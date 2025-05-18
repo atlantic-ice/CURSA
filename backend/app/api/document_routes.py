@@ -40,18 +40,14 @@ def upload_document():
     if file.filename == '':
         return jsonify({'error': 'Не выбран файл'}), 400
     
-    # Проверяем допустимое расширение по оригинальному имени
-    original_filename = file.filename
-    if not allowed_file(original_filename):
+    # Проверяем допустимое расширение
+    if not allowed_file(file.filename):
         return jsonify({'error': 'Недопустимый формат файла. Разрешены только файлы DOCX.'}), 400
     
     try:
-        # Создаём временную директорию и сохраняем файл с расширением .docx
+        # Создаём временную директорию и сохраняем файл с корректным именем
         temp_dir = tempfile.mkdtemp()
-        filename = secure_filename(original_filename)
-        # Гарантируем, что имя заканчивается на .docx
-        if not filename.lower().endswith('.docx'):
-            filename += '.docx'
+        filename = secure_filename(file.filename)
         file_path = os.path.join(temp_dir, filename)
         
         # Сохраняем с явным закрытием файла

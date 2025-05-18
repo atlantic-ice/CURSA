@@ -36,6 +36,15 @@
             "max_notifications": 50
         }
     },
-    "last_updated": null,
-    "notifications_history": []
+    "last_updated": "2025-05-19 00:15:21",
+    "notifications_history": [
+        {
+            "id": "6823c87f-3e22-4bf2-af68-1cbcee361fad",
+            "timestamp": "2025-05-19 00:14:20",
+            "message": "\u041f\u0440\u0435\u0434\u0443\u043f\u0440\u0435\u0436\u0434\u0435\u043d\u0438\u0435 \u043e\u0431 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u0438 \u043f\u0430\u043c\u044f\u0442\u0438: 84.7%",
+            "level": "warning",
+            "source": "memory_check",
+            "read": true
+        }
+    ]
 }

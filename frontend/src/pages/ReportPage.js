@@ -67,19 +67,14 @@ const ReportPage = () => {
   // Контекст для истории проверок
   const { addToHistory } = useContext(CheckHistoryContext);
 
-  // useEffect для редиректа, если нет reportData
+  // Перенаправление, если нет данных
   useEffect(() => {
     if (!reportData) {
       navigate('/check');
     }
   }, [reportData, navigate]);
 
-  // useEffect для прокрутки вверх
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  // useEffect для сохранения истории
+  // Сохраняем результат в истории при первичной загрузке страницы
   useEffect(() => {
     if (reportData && fileName) {
       addToHistory({
@@ -91,6 +86,11 @@ const ReportPage = () => {
       });
     }
   }, [reportData, fileName, addToHistory, correctedFilePath]);
+
+  // Прокрутка вверх при загрузке страницы
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   if (!reportData) {
     return null;
@@ -214,8 +214,7 @@ const ReportPage = () => {
       if (response.data.success) {
         setCorrectedFilePath(response.data.corrected_file_path);
         setCorrectionSuccess(true);
-        // Автоматически скачиваем исправленный файл
-        downloadDocument(response.data.corrected_file_path, fileName);
+        
         // Обновить запись в истории, добавив путь исправленного файла
         addToHistory({
           id: Date.now().toString(),

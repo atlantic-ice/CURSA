@@ -11,6 +11,7 @@ import TemplatesSection from '../components/TemplatesSection';
 import RelatedLinksCard from '../components/RelatedLinksCard';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SchoolIcon from '@mui/icons-material/School';
+import { motion } from 'framer-motion';
 
 const ResourcesPage = () => {
   // Данные для часто задаваемых вопросов
@@ -89,50 +90,110 @@ const ResourcesPage = () => {
   ];
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 5, textAlign: 'center' }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            mb: 2,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 1,
-          }}
-        >
-          <AutoStoriesOutlinedIcon sx={{ fontSize: 32 }} />
-          Полезные ресурсы
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" sx={{ maxWidth: 800, mx: 'auto' }}>
-          Шаблоны документов, ответы на часто задаваемые вопросы и другие полезные материалы для подготовки курсовой работы
-        </Typography>
+    <Box sx={{ position: 'relative', minHeight: '100vh', pb: 8 }}>
+      {/* WOW-шапка с градиентом */}
+      <Box sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        bgcolor: (theme) => theme.palette.mode === 'dark'
+          ? 'linear-gradient(120deg, #23272f 0%, #1a1d23 100%)'
+          : 'linear-gradient(120deg, #f8fafc 0%, #e3eafc 100%)',
+        pt: { xs: 7, md: 10 },
+        pb: { xs: 5, md: 7 },
+        mb: 4,
+        borderRadius: { xs: 0, md: 6 },
+      }}>
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <Typography
+              variant="h3"
+              component="h1"
+              sx={{
+                mb: 2,
+                fontWeight: 900,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1.5,
+                letterSpacing: 1.5,
+                fontSize: { xs: 32, md: 44 },
+                background: (theme) => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(90deg,#6366f1,#2563eb 60%,#6366f1)'
+                  : 'linear-gradient(90deg,#2563eb,#60a5fa 60%,#6366f1)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: (theme) => theme.palette.mode === 'dark'
+                  ? '0 2px 16px #6366f1cc'
+                  : '0 2px 8px #2563eb33',
+              }}
+            >
+              <AutoStoriesOutlinedIcon sx={{ fontSize: { xs: 32, md: 48 } }} />
+              Полезные ресурсы
+            </Typography>
+            <Typography
+              variant="h6"
+              color="text.secondary"
+              sx={{
+                maxWidth: 800,
+                mx: 'auto',
+                mb: 1,
+                fontWeight: 500,
+                fontSize: { xs: 16, md: 20 },
+                opacity: 0.92,
+              }}
+            >
+              Шаблоны документов, ответы на часто задаваемые вопросы и другие полезные материалы для подготовки курсовой работы
+            </Typography>
+          </motion.div>
+        </Container>
       </Box>
 
-      {/* Шаблоны документов */}
-      <TemplatesSection 
-        templates={templateData} 
-        sx={{ mb: 6 }}
-      />
-      
-      <Divider sx={{ my: 6 }} />
-      
-      {/* Часто задаваемые вопросы */}
-      <FAQSection 
-        questions={faqQuestions} 
-        sx={{ mb: 6 }}
-      />
-      
-      {/* Связанные разделы */}
-      <Box sx={{ mb: 6 }}>
-        <RelatedLinksCard 
-          title="Связанные разделы"
-          links={relatedLinks}
-        />
-      </Box>
-    </Container>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
+        {/* WOW-анимированный блок шаблонов */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <TemplatesSection 
+            templates={templateData} 
+            sx={{ mb: 6 }}
+          />
+        </motion.div>
+
+        <Divider sx={{ my: 6 }} />
+
+        {/* WOW-анимированный FAQ */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <FAQSection 
+            questions={faqQuestions} 
+            sx={{ mb: 6 }}
+          />
+        </motion.div>
+
+        {/* Связанные разделы */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <Box sx={{ mb: 6 }}>
+            <RelatedLinksCard 
+              title="Связанные разделы"
+              links={relatedLinks}
+            />
+          </Box>
+        </motion.div>
+      </Container>
+    </Box>
   );
 };
 

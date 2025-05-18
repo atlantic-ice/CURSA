@@ -52,7 +52,7 @@ const HomePage = () => {
           align="center"
           sx={{ mb: 5, fontWeight: 700 }}
         >
-          Наши сервисы
+          Будь в CURSE
         </Typography>
         
         <Grid container spacing={4} justifyContent="center">
@@ -86,14 +86,6 @@ const HomePage = () => {
                 },
               }}
             >
-              <Box sx={{ 
-                height: 10, 
-                bgcolor: 'primary.main', 
-                width: '100%',
-                boxShadow: theme => theme.palette.mode === 'dark'
-                  ? '0 2px 8px 0 rgba(37,99,235,0.22)'
-                  : '0 2px 8px 0 rgba(37,99,235,0.12)',
-              }} />
               <CardActionArea 
                 onClick={handleCheckClick}
                 sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative', background: theme => theme.palette.mode === 'dark'
@@ -194,19 +186,25 @@ const HomePage = () => {
               }} />
               {/* Блокировка поверх карточки */}
               <Box 
-                sx={{ 
+                sx={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  bgcolor: 'rgba(255,255,255,0.45)',
+                  bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(24,28,36,0.82)' : 'rgba(255,255,255,0.55)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   zIndex: 10,
                   pointerEvents: 'none',
                   transition: 'background 0.3s',
+                  backdropFilter: 'blur(8px) saturate(1.2)',
+                  boxShadow: theme => theme.palette.mode === 'dark'
+                    ? '0 4px 32px #2563eb33, 0 0 0 1.5px #6366f1cc'
+                    : '0 4px 24px #2563eb11',
+                  border: theme => theme.palette.mode === 'dark' ? '1.5px solid #333' : '1.5px solid #e3e3e3',
+                  borderRadius: 4,
                 }}
               >
                 <Box 
@@ -215,21 +213,44 @@ const HomePage = () => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: 2,
-                    borderRadius: 2,
-                    backdropFilter: 'blur(4px)',
-                    bgcolor: 'rgba(255,255,255,0.8)',
-                    boxShadow: '0 2px 12px #0001',
+                    padding: 3,
+                    borderRadius: 3,
+                    bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(36,40,56,0.92)' : 'rgba(255,255,255,0.92)',
+                    boxShadow: theme => theme.palette.mode === 'dark'
+                      ? '0 2px 24px #6366f144, 0 0 0 2px #2563eb33'
+                      : '0 2px 12px #2563eb11',
                     animation: 'lockPulse 2.5s infinite',
                   }}
                 >
-                  <LockIcon sx={{ fontSize: 44, color: 'grey.600', mb: 1, animation: 'lockBounce 1.2s infinite' }} />
+                  <LockIcon sx={{ 
+                    fontSize: 54, 
+                    color: theme => theme.palette.mode === 'dark' ? '#6366f1' : 'grey.600', 
+                    mb: 1, 
+                    filter: theme => theme.palette.mode === 'dark' ? 'drop-shadow(0 0 12px #6366f1cc)' : 'drop-shadow(0 2px 8px #bdbdbd22)',
+                    animation: 'lockBounce 1.2s infinite' 
+                  }} />
                   <Typography 
                     variant="h5" 
-                    color="grey.700"
-                    sx={{ fontWeight: 800, letterSpacing: 1, background: 'linear-gradient(90deg,#bdbdbd,#757575,#bdbdbd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 0.5 }}
+                    sx={{ 
+                      fontWeight: 900, 
+                      letterSpacing: 2, 
+                      mb: 0.5,
+                      fontSize: 28,
+                      background: theme => theme.palette.mode === 'dark'
+                        ? 'linear-gradient(90deg,#6366f1,#2563eb 60%,#6366f1)'
+                        : 'linear-gradient(90deg,#bdbdbd,#757575,#bdbdbd)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      textShadow: theme => theme.palette.mode === 'dark'
+                        ? '0 2px 16px #6366f1cc'
+                        : '0 2px 8px #bdbdbd33',
+                      textTransform: 'uppercase',
+                    }}
                   >
                     В разработке
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: theme => theme.palette.mode === 'dark' ? '#bdbdbd' : 'grey.700', mt: 1, fontWeight: 500, opacity: 0.85 }}>
+                    Этот раздел скоро будет доступен!
                   </Typography>
                 </Box>
               </Box>
@@ -264,11 +285,24 @@ const HomePage = () => {
               </CardContent>
               <CardActions sx={{ justifyContent: 'center', pb: 3 }}>
                 <Button 
-                  variant="outlined"
+                  variant="contained"
                   size="large"
                   disabled
                   startIcon={<LockIcon />}
-                  sx={{ px: 5, fontWeight: 600, fontSize: 18, borderRadius: 3 }}
+                  sx={{ 
+                    px: 5, 
+                    fontWeight: 700, 
+                    fontSize: 18, 
+                    borderRadius: 3,
+                    background: theme => theme.palette.mode === 'dark'
+                      ? 'linear-gradient(90deg,#6366f1 0%,#2563eb 100%)'
+                      : 'linear-gradient(90deg,#e0e7ef 0%,#bdbdbd 100%)',
+                    color: theme => theme.palette.mode === 'dark' ? '#fff' : '#222',
+                    boxShadow: theme => theme.palette.mode === 'dark'
+                      ? '0 2px 16px #6366f1cc'
+                      : '0 2px 8px #bdbdbd33',
+                    opacity: 0.95,
+                  }}
                 >
                   Скоро
                 </Button>
@@ -300,43 +334,43 @@ const HomePage = () => {
                 viewport={{ once: true }}
                 style={{ height: '100%' }}
               >
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center',
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
                     textAlign: 'center',
                     height: '100%',
                     position: 'relative',
-                  }}
-                >
-                  <Box 
-                    sx={{
+                }}
+              >
+                <Box 
+                  sx={{
                       width: 90,
                       height: 90,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: 'primary.main',
-                      color: 'white',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'primary.main',
+                    color: 'white',
                       mb: 3,
                       boxShadow: '0 4px 24px #2563eb33',
                       fontSize: 44,
                       transition: 'transform 0.3s',
                       '&:hover': { transform: 'scale(1.08) rotate(-6deg)' },
-                    }}
-                  >
+                  }}
+                >
                     <DescriptionIcon sx={{ fontSize: 44 }} />
-                  </Box>
-                  <Typography variant="h6" gutterBottom fontWeight={700} sx={{ fontSize: 22 }}>
-                    1. Загрузите документ
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Загрузите ваш DOCX файл с курсовой работой через удобный 
-                    интерфейс с поддержкой drag-and-drop
-                  </Typography>
                 </Box>
+                  <Typography variant="h6" gutterBottom fontWeight={700} sx={{ fontSize: 22 }}>
+                  1. Загрузите документ
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Загрузите ваш DOCX файл с курсовой работой через удобный 
+                  интерфейс с поддержкой drag-and-drop
+                </Typography>
+              </Box>
               </motion.div>
             </Grid>
             {/* Шаг 2 */}
@@ -348,43 +382,43 @@ const HomePage = () => {
                 viewport={{ once: true }}
                 style={{ height: '100%' }}
               >
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center',
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
                     textAlign: 'center',
                     height: '100%',
                     position: 'relative',
-                  }}
-                >
-                  <Box 
-                    sx={{
+                }}
+              >
+                <Box 
+                  sx={{
                       width: 90,
                       height: 90,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: 'primary.main',
-                      color: 'white',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'primary.main',
+                    color: 'white',
                       mb: 3,
                       boxShadow: '0 4px 24px #2563eb33',
                       fontSize: 44,
                       transition: 'transform 0.3s',
                       '&:hover': { transform: 'scale(1.08) rotate(6deg)' },
-                    }}
-                  >
+                  }}
+                >
                     <FindInPageIcon sx={{ fontSize: 44 }} />
-                  </Box>
-                  <Typography variant="h6" gutterBottom fontWeight={700} sx={{ fontSize: 22 }}>
-                    2. Получите отчет
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Система проанализирует работу, выявит все несоответствия 
-                    требованиям и представит результаты в наглядном отчете
-                  </Typography>
                 </Box>
+                  <Typography variant="h6" gutterBottom fontWeight={700} sx={{ fontSize: 22 }}>
+                  2. Получите отчет
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Система проанализирует работу, выявит все несоответствия 
+                  требованиям и представит результаты в наглядном отчете
+                </Typography>
+              </Box>
               </motion.div>
             </Grid>
             {/* Шаг 3 */}
@@ -396,43 +430,43 @@ const HomePage = () => {
                 viewport={{ once: true }}
                 style={{ height: '100%' }}
               >
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center',
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
                     textAlign: 'center',
                     height: '100%',
                     position: 'relative',
-                  }}
-                >
-                  <Box 
-                    sx={{
+                }}
+              >
+                <Box 
+                  sx={{
                       width: 90,
                       height: 90,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: 'primary.main',
-                      color: 'white',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'primary.main',
+                    color: 'white',
                       mb: 3,
                       boxShadow: '0 4px 24px #2563eb33',
                       fontSize: 44,
                       transition: 'transform 0.3s',
                       '&:hover': { transform: 'scale(1.08) rotate(-4deg)' },
-                    }}
-                  >
+                  }}
+                >
                     <BuildIcon sx={{ fontSize: 44 }} />
-                  </Box>
-                  <Typography variant="h6" gutterBottom fontWeight={700} sx={{ fontSize: 22 }}>
-                    3. Исправьте ошибки
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Автоматически исправьте найденные проблемы одним кликом 
-                    и скачайте исправленную версию документа
-                  </Typography>
                 </Box>
+                  <Typography variant="h6" gutterBottom fontWeight={700} sx={{ fontSize: 22 }}>
+                  3. Исправьте ошибки
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Автоматически исправьте найденные проблемы одним кликом 
+                  и скачайте исправленную версию документа
+                </Typography>
+              </Box>
               </motion.div>
             </Grid>
           </Grid>
@@ -451,7 +485,7 @@ const HomePage = () => {
         </Typography>
 
         <Grid container spacing={3} justifyContent="center">
-          {/* Точность проверки */}
+          {/* Скорость */}
           <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', justifyContent: 'center' }}>
             <motion.div
               initial={{ opacity: 0, y: 40 }}
@@ -460,58 +494,64 @@ const HomePage = () => {
               viewport={{ once: true }}
               style={{ height: '100%' }}
             >
-              <Paper 
-                elevation={0}
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                maxWidth: 350,
+                minWidth: 260,
+                width: '100%',
+                mx: 'auto',
+                p: 3,
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: 'divider',
+                transition: 'transform 0.3s, box-shadow 0.3s',
+                boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
+                '&:hover': {
+                  transform: 'scale(1.035)',
+                  boxShadow: '0 12px 32px 0 #2563eb33',
+                  borderColor: 'primary.light',
+                }
+              }}
+            >
+              <Box 
                 sx={{ 
-                  p: 3, 
-                  height: '100%',
-                  maxWidth: 350,
-                  minWidth: 280,
-                  width: '100%',
+                  width: 56, height: 56, borderRadius: '50%', mb: 2,
+                  background: 'linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 12px #2563eb33',
                   mx: 'auto',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 4,
-                  boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
-                  transition: 'box-shadow 0.3s, transform 0.3s',
-                  '&:hover': {
-                    boxShadow: '0 12px 32px 0 #22c55e33',
-                    borderColor: 'success.light',
-                    transform: 'scale(1.035)',
-                  },
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
                 }}
               >
-                <Box sx={{
-                  width: 64, height: 64, borderRadius: '50%', mb: 2,
-                  background: 'linear-gradient(135deg, #22c55e 0%, #4ade80 100%)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 2px 12px #22c55e33',
-                  fontSize: 36,
-                }}>
-                  <CheckCircleOutlineIcon sx={{ color: 'white', fontSize: 36 }} />
-                </Box>
-                <Typography variant="h6" fontWeight={700} align="center">
-                  Точность проверки
-                </Typography>
-                <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1, mb: 2 }}>
-                  Система анализирует все аспекты форматирования документа, 
-                  включая шрифты, отступы, оформление библиографии и многое другое
-                </Typography>
-                <Button
-                  variant="text"
-                  component={RouterLink}
-                  to="/examples"
-                  size="small"
-                  endIcon={<ArrowForwardIcon />}
-                  sx={{ mt: 'auto', fontWeight: 600 }}
-                >
-                  Смотреть примеры
-                </Button>
-              </Paper>
+                <SpeedIcon sx={{ color: 'white', fontSize: 30 }} />
+              </Box>
+              <Typography variant="h6" gutterBottom fontWeight={700} align="center">
+                Скорость
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, flexGrow: 1 }} align="center">
+                Получите результаты проверки вашего документа за считанные секунды, 
+                вместо часов ожидания ответа от преподавателя
+              </Typography>
+              <Button
+                variant="text"
+                color="primary"
+                component={RouterLink}
+                to="/check"
+                size="small"
+                endIcon={<ArrowForwardIcon />}
+                sx={{ fontWeight: 600 }}
+              >
+                Проверить документ
+              </Button>
+            </Paper>
             </motion.div>
           </Grid>
-          {/* Скорость */}
+          {/* Точность проверки */}
           <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', justifyContent: 'center' }}>
             <motion.div
               initial={{ opacity: 0, y: 40 }}
@@ -520,55 +560,61 @@ const HomePage = () => {
               viewport={{ once: true }}
               style={{ height: '100%' }}
             >
-              <Paper 
-                elevation={0}
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                maxWidth: 350,
+                minWidth: 260,
+                width: '100%',
+                mx: 'auto',
+                p: 3,
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: 'divider',
+                transition: 'transform 0.3s, box-shadow 0.3s',
+                boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
+                '&:hover': {
+                  transform: 'scale(1.035)',
+                  boxShadow: '0 12px 32px 0 #22c55e33',
+                  borderColor: 'success.light',
+                }
+              }}
+            >
+              <Box 
                 sx={{ 
-                  p: 3, 
-                  height: '100%',
-                  maxWidth: 350,
-                  minWidth: 280,
-                  width: '100%',
+                  width: 56, height: 56, borderRadius: '50%', mb: 2,
+                  background: 'linear-gradient(135deg, #22c55e 0%, #4ade80 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 12px #22c55e33',
                   mx: 'auto',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 4,
-                  boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
-                  transition: 'box-shadow 0.3s, transform 0.3s',
-                  '&:hover': {
-                    boxShadow: '0 12px 32px 0 #2563eb33',
-                    borderColor: 'primary.light',
-                    transform: 'scale(1.035)',
-                  },
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
                 }}
               >
-                <Box sx={{
-                  width: 64, height: 64, borderRadius: '50%', mb: 2,
-                  background: 'linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 2px 12px #2563eb33',
-                  fontSize: 36,
-                }}>
-                  <SpeedIcon sx={{ color: 'white', fontSize: 36 }} />
-                </Box>
-                <Typography variant="h6" fontWeight={700} align="center">
-                  Скорость
-                </Typography>
-                <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1, mb: 2 }}>
-                  Получите результаты проверки вашего документа за считанные секунды, 
-                  вместо часов ожидания ответа от преподавателя
-                </Typography>
-                <Button
-                  variant="text"
-                  component={RouterLink}
-                  to="/check"
-                  size="small"
-                  endIcon={<ArrowForwardIcon />}
-                  sx={{ mt: 'auto', fontWeight: 600 }}
-                >
-                  Проверить документ
-                </Button>
-              </Paper>
+                <CheckCircleOutlineIcon sx={{ color: 'white', fontSize: 30 }} />
+              </Box>
+              <Typography variant="h6" gutterBottom fontWeight={700} align="center">
+                Точность проверки
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, flexGrow: 1 }} align="center">
+                Система анализирует все аспекты форматирования документа, 
+                включая шрифты, отступы, оформление библиографии и многое другое
+              </Typography>
+              <Button
+                variant="text"
+                color="success"
+                component={RouterLink}
+                to="/examples"
+                size="small"
+                endIcon={<ArrowForwardIcon />}
+                sx={{ fontWeight: 600 }}
+              >
+                Смотреть примеры
+              </Button>
+            </Paper>
             </motion.div>
           </Grid>
           {/* Автоматическое исправление */}
@@ -580,55 +626,61 @@ const HomePage = () => {
               viewport={{ once: true }}
               style={{ height: '100%' }}
             >
-              <Paper 
-                elevation={0}
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                maxWidth: 350,
+                minWidth: 260,
+                width: '100%',
+                mx: 'auto',
+                p: 3,
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: 'divider',
+                transition: 'transform 0.3s, box-shadow 0.3s',
+                boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
+                '&:hover': {
+                  transform: 'scale(1.035)',
+                  boxShadow: '0 12px 32px 0 #f59e42cc',
+                  borderColor: 'warning.light',
+                }
+              }}
+            >
+              <Box 
                 sx={{ 
-                  p: 3, 
-                  height: '100%',
-                  maxWidth: 350,
-                  minWidth: 280,
-                  width: '100%',
-                  mx: 'auto',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 4,
-                  boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
-                  transition: 'box-shadow 0.3s, transform 0.3s',
-                  '&:hover': {
-                    boxShadow: '0 12px 32px 0 #f59e42cc',
-                    borderColor: 'warning.light',
-                    transform: 'scale(1.035)',
-                  },
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                }}
-              >
-                <Box sx={{
-                  width: 64, height: 64, borderRadius: '50%', mb: 2,
+                  width: 56, height: 56, borderRadius: '50%', mb: 2,
                   background: 'linear-gradient(135deg, #f59e42 0%, #fbbf24 100%)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: '0 2px 12px #f59e4233',
-                  fontSize: 36,
-                }}>
-                  <AutoFixHighIcon sx={{ color: 'white', fontSize: 36 }} />
-                </Box>
-                <Typography variant="h6" fontWeight={700} align="center">
-                  Автоматическое исправление
-                </Typography>
-                <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1, mb: 2 }}>
-                  Большинство обнаруженных проблем может быть исправлено автоматически одним кликом, 
-                  что экономит ваше время на форматирование
-                </Typography>
-                <Button
-                  variant="text"
-                  component={RouterLink}
-                  to="/guidelines"
-                  size="small"
-                  endIcon={<ArrowForwardIcon />}
-                  sx={{ mt: 'auto', fontWeight: 600 }}
-                >
-                  Подробнее о требованиях
-                </Button>
-              </Paper>
+                  mx: 'auto',
+                }}
+              >
+                <AutoFixHighIcon sx={{ color: 'white', fontSize: 30 }} />
+              </Box>
+              <Typography variant="h6" gutterBottom fontWeight={700} align="center">
+                Автоматическое исправление
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, flexGrow: 1 }} align="center">
+                Большинство обнаруженных проблем может быть исправлено автоматически одним кликом, 
+                что экономит ваше время на форматирование
+              </Typography>
+              <Button
+                variant="text"
+                color="warning"
+                component={RouterLink}
+                to="/guidelines"
+                size="small"
+                endIcon={<ArrowForwardIcon />}
+                sx={{ fontWeight: 600 }}
+              >
+                Подробнее о требованиях
+              </Button>
+            </Paper>
             </motion.div>
           </Grid>
         </Grid>
@@ -665,58 +717,58 @@ const HomePage = () => {
               viewport={{ once: true }}
               style={{ height: '100%' }}
             >
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  display: 'flex',
-                  flexDirection: 'column',
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  height: '100%',
+                height: '100%',
                   maxWidth: 350,
                   minWidth: 260,
                   width: '100%',
                   mx: 'auto',
-                  p: 3,
+                p: 3,
                   borderRadius: 4,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'transform 0.3s, box-shadow 0.3s',
+                border: '1px solid',
+                borderColor: 'divider',
+                transition: 'transform 0.3s, box-shadow 0.3s',
                   boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
-                  '&:hover': {
+                '&:hover': {
                     transform: 'scale(1.035)',
                     boxShadow: '0 12px 32px 0 #2563eb33',
                     borderColor: 'primary.light',
-                  }
-                }}
-              >
-                <Box 
-                  sx={{ 
+                }
+              }}
+            >
+              <Box 
+                sx={{ 
                     width: 56, height: 56, borderRadius: '50%', mb: 2,
                     background: 'linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: '0 2px 12px #2563eb33',
                     mx: 'auto',
-                  }}
-                >
+                }}
+              >
                   <MenuBookIcon sx={{ color: 'white', fontSize: 30 }} />
-                </Box>
+              </Box>
                 <Typography variant="h6" gutterBottom fontWeight={700} align="center">
-                  Рекомендации по оформлению
-                </Typography>
+                Рекомендации по оформлению
+              </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3, flexGrow: 1 }} align="center">
-                  Подробное руководство по оформлению всех элементов курсовой работы согласно действующим стандартам
-                </Typography>
-                <Button 
-                  variant="text" 
-                  color="primary" 
-                  endIcon={<ArrowForwardIcon />}
-                  onClick={() => navigate('/guidelines')}
+                Подробное руководство по оформлению всех элементов курсовой работы согласно действующим стандартам
+              </Typography>
+              <Button 
+                variant="text" 
+                color="primary" 
+                endIcon={<ArrowForwardIcon />}
+                onClick={() => navigate('/guidelines')}
                   sx={{ fontWeight: 600 }}
-                >
-                  Перейти к рекомендациям
-                </Button>
-              </Paper>
+              >
+                Перейти к рекомендациям
+              </Button>
+            </Paper>
             </motion.div>
           </Grid>
           {/* Примеры оформления */}
@@ -728,58 +780,58 @@ const HomePage = () => {
               viewport={{ once: true }}
               style={{ height: '100%' }}
             >
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  display: 'flex',
-                  flexDirection: 'column',
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  height: '100%',
+                height: '100%',
                   maxWidth: 350,
                   minWidth: 260,
                   width: '100%',
                   mx: 'auto',
-                  p: 3,
+                p: 3,
                   borderRadius: 4,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'transform 0.3s, box-shadow 0.3s',
+                border: '1px solid',
+                borderColor: 'divider',
+                transition: 'transform 0.3s, box-shadow 0.3s',
                   boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
-                  '&:hover': {
+                '&:hover': {
                     transform: 'scale(1.035)',
                     boxShadow: '0 12px 32px 0 #22c55e33',
                     borderColor: 'success.light',
-                  }
-                }}
-              >
-                <Box 
-                  sx={{ 
+                }
+              }}
+            >
+              <Box 
+                sx={{ 
                     width: 56, height: 56, borderRadius: '50%', mb: 2,
                     background: 'linear-gradient(135deg, #22c55e 0%, #4ade80 100%)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: '0 2px 12px #22c55e33',
                     mx: 'auto',
-                  }}
-                >
+                }}
+              >
                   <CollectionsBookmarkIcon sx={{ color: 'white', fontSize: 30 }} />
-                </Box>
+              </Box>
                 <Typography variant="h6" gutterBottom fontWeight={700} align="center">
-                  Примеры оформления
-                </Typography>
+                Примеры оформления
+              </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3, flexGrow: 1 }} align="center">
-                  Наглядные примеры правильного и неправильного оформления элементов курсовых работ с пояснениями
-                </Typography>
-                <Button 
-                  variant="text" 
+                Наглядные примеры правильного и неправильного оформления элементов курсовых работ с пояснениями
+              </Typography>
+              <Button 
+                variant="text" 
                   color="success" 
-                  endIcon={<ArrowForwardIcon />}
-                  onClick={() => navigate('/examples')}
+                endIcon={<ArrowForwardIcon />}
+                onClick={() => navigate('/examples')}
                   sx={{ fontWeight: 600 }}
-                >
-                  Смотреть примеры
-                </Button>
-              </Paper>
+              >
+                Смотреть примеры
+              </Button>
+            </Paper>
             </motion.div>
           </Grid>
           {/* Полезные ресурсы */}
@@ -791,58 +843,58 @@ const HomePage = () => {
               viewport={{ once: true }}
               style={{ height: '100%' }}
             >
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  display: 'flex',
-                  flexDirection: 'column',
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  height: '100%',
+                height: '100%',
                   maxWidth: 350,
                   minWidth: 260,
                   width: '100%',
                   mx: 'auto',
-                  p: 3,
+                p: 3,
                   borderRadius: 4,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'transform 0.3s, box-shadow 0.3s',
+                border: '1px solid',
+                borderColor: 'divider',
+                transition: 'transform 0.3s, box-shadow 0.3s',
                   boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
-                  '&:hover': {
+                '&:hover': {
                     transform: 'scale(1.035)',
                     boxShadow: '0 12px 32px 0 #f59e42cc',
                     borderColor: 'warning.light',
-                  }
-                }}
-              >
-                <Box 
-                  sx={{ 
+                }
+              }}
+            >
+              <Box 
+                sx={{ 
                     width: 56, height: 56, borderRadius: '50%', mb: 2,
                     background: 'linear-gradient(135deg, #f59e42 0%, #fbbf24 100%)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: '0 2px 12px #f59e4233',
                     mx: 'auto',
-                  }}
-                >
+                }}
+              >
                   <InfoIcon sx={{ color: 'white', fontSize: 30 }} />
-                </Box>
+              </Box>
                 <Typography variant="h6" gutterBottom fontWeight={700} align="center">
-                  Полезные ресурсы
-                </Typography>
+                Полезные ресурсы
+              </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3, flexGrow: 1 }} align="center">
-                  Шаблоны документов, ответы на часто задаваемые вопросы и другие полезные материалы для студентов
-                </Typography>
-                <Button 
-                  variant="text" 
+                Шаблоны документов, ответы на часто задаваемые вопросы и другие полезные материалы для студентов
+              </Typography>
+              <Button 
+                variant="text" 
                   color="warning" 
-                  endIcon={<ArrowForwardIcon />}
-                  onClick={() => navigate('/resources')}
+                endIcon={<ArrowForwardIcon />}
+                onClick={() => navigate('/resources')}
                   sx={{ fontWeight: 600 }}
-                >
-                  Перейти к ресурсам
-                </Button>
-              </Paper>
+              >
+                Перейти к ресурсам
+              </Button>
+            </Paper>
             </motion.div>
           </Grid>
         </Grid>

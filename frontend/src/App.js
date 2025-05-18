@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
+import '@fontsource/montserrat/900.css';
 
 import HomePage from './pages/HomePage';
 import GuidelinesPage from './pages/GuidelinesPage';

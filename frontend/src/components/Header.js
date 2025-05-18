@@ -31,7 +31,10 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ArticleIcon from '@mui/icons-material/Article';
 import ImageIcon from '@mui/icons-material/Image';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import { ColorModeContext } from '../App';
+import { keyframes } from '@mui/system';
+import CursaLogo from './CursaLogo';
 
 const Header = () => {
   const theme = useTheme();
@@ -60,8 +63,6 @@ const Header = () => {
   };
 
   const navLinks = [
-    { name: 'Главная', path: '/', icon: <HomeIcon /> },
-    { name: 'Проверить', path: '/check', icon: <CheckCircleOutlineIcon /> },
     { name: 'Требования', path: '/guidelines', icon: <ArticleIcon /> },
     { name: 'Примеры', path: '/examples', icon: <ImageIcon /> },
     { name: 'Ресурсы', path: '/resources', icon: <LibraryBooksIcon /> },
@@ -136,35 +137,22 @@ const Header = () => {
         pointerEvents: 'auto',
         bgcolor: 'transparent',
       }}>
-        <Typography 
-          variant="h4" 
-          component={RouterLink} 
-          to="/"
-          sx={{ 
-            flexGrow: 0, 
-            textDecoration: 'none', 
-            color: theme => theme.palette.mode === 'dark' ? '#fff' : '#111',
-            fontWeight: 900,
-            letterSpacing: 3.5,
-            fontSize: { xs: 28, md: 34 },
-            fontFamily: 'Inter, Arial, sans-serif',
-            textTransform: 'uppercase',
-            transition: 'color 0.3s',
-            mr: 0,
-            pl: 0,
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
             cursor: 'pointer',
-            textShadow: theme => theme.palette.mode === 'dark'
-              ? '0 2px 16px #2563eb22'
-              : '0 2px 8px #2563eb11',
-            '&:hover': {
-              filter: 'brightness(1.08)',
-            },
+            userSelect: 'none',
           }}
+          component={RouterLink}
+          to="/"
+          style={{ textDecoration: 'none' }}
         >
-          CURSA
-        </Typography>
+          <CursaLogo fontSize={34} />
+        </Box>
       </Box>
-      {/* Абсолютно правая зона: смена темы и загрузка */}
+      {/* Абсолютно правая зона: навигация, смена темы и кнопка "Проверить" */}
       {!isMobile && (
         <Box sx={{
           position: 'absolute',
@@ -178,6 +166,36 @@ const Header = () => {
           pointerEvents: 'auto',
           bgcolor: 'transparent',
         }}>
+          {/* Навигация — теперь прямо перед кнопкой "Проверить" */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            {navLinks.map((link) => (
+              <Button
+                key={link.path}
+                component={RouterLink}
+                to={link.path}
+                sx={{ 
+                  mx: 0.5,
+                  px: 1.5,
+                  py: 1.2,
+                  color: location.pathname === link.path ? 'primary.main' : 'text.primary',
+                  fontWeight: 600,
+                  fontSize: 17,
+                  borderRadius: 2,
+                  background: 'none',
+                  position: 'relative',
+                  overflow: 'visible',
+                  transition: 'color 0.2s',
+                  '&:hover': {
+                    bgcolor: 'transparent',
+                    color: 'primary.main',
+                  }
+                }}
+                disableRipple
+              >
+                {link.name}
+              </Button>
+            ))}
+          </Box>
           <Tooltip title={theme.palette.mode === 'dark' ? 'Светлая тема' : 'Темная тема'}>
             <IconButton 
               onClick={colorMode.toggleColorMode} 
@@ -219,71 +237,16 @@ const Header = () => {
               }
             }}
           >
-            Загрузить
+            Проверить
           </Button>
         </Box>
       )}
       <Container maxWidth="lg" disableGutters>
-        <Toolbar sx={{ py: 1, minHeight: 64, pl: { xs: 10, md: 13 }, pr: { xs: 10, md: 13 } }}>
-          {/* Навигация для ПК */}
-          {!isMobile && (
-            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-              {navLinks.map((link) => (
-                <Button
-                  key={link.path}
-                  component={RouterLink}
-                  to={link.path}
-                  sx={{ 
-                    mx: 0.5,
-                    px: 1.5,
-                    py: 1.2,
-                    color: location.pathname === link.path ? 'primary.main' : 'text.primary',
-                    fontWeight: 600,
-                    fontSize: 17,
-                    borderRadius: 2,
-                    background: 'none',
-                    position: 'relative',
-                    overflow: 'visible',
-                    transition: 'color 0.2s',
-                    '&:after': {
-                      content: '""',
-                      display: 'block',
-                      position: 'absolute',
-                      left: 8,
-                      right: 8,
-                      bottom: 6,
-                      height: 2.5,
-                      borderRadius: 2,
-                      background: location.pathname === link.path
-                        ? 'linear-gradient(90deg, #2563eb 0%, #6366f1 100%)'
-                        : 'transparent',
-                      opacity: location.pathname === link.path ? 1 : 0,
-                      transition: 'opacity 0.25s',
-                    },
-                    '&:hover': {
-                      bgcolor: 'transparent',
-                      color: 'primary.main',
-                      '&:after': {
-                        opacity: 1,
-                        background: 'linear-gradient(90deg, #2563eb 0%, #6366f1 100%)',
-                      }
-                    }
-                  }}
-                  disableRipple
-                >
-                  {link.name}
-                </Button>
-              ))}
-            </Box>
-          )}
+        <Toolbar sx={{ py: 1, minHeight: 64, pl: { xs: 2, md: 3 }, pr: { xs: 2, md: 3 } }}>
+          {/* Пустой flex-grow для выравнивания */}
+          <Box sx={{ flexGrow: 1 }} />
         </Toolbar>
       </Container>
-      {/* WOW-анимация underline */}
-      <style jsx global>{`
-        .MuiButton-root[aria-current="page"]:after {
-          opacity: 1 !important;
-        }
-      `}</style>
       {/* Mobile menu drawer */}
       <Drawer
         anchor="right"
@@ -304,4 +267,4 @@ const Header = () => {
   );
 };
 
-export default Header;
+export default Header; 

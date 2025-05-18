@@ -2,6 +2,40 @@ import re
 from docx.shared import Pt, Cm
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
+# === NORM_RULES: 30 нормоконтрольных правил ===
+NORM_RULES = [
+    {"id": 1, "name": "Наименование темы работы", "description": "Тема соответствует утвержденной приказом.", "checker": "_check_topic_title"},
+    {"id": 2, "name": "Размер шрифта", "description": "Размер основного шрифта — 14.", "checker": "_check_font"},
+    {"id": 3, "name": "Название шрифта", "description": "Times New Roman, обычный, черный.", "checker": "_check_font"},
+    {"id": 4, "name": "Межстрочный интервал", "description": "Межстрочный интервал 1,5.", "checker": "_check_line_spacing"},
+    {"id": 5, "name": "Абзацный отступ (мм)", "description": "Абзацный отступ 1,25 см.", "checker": "_check_paragraphs"},
+    {"id": 6, "name": "Поля (мм)", "description": "Левое 30 мм, правое 10-15 мм, верх/низ 20 мм.", "checker": "_check_margins"},
+    {"id": 7, "name": "Акценты", "description": "Только курсив, размер, жирность (кроме заголовков).", "checker": "_check_accents"},
+    {"id": 8, "name": "Нумерация страниц", "description": "Сквозная, вверху справа, шрифт 12 TNR, не на титуле/оглавлении.", "checker": "_check_page_numbers"},
+    {"id": 9, "name": "Выравнивание", "description": "Основной текст — по ширине, автоперенос.", "checker": "_check_paragraphs"},
+    {"id": 10, "name": "Объем работы", "description": "40-90 стр. (без приложений).", "checker": "_check_page_count"},
+    {"id": 11, "name": "Интервалы", "description": "Между заголовками и текстом — 2 одинарных.", "checker": "_check_heading_spacing"},
+    {"id": 12, "name": "Структурные части", "description": "Каждая с новой страницы.", "checker": "_check_section_start"},
+    {"id": 13, "name": "Заголовки структурных элементов", "description": "По центру, ЗАГЛАВНЫМИ, без точки.", "checker": "_check_headings"},
+    {"id": 14, "name": "Глава", "description": "Заканчивается выводами, выравнивание по центру, интервалы.", "checker": "_check_chapter_conclusion"},
+    {"id": 15, "name": "Оформление заголовков (разделы/подразделы)", "description": "Разделы — ЗАГЛАВНЫМИ, по ширине, с отступом; подразделы — с прописной, по ширине, без точки.", "checker": "_check_headings"},
+    {"id": 16, "name": "Оформление заголовков (общие требования)", "description": "Без переносов, без подчеркивания, без разрядки.", "checker": "_check_headings"},
+    {"id": 17, "name": "Оформление приложений", "description": "Отдельный лист 'ПРИЛОЖЕНИЯ', далее 'Приложение А', далее название.", "checker": "_check_appendices"},
+    {"id": 18, "name": "Числительные количественные", "description": "Однозначные — словами, многозначные — цифрами, в начале предложения — словами.", "checker": "_check_numerals"},
+    {"id": 19, "name": "Порядковые числительные", "description": "С падежными окончаниями.", "checker": "_check_ordinals"},
+    {"id": 20, "name": "Фамилии", "description": "В тексте: А.С. Пушкин; в списке: Пушкин А.С.; не отделять инициалы.", "checker": "_check_surnames"},
+    {"id": 21, "name": "Оглавление", "description": "Все разделы, без абзацного отступа.", "checker": "_check_toc"},
+    {"id": 22, "name": "Титульный лист", "description": "Только черной ручкой, дата — индивидуально.", "checker": "_check_title_page"},
+    {"id": 23, "name": "Перечисления", "description": "С абзацного отступа, простые — запятая, сложные — точка с запятой, подуровни смещены.", "checker": "_check_lists"},
+    {"id": 24, "name": "Оформление таблиц", "description": "Название над таблицей, по левому краю, без абзаца, 1,5 интервала до/после, высота строк ≥8 мм.", "checker": "_check_images_and_tables"},
+    {"id": 25, "name": "Оформление иллюстраций", "description": "Название под рисунком, по центру, без абзаца, 1,5 интервала до/после.", "checker": "_check_images_and_tables"},
+    {"id": 26, "name": "Ссылки на иллюстрации, таблицы, формулы", "description": "Обязательны.", "checker": "_check_references"},
+    {"id": 27, "name": "Нумерация таблиц, формул, иллюстраций", "description": "Сквозная или по разделам, в приложениях — отдельная.", "checker": "_check_numbering"},
+    {"id": 28, "name": "Последовательность частей", "description": "Титул, задание, реферат, глоссарий, оглавление, введение, основная, заключение, источники, приложения.", "checker": "_check_document_structure"},
+    {"id": 29, "name": "Список использованных источников", "description": "≥35 (пед), ≥20 (ИС, МО), алфавит/хронология/тематика, URL, дата обращения.", "checker": "_check_bibliography"},
+    {"id": 30, "name": "Библиографические ссылки", "description": "[5], [1, с. 28] и т.д.", "checker": "_check_bibliography_references"},
+]
+
 class NormControlChecker:
     """
     Класс для проверки документа на соответствие требованиям нормоконтроля
@@ -88,20 +122,25 @@ class NormControlChecker:
         Returns:
             dict: Результаты проверки с выявленными несоответствиями
         """
-        results = {
-            'font_issues': self._check_font(document_data),
-            'margins_issues': self._check_margins(document_data),
-            'line_spacing_issues': self._check_line_spacing(document_data),
-            'paragraphs_issues': self._check_paragraphs(document_data),
-            'headings_issues': self._check_headings(document_data),
-            'bibliography_issues': self._check_bibliography(document_data),
-            'images_and_tables_issues': self._check_images_and_tables(document_data),
-            'page_numbers_issues': self._check_page_numbers(document_data),
-            'lists_issues': self._check_lists(document_data),
-            'references_issues': self._check_references(document_data),
-            'structure_issues': self._check_document_structure(document_data),  # Добавлена проверка структуры
-            'title_page_issues': self._check_title_page(document_data),  # Новая проверка титульного листа
-        }
+        results = []
+        for rule in NORM_RULES:
+            check_func = getattr(self, rule["checker"], None)
+            if check_func is not None:
+                result = check_func(document_data)
+            else:
+                result = [{
+                    'type': 'not_implemented',
+                    'severity': 'info',
+                    'location': 'Документ',
+                    'description': f'Проверка для нормы "{rule["name"]}" ещё не реализована.',
+                    'auto_fixable': False
+                }]
+            results.append({
+                "rule_id": rule["id"],
+                "rule_name": rule["name"],
+                "description": rule["description"],
+                "issues": result
+            })
         
         # Считаем общее количество проблем
         all_issues = []
@@ -1071,3 +1110,44 @@ class NormControlChecker:
                 'auto_fixable': False
             })
         return issues 
+
+    # ==== Заглушки для новых норм ====
+    def _check_topic_title(self, document_data):
+        # TODO: Реализовать проверку темы работы по утвержденному списку/приказу
+        return []
+    def _check_accents(self, document_data):
+        # TODO: Проверка акцентов (курсив, жирность, размер)
+        return []
+    def _check_page_count(self, document_data):
+        # TODO: Проверка объема работы (количество страниц)
+        return []
+    def _check_heading_spacing(self, document_data):
+        # TODO: Проверка интервалов между заголовками и текстом
+        return []
+    def _check_section_start(self, document_data):
+        # TODO: Проверка начала каждой главы/раздела с новой страницы
+        return []
+    def _check_chapter_conclusion(self, document_data):
+        # TODO: Проверка наличия выводов в конце главы
+        return []
+    def _check_appendices(self, document_data):
+        # TODO: Проверка оформления приложений
+        return []
+    def _check_numerals(self, document_data):
+        # TODO: Проверка количественных числительных
+        return []
+    def _check_ordinals(self, document_data):
+        # TODO: Проверка порядковых числительных
+        return []
+    def _check_surnames(self, document_data):
+        # TODO: Проверка оформления фамилий и инициалов
+        return []
+    def _check_toc(self, document_data):
+        # TODO: Проверка оформления оглавления
+        return []
+    def _check_numbering(self, document_data):
+        # TODO: Проверка нумерации таблиц, формул, иллюстраций
+        return []
+    def _check_bibliography_references(self, document_data):
+        # TODO: Проверка оформления библиографических ссылок в тексте
+        return [] 
