@@ -1,0 +1,41 @@
+{
+    "disk_space": {
+        "enabled": true,
+        "warning_threshold": 80,
+        "critical_threshold": 90,
+        "check_interval": 3600
+    },
+    "error_rate": {
+        "enabled": true,
+        "threshold": 10,
+        "window": 3600
+    },
+    "system_load": {
+        "enabled": false,
+        "threshold": 80,
+        "check_interval": 300
+    },
+    "memory_usage": {
+        "enabled": true,
+        "warning_threshold": 80,
+        "critical_threshold": 90,
+        "check_interval": 1800
+    },
+    "notifications": {
+        "email": {
+            "enabled": false,
+            "recipients": [],
+            "smtp_server": "",
+            "smtp_port": 587,
+            "smtp_user": "",
+            "smtp_password": "",
+            "sender": "noreply@example.com"
+        },
+        "web": {
+            "enabled": true,
+            "max_notifications": 50
+        }
+    },
+    "last_updated": null,
+    "notifications_history": []
+}
