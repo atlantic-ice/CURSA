@@ -1,12 +1,16 @@
 import os
-import docx
-from docx.shared import Pt, Cm, RGBColor
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT, WD_LINE_SPACING
-from docx.oxml.shared import OxmlElement, qn
-from docx.oxml.ns import qn
-from docx.oxml import parse_xml
 import re
 import datetime
+import tempfile
+from docx import Document
+from docx.shared import Pt, Cm, RGBColor
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT, WD_LINE_SPACING
+from docx.enum.section import WD_SECTION
+from docx.oxml import OxmlElement, parse_xml
+from docx.oxml.ns import qn
+import shutil
+from docxtpl import DocxTemplate
+from docxcompose.composer import Composer
 
 class DocumentCorrector:
     """
@@ -41,6 +45,26 @@ class DocumentCorrector:
                 }
             }
         }
+        self.errors = []
+        self.temp_files = []
+    
+    def __del__(self):
+        """
+        Деструктор для очистки временных файлов
+        """
+        for temp_file in self.temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+                    print(f"Удален временный файл: {temp_file}")
+                    
+                # Проверяем, пуста ли директория, и если да, удаляем её
+                temp_dir = os.path.dirname(temp_file)
+                if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                    os.rmdir(temp_dir)
+                    print(f"Удалена пустая временная директория: {temp_dir}")
+            except Exception as e:
+                print(f"Ошибка при удалении временного файла {temp_file}: {str(e)}")
     
     def correct_document(self, file_path, errors=None, out_path=None):
         """
@@ -54,30 +78,60 @@ class DocumentCorrector:
         Returns:
             str: Путь к исправленному файлу
         """
-        # Загружаем документ
-        document = docx.Document(file_path)
+        self.errors = errors
         
-        # Определяем путь для сохранения исправленного файла
-        if out_path is None:
-            # Создаем путь для сохранения исправленного файла
-            base_name, ext = os.path.splitext(file_path)
-            corrected_file_path = f"{base_name}_corrected{ext}"
-        else:
-            corrected_file_path = out_path
+        # Проверяем существование файла
+        if not os.path.exists(file_path):
+            # Пробуем добавить расширение .docx если его нет
+            if not file_path.lower().endswith('.docx'):
+                corrected_path = file_path + '.docx'
+                if os.path.exists(corrected_path):
+                    file_path = corrected_path
+                else:
+                    raise FileNotFoundError(f"Файл не найден: {file_path}")
+            else:
+                raise FileNotFoundError(f"Файл не найден: {file_path}")
         
-        # Если список ошибок не предоставлен, исправляем все, что можем
-        if errors is None:
-            self._correct_all(document)
-        else:
-            # Исправляем только указанные ошибки
-            self._correct_specific_errors(document, errors)
-        
-        # Создаем директорию для файла, если её нет
-        os.makedirs(os.path.dirname(os.path.abspath(corrected_file_path)), exist_ok=True)
-        
-        # Сохраняем исправленный документ
-        document.save(corrected_file_path)
-        return corrected_file_path
+        try:
+            # Загружаем документ
+            document = Document(file_path)
+            
+            # Если указан путь для сохранения
+            if out_path:
+                # Проверяем, что путь имеет правильное расширение
+                if not out_path.lower().endswith('.docx'):
+                    out_path = out_path + '.docx'
+                
+                # Создаем директорию, если ее нет
+                out_dir = os.path.dirname(out_path)
+                if out_dir and not os.path.exists(out_dir):
+                    os.makedirs(out_dir, exist_ok=True)
+            else:
+                # Если путь не указан, создаем временный файл
+                temp_dir = tempfile.mkdtemp()
+                file_name = os.path.basename(file_path)
+                
+                # Убедимся, что имя имеет расширение .docx
+                if not file_name.lower().endswith('.docx'):
+                    file_name = os.path.splitext(file_name)[0] + '.docx'
+                
+                out_path = os.path.join(temp_dir, f"corrected_{file_name}")
+                self.temp_files.append(out_path)
+            
+            # Если список ошибок не предоставлен, исправляем все, что можем
+            if errors is None:
+                self._correct_all(document)
+            else:
+                # Исправляем только указанные ошибки
+                self._correct_specific_errors(document, errors)
+            
+            # Сохраняем исправленный документ
+            document.save(out_path)
+            return out_path
+            
+        except Exception as e:
+            print(f"Ошибка при исправлении документа: {str(e)}")
+            raise
     
     def _correct_all(self, document):
         """
@@ -179,20 +233,39 @@ class DocumentCorrector:
             
             # Применяем соответствующий стиль шрифта
             for run in paragraph.runs:
-                # Заголовки обрабатываем отдельно в _correct_headings
-                if not is_heading:
-                    run.font.name = self.standard_rules['font']['name']
+                # Устанавливаем базовый шрифт для всех элементов
+                run.font.name = self.standard_rules['font']['name']
+                
+                if is_heading and heading_level == 1:
+                    # Для заголовков 1 уровня
+                    run.font.size = Pt(self.standard_rules['headings']['h1']['font_size'])
+                    run.font.bold = self.standard_rules['headings']['h1']['bold']
+                elif is_heading and heading_level == 2:
+                    # Для заголовков 2 уровня
+                    run.font.size = Pt(self.standard_rules['headings']['h2']['font_size'])
+                    run.font.bold = self.standard_rules['headings']['h2']['bold']
+                else:
+                    # Для обычного текста
                     run.font.size = Pt(self.standard_rules['font']['size'])
     
     def _correct_margins(self, document):
         """
         Исправляет поля страницы
         """
+        # Устанавливаем правильные поля для всех секций документа
         for section in document.sections:
+            # Устанавливаем значения полей в сантиметрах
             section.top_margin = Cm(self.standard_rules['margins']['top'])
             section.bottom_margin = Cm(self.standard_rules['margins']['bottom'])
             section.left_margin = Cm(self.standard_rules['margins']['left'])
             section.right_margin = Cm(self.standard_rules['margins']['right'])
+            
+            # Устанавливаем стандартную ориентацию страницы
+            section.orientation = 0  # 0 - портретная ориентация
+            
+            # Устанавливаем размер страницы A4
+            section.page_width = Cm(21.0)
+            section.page_height = Cm(29.7)
     
     def _correct_line_spacing(self, document):
         """
@@ -202,9 +275,14 @@ class DocumentCorrector:
             # Пропускаем пустые параграфы и заголовки
             if not paragraph.text.strip() or paragraph.style.name.startswith('Heading'):
                 continue
-                
+            
+            # Устанавливаем полуторный интервал (1.5)
             paragraph.paragraph_format.line_spacing = self.standard_rules['line_spacing']
             paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+            
+            # Дополнительно устанавливаем правильный интервал перед и после абзаца
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
     
     def _correct_first_line_indent(self, document):
         """
@@ -333,68 +411,77 @@ class DocumentCorrector:
     
     def _correct_page_numbers(self, document):
         """
-        Исправляет нумерацию страниц (добавляет нумерацию в нижний колонтитул)
+        Исправляет нумерацию страниц (добавляет нумерацию в верхний колонтитул справа)
         """
         # Для каждой секции документа
         for section in document.sections:
-            # Получаем доступ к нижнему колонтитулу
-            footer = section.footer
+            # Отключаем связь с предыдущим колонтитулом
+            section.header.is_linked_to_previous = False
             
-            # Очищаем содержимое нижнего колонтитула, удаляя все параграфы кроме первого
-            # (удаляем все существующие параграфы)
-            for i in range(len(footer.paragraphs) - 1, 0, -1):
-                p = footer.paragraphs[i]
-                p._element.getparent().remove(p._element)
+            # Получаем доступ к верхнему колонтитулу
+            header = section.header
             
-            # Если у нас есть хотя бы один параграф, используем его
-            # В противном случае создаем новый
-            if footer.paragraphs:
-                footer_paragraph = footer.paragraphs[0]
-                # Очищаем текст параграфа
-                for run in footer_paragraph.runs:
-                    run._element.getparent().remove(run._element)
-            else:
-                footer_paragraph = footer.add_paragraph()
-                
+            # Очищаем содержимое верхнего колонтитула
+            for paragraph in header.paragraphs:
+                p = paragraph._element
+                p.getparent().remove(p)
+            
+            # Создаем новый параграф для номера страницы
+            header_paragraph = header.add_paragraph()
+            
             # Настраиваем форматирование параграфа
-            footer_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            footer_paragraph.paragraph_format.space_before = Pt(0)
-            footer_paragraph.paragraph_format.space_after = Pt(0)
+            header_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT  # Выравнивание справа
+            header_paragraph.paragraph_format.space_before = Pt(0)
+            header_paragraph.paragraph_format.space_after = Pt(0)
+            header_paragraph.paragraph_format.line_spacing = 1.0
             
             # Добавляем номер страницы через поле
-            run = footer_paragraph.add_run()
+            run = header_paragraph.add_run()
             self._add_page_number(run)
             
             # Устанавливаем шрифт для номера страницы
-            run.font.name = self.standard_rules['font']['name']
-            run.font.size = Pt(12)
+            run.font.name = self.standard_rules['font']['name']  # Times New Roman
+            run.font.size = Pt(12)  # 12pt
+            run.font.bold = False
+            
+            # Добавляем пустой run после номера страницы для корректного отображения
+            header_paragraph.add_run()
         
-        # Устанавливаем титульный лист без номера (первая страница)
-        self._suppress_first_page_number(document)
+        # Отключаем нумерацию на первых страницах
+        self._suppress_initial_page_numbers(document)
     
     def _add_page_number(self, run):
         """
         Добавляет номер страницы через поле
         """
-        # Создаем элементы для номера страницы с правильным пространством имен
+        # Создаем элементы для номера страницы
         fldChar1 = OxmlElement('w:fldChar')
         fldChar1.set(qn('w:fldCharType'), 'begin')
-        
+
         instrText = OxmlElement('w:instrText')
         instrText.set(qn('xml:space'), 'preserve')
-        instrText.text = "PAGE"
-        
+        instrText.text = " PAGE \\* MERGEFORMAT "  # Добавляем MERGEFORMAT для лучшей совместимости
+
         fldChar2 = OxmlElement('w:fldChar')
-        fldChar2.set(qn('w:fldCharType'), 'end')
-        
+        fldChar2.set(qn('w:fldCharType'), 'separate')
+
+        fldChar3 = OxmlElement('w:t')
+        fldChar3.text = "1"  # Placeholder для номера страницы
+
+        fldChar4 = OxmlElement('w:fldChar')
+        fldChar4.set(qn('w:fldCharType'), 'end')
+
         # Добавляем созданные элементы в параграф
         run._element.append(fldChar1)
         run._element.append(instrText)
         run._element.append(fldChar2)
+        run._element.append(fldChar3)
+        run._element.append(fldChar4)
     
-    def _suppress_first_page_number(self, document):
+    def _suppress_initial_page_numbers(self, document):
         """
-        Убирает номер страницы с первой страницы (титульный лист)
+        Отключает нумерацию на начальных страницах (титульный лист, задание, реферат, оглавление)
+        и устанавливает начало нумерации с нужной страницы
         """
         try:
             if document.sections:
@@ -408,12 +495,21 @@ class DocumentCorrector:
                 
                 # Проверяем, существует ли уже элемент
                 if section_props.find(qn('w:titlePg')) is None:
-                    # Определяем правильную позицию для вставки
-                    # Обычно titlePg следует за элементами type, pgSz, pgMar
                     section_props.append(title_pg)
-                    
+                
+                # Устанавливаем начальный номер страницы (3 или 4, в зависимости от оглавления)
+                # Находим элемент pgNumType или создаем новый
+                pg_num_type = section_props.find(qn('w:pgNumType'))
+                if pg_num_type is None:
+                    pg_num_type = OxmlElement('w:pgNumType')
+                    section_props.append(pg_num_type)
+                
+                # Устанавливаем начальный номер страницы как 3
+                # (можно будет вручную изменить на 4, если оглавление занимает две страницы)
+                pg_num_type.set(qn('w:start'), '3')
+                
         except Exception as e:
-            print(f"Предупреждение: Не удалось отключить номер страницы на первой странице: {str(e)}")
+            print(f"Предупреждение: Не удалось настроить нумерацию начальных страниц: {str(e)}")
             # Продолжаем выполнение даже при ошибке, т.к. это некритичная функция
     
     def _correct_lists(self, document):
@@ -452,22 +548,14 @@ class DocumentCorrector:
     
     def _correct_title_page(self, document):
         """
-        Исправляет титульный лист: порядок блоков, регистр, интервалы, шрифт, размер, выравнивание, отсутствие абзацного отступа
+        Исправляет титульный лист: заменяет неправильный титульный лист на шаблонный
+        или вставляет шаблонный титульный лист, если он отсутствует
         """
-        TITLE_PAGE_TEMPLATE = [
-            {'type': 'university', 'keywords': ['федеральное государственное', 'университет'], 'case': 'upper', 'min_lines_after': 1},
-            {'type': 'faculty', 'keywords': ['факультет'], 'case': 'upper', 'min_lines_after': 0},
-            {'type': 'department', 'keywords': ['кафедра'], 'case': 'upper', 'min_lines_after': 2},
-            {'type': 'work_type', 'keywords': ['курсовая работа', 'отчет', 'дисциплина'], 'case': 'upper', 'min_lines_after': 1},
-            {'type': 'topic', 'keywords': ['тема'], 'case': 'title', 'min_lines_after': 2},
-            {'type': 'student', 'keywords': ['студент'], 'case': 'title', 'min_lines_after': 0},
-            {'type': 'supervisor', 'keywords': ['руководитель'], 'case': 'title', 'min_lines_after': 2},
-            {'type': 'city', 'keywords': ['город'], 'case': 'title', 'min_lines_after': 0},
-            {'type': 'year', 'keywords': ['год'], 'case': 'title', 'min_lines_after': 0},
-        ]
-        current_year = str(datetime.datetime.now().year)
-        # Собираем все параграфы титульного листа (до первого Heading 1 или до "СОДЕРЖАНИЕ"/"ВВЕДЕНИЕ")
+        # Проверяем наличие титульного листа
+        title_page_exists = False
         title_page_paragraphs = []
+        
+        # Собираем все параграфы титульного листа (до первого Heading 1 или до "СОДЕРЖАНИЕ"/"ВВЕДЕНИЕ")
         for i, para in enumerate(document.paragraphs):
             text = para.text.strip().lower()
             if para.style.name.startswith('Heading') and para.style.name == 'Heading 1':
@@ -475,70 +563,82 @@ class DocumentCorrector:
             if any(word in text for word in ['содержание', 'введение']):
                 break
             title_page_paragraphs.append((i, para))
-        # Сопоставляем блоки шаблона с найденными параграфами
-        used = set()
-        new_title_page = []
-        for block in TITLE_PAGE_TEMPLATE:
-            found = False
-            for idx, (i, para) in enumerate(title_page_paragraphs):
-                if idx in used:
-                    continue
-                text = para.text.strip().lower()
-                if any(kw in text for kw in block['keywords']):
-                    # Исправляем регистр
-                    if block['case'] == 'upper':
-                        para.text = para.text.upper()
-                    elif block['case'] == 'title':
-                        para.text = para.text.capitalize()
-                    # Исправляем шрифт и размер
-                    for run in para.runs:
-                        run.font.name = self.standard_rules['font']['name']
-                        run.font.size = Pt(self.standard_rules['font']['size'])
-                    # Исправляем выравнивание
-                    para.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                    # Убираем абзацный отступ
-                    para.paragraph_format.first_line_indent = Cm(0)
-                    new_title_page.append((i, para))
-                    used.add(idx)
-                    found = True
-                    break
-            if not found:
-                # Интеллектуальные заглушки
-                if block['type'] == 'topic':
-                    dummy_text = 'ТЕМА: [указать тему]'
-                elif block['type'] == 'student':
-                    dummy_text = 'Студент: [ФИО]'
-                elif block['type'] == 'supervisor':
-                    dummy_text = 'Руководитель: [ФИО]'
-                elif block['type'] == 'city':
-                    dummy_text = 'Город: [указать город]'
-                elif block['type'] == 'year':
-                    dummy_text = current_year
-                else:
-                    dummy_text = block['keywords'][0].upper() if block['case'] == 'upper' else block['keywords'][0].capitalize()
-                para = document.add_paragraph(dummy_text)
-                para.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                para.paragraph_format.first_line_indent = Cm(0)
-                for run in para.runs:
-                    run.font.name = self.standard_rules['font']['name']
-                    run.font.size = Pt(self.standard_rules['font']['size'])
-                new_title_page.append((None, para))
-        # Удаляем старые параграфы титульного листа
-        for i, para in reversed(title_page_paragraphs):
-            p = para._element
-            p.getparent().remove(p)
-        # Вставляем новые параграфы титульного листа в начало документа
-        body = document._element.body
-        insert_pos = 0
-        for _, para in new_title_page:
-            body.insert(insert_pos, para._element)
-            insert_pos += 1
-        # Добавляем интервалы (пустые строки) после блоков, если требуется
-        for idx, block in enumerate(TITLE_PAGE_TEMPLATE):
-            min_lines = block['min_lines_after']
-            if min_lines > 0:
-                for _ in range(min_lines):
-                    para = document.add_paragraph("")
-                    para.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                    para.paragraph_format.first_line_indent = Cm(0)
-                    body.insert(idx + 1, para._element) 
+        
+        # Определяем, содержит ли документ титульный лист
+        title_keywords = [
+            'университет', 'кафедра', 'факультет', 'курсовая', 'работа', 'студент', 'руководитель'
+        ]
+        
+        # Проверяем, содержит ли титульный лист ключевые слова
+        if len(title_page_paragraphs) > 3:  # Минимальное количество строк для титульного листа
+            title_text = ' '.join([para[1].text.lower() for para in title_page_paragraphs])
+            if any(keyword in title_text for keyword in title_keywords):
+                title_page_exists = True
+        
+        # Путь к шаблону титульного листа
+        template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates', 'Титульный лист.docx')
+        
+        if not os.path.exists(template_path):
+            print(f"Предупреждение: Шаблон титульного листа не найден по пути {template_path}")
+            return
+
+        if title_page_exists:
+            # Если титульный лист существует, но неправильно оформлен - заменяем его
+            # Удаляем старые параграфы титульного листа
+            for i, para in reversed(title_page_paragraphs):
+                p = para._element
+                p.getparent().remove(p)
+                
+            # Вставляем новый титульный лист из шаблона
+            self._insert_title_page_from_template(document, template_path)
+        else:
+            # Если титульного листа нет - просто вставляем шаблон
+            self._insert_title_page_from_template(document, template_path)
+
+    def _insert_title_page_from_template(self, document, template_path):
+        """
+        Вставляет титульный лист из шаблона в начало документа
+        """
+        try:
+            # Создаем временный файл для сохранения текущего документа
+            temp_doc_fd, temp_doc_path = tempfile.mkstemp(suffix='.docx')
+            os.close(temp_doc_fd)
+            document.save(temp_doc_path)
+            self.temp_files.append(temp_doc_path)
+            
+            # Создаем новый документ на основе шаблона титульного листа
+            title_doc = Document(template_path)
+            
+            # Сохраняем шаблон во временный файл
+            temp_title_fd, temp_title_path = tempfile.mkstemp(suffix='.docx')
+            os.close(temp_title_fd)
+            title_doc.save(temp_title_path)
+            self.temp_files.append(temp_title_path)
+            
+            # Используем Composer для объединения документов
+            composer = Composer(title_doc)
+            doc_to_merge = Document(temp_doc_path)
+            composer.append(doc_to_merge)
+            
+            # Сохраняем результат во временный файл
+            temp_result_fd, temp_result_path = tempfile.mkstemp(suffix='.docx')
+            os.close(temp_result_fd)
+            composer.save(temp_result_path)
+            self.temp_files.append(temp_result_path)
+            
+            # Загружаем результат обратно в исходный документ
+            result_doc = Document(temp_result_path)
+            
+            # Очищаем исходный документ
+            for element in list(document._element.body):
+                document._element.body.remove(element)
+            
+            # Копируем все элементы из результата в исходный документ
+            for element in list(result_doc._element.body):
+                document._element.body.append(element)
+                
+            print("Титульный лист успешно вставлен")
+            
+        except Exception as e:
+            print(f"Ошибка при вставке титульного листа: {str(e)}")
+            # Продолжаем выполнение даже при ошибке, т.к. титульный лист не критичен 

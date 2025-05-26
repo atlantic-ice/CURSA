@@ -3,7 +3,6 @@ import {
   Box,
   Paper,
   Typography,
-  Divider,
   Grid,
   useTheme
 } from '@mui/material';
@@ -22,6 +21,8 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
  * @param {JSX.Element} [props.incorrectImage] - Изображение неправильного примера (необязательно)
  * @param {string} [props.correctExplanation] - Пояснение к правильному примеру (необязательно)
  * @param {string} [props.incorrectExplanation] - Пояснение к неправильному примеру (необязательно)
+ * @param {Object} [props.incorrectFormatting] - Форматирование для неправильного примера (шрифт, размер, выравнивание)
+ * @param {Object} [props.correctFormatting] - Форматирование для правильного примера (шрифт, размер, выравнивание)
  * @param {Object} [props.sx] - Дополнительные стили компонента
  */
 const GuidelineExample = ({
@@ -33,9 +34,30 @@ const GuidelineExample = ({
   incorrectImage,
   correctExplanation,
   incorrectExplanation,
+  incorrectFormatting = {},
+  correctFormatting = {},
   sx = {}
 }) => {
   const theme = useTheme();
+  
+  // Форматирование по умолчанию
+  const defaultIncorrectFormatting = {
+    fontFamily: "'Arial', sans-serif",
+    fontSize: '12pt',
+    textAlign: 'left',
+    lineHeight: 1.0
+  };
+  
+  const defaultCorrectFormatting = {
+    fontFamily: "'Times New Roman', serif",
+    fontSize: '14pt',
+    textAlign: 'justify',
+    lineHeight: 1.5
+  };
+  
+  // Применяем пользовательское форматирование, если оно задано
+  const appliedIncorrectFormatting = { ...defaultIncorrectFormatting, ...incorrectFormatting };
+  const appliedCorrectFormatting = { ...defaultCorrectFormatting, ...correctFormatting };
   
   return (
     <Paper 
@@ -100,11 +122,10 @@ const GuidelineExample = ({
                 bgcolor: 'background.paper',
                 border: '1px solid',
                 borderColor: theme.palette.mode === 'light' ? 'rgba(244, 67, 54, 0.3)' : 'rgba(244, 67, 54, 0.5)',
-                fontFamily: 'monospace',
-                fontSize: '0.875rem',
                 mb: incorrectExplanation ? 2 : 0,
                 overflow: 'auto',
-                maxHeight: 200
+                maxHeight: 200,
+                ...appliedIncorrectFormatting
               }}
             >
               {incorrectExample}
@@ -153,11 +174,10 @@ const GuidelineExample = ({
                 bgcolor: 'background.paper', 
                 border: '1px solid',
                 borderColor: theme.palette.mode === 'light' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.5)',
-                fontFamily: 'monospace',
-                fontSize: '0.875rem',
                 mb: correctExplanation ? 2 : 0,
                 overflow: 'auto',
-                maxHeight: 200
+                maxHeight: 200,
+                ...appliedCorrectFormatting
               }}
             >
               {correctExample}

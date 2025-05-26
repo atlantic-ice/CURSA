@@ -6,6 +6,8 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fontsource/inter": "^5.2.5",
+    "@fontsource/montserrat": "^5.2.5",
+    "@fontsource/roboto": "^5.2.5",
     "@fontsource/wix-madefor-display": "^5.2.5",
     "@mui/icons-material": "^7.1.0",
     "@mui/material": "^7.1.0",
@@ -19,7 +21,7 @@
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
     "react-router-dom": "^7.6.0",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

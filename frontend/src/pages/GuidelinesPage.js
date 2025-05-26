@@ -108,28 +108,31 @@ const GuidelinesPage = () => {
             transition={{ duration: 0.8 }}
           >
             <Typography
-              variant="h3"
+              variant="h4"
               component="h1"
+              align="center"
               sx={{
                 mb: 2,
-                fontWeight: 900,
+                fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 1.5,
                 letterSpacing: 1.5,
-                fontSize: { xs: 32, md: 44 },
-                background: theme.palette.mode === 'dark'
-                  ? 'linear-gradient(90deg,#6366f1,#2563eb 60%,#6366f1)'
-                  : 'linear-gradient(90deg,#2563eb,#60a5fa 60%,#6366f1)',
+                fontSize: { xs: 28, md: 38 },
+                background: theme => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%)'
+                  : 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                textShadow: theme.palette.mode === 'dark'
+                backgroundClip: 'text',
+                textFillColor: 'transparent',
+                textShadow: theme => theme.palette.mode === 'dark'
                   ? '0 2px 16px #6366f1cc'
                   : '0 2px 8px #2563eb33',
               }}
             >
-              <MenuBookOutlinedIcon sx={{ fontSize: { xs: 32, md: 48 } }} />
+              <MenuBookOutlinedIcon sx={{ fontSize: { xs: 28, md: 38 } }} />
               Рекомендации по оформлению
             </Typography>
             <Typography

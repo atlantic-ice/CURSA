@@ -1,0 +1,20 @@
+[
+  {
+    "test_id": "tests/integration/test_document_flow.py::TestDocumentIntegrationFlow::test_full_document_flow",
+    "test_name": "test_full_document_flow",
+    "test_type": "integration",
+    "passed": false,
+    "duration": 0.10402430000249296,
+    "failed": true,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/integration/test_document_flow.py::TestDocumentIntegrationFlow::test_document_flow_with_invalid_file",
+    "test_name": "test_document_flow_with_invalid_file",
+    "test_type": "integration",
+    "passed": false,
+    "duration": 0.0013848999806214124,
+    "failed": true,
+    "skipped": false
+  }
+]

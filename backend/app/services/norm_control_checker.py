@@ -1,6 +1,9 @@
+import os
 import re
+import json
 from docx.shared import Pt, Cm
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from collections import defaultdict
 
 # === NORM_RULES: 30 нормоконтрольных правил ===
 NORM_RULES = [
@@ -47,9 +50,8 @@ class NormControlChecker:
         {'type': 'work_type', 'keywords': ['курсовая работа', 'отчет', 'дисциплина'], 'case': 'upper', 'min_lines_after': 1},
         {'type': 'topic', 'keywords': ['тема'], 'case': 'title', 'min_lines_after': 2},
         {'type': 'student', 'keywords': ['студент'], 'case': 'title', 'min_lines_after': 0},
-        {'type': 'supervisor', 'keywords': ['руководитель'], 'case': 'title', 'min_lines_after': 2},
-        {'type': 'city', 'keywords': ['город'], 'case': 'title', 'min_lines_after': 0},
-        {'type': 'year', 'keywords': ['год'], 'case': 'title', 'min_lines_after': 0},
+        {'type': 'supervisor', 'keywords': ['руководитель'], 'case': 'title', 'min_lines_after': 4},
+        {'type': 'city_year', 'keywords': ['город', 'благовещенск'], 'case': 'title', 'min_lines_after': 0},
     ]
     def __init__(self):
         # Стандартные правила для курсовых работ
@@ -144,17 +146,21 @@ class NormControlChecker:
         
         # Считаем общее количество проблем
         all_issues = []
-        for category, issues in results.items():
-            if issues:
-                all_issues.extend(issues)
-                
-        results['total_issues_count'] = len(all_issues)
-        results['issues'] = all_issues
+        for rule_result in results:
+            if 'issues' in rule_result and rule_result['issues']:
+                all_issues.extend(rule_result['issues'])
+        
+        # Преобразуем список результатов в словарь для ответа
+        response = {
+            'rules_results': results,
+            'total_issues_count': len(all_issues),
+            'issues': all_issues
+        }
         
         # Подготовим статистику по категориям и серьезности проблем
-        results['statistics'] = self._calculate_statistics(results)
+        response['statistics'] = self._calculate_statistics(results)
         
-        return results
+        return response
     
     def _check_font(self, document_data):
         """
@@ -711,25 +717,63 @@ class NormControlChecker:
             })
             return issues
             
-        # Проверяем позицию нумерации (должна быть внизу)
-        if page_numbers.get('position') != 'footer':
+        # Проверяем позицию нумерации (должна быть вверху)
+        if page_numbers.get('position') != 'header':
             issues.append({
                 'type': 'page_numbers_position',
                 'severity': 'low',
                 'location': "Документ",
-                'description': "Номера страниц должны располагаться внизу страницы.",
+                'description': "Номера страниц должны располагаться в верхней части листа.",
                 'auto_fixable': True
             })
             
-        # Проверяем выравнивание нумерации (должно быть по центру)
-        if page_numbers.get('alignment') != 'center':
+        # Проверяем выравнивание нумерации (должно быть справа)
+        if page_numbers.get('alignment') != 'right':
             issues.append({
                 'type': 'page_numbers_alignment',
                 'severity': 'low',
                 'location': "Документ",
-                'description': "Номера страниц должны быть выровнены по центру.",
+                'description': "Номера страниц должны быть выровнены по правому краю.",
                 'auto_fixable': True
             })
+
+        # Проверяем начальную страницу нумерации (должна быть 3 или 4)
+        first_page = page_numbers.get('first_numbered_page')
+        if first_page is not None and first_page not in [3, 4]:
+            issues.append({
+                'type': 'page_numbers_start_page',
+                'severity': 'low',
+                'location': "Документ",
+                'description': "Нумерация должна начинаться со страницы ВВЕДЕНИЕ (страница 3 или 4).",
+                'auto_fixable': True
+            })
+
+        # Проверяем шрифт нумерации
+        styles = document_data.get('styles', {})
+        header_style = None
+        for section in document_data.get('page_setup', {}).values():
+            if section.get('header_style'):
+                header_style = styles.get(section.get('header_style'))
+                break
+
+        if header_style and header_style.get('font'):
+            font = header_style.get('font')
+            if font.get('name') != 'Times New Roman':
+                issues.append({
+                    'type': 'page_numbers_font_name',
+                    'severity': 'low',
+                    'location': "Документ",
+                    'description': "Номера страниц должны быть набраны шрифтом Times New Roman.",
+                    'auto_fixable': True
+                })
+            if font.get('size') != 12:
+                issues.append({
+                    'type': 'page_numbers_font_size',
+                    'severity': 'low',
+                    'location': "Документ",
+                    'description': "Размер шрифта номеров страниц должен быть 12 пт.",
+                    'auto_fixable': True
+                })
             
         return issues
 
@@ -945,6 +989,12 @@ class NormControlChecker:
     def _calculate_statistics(self, results):
         """
         Рассчитывает статистику по результатам проверки
+        
+        Args:
+            results: Список результатов проверки по всем правилам
+            
+        Returns:
+            dict: Статистика по проверкам
         """
         statistics = {
             'severity': {
@@ -957,30 +1007,50 @@ class NormControlChecker:
             'issues_by_location': {}
         }
         
-        all_issues = results.get('issues', [])
-        for issue in all_issues:
-            # Подсчет по серьезности
-            severity = issue.get('severity')
-            if severity in statistics['severity']:
-                statistics['severity'][severity] += 1
+        # Собираем все найденные проблемы из списка результатов
+        all_issues = []
+        for rule_result in results:
+            if 'issues' in rule_result and rule_result['issues']:
+                # Подсчитываем статистику по категориям
+                rule_name = rule_result.get('rule_name', 'Прочее')
+                if rule_name not in statistics['categories']:
+                    statistics['categories'][rule_name] = {
+                        'total': 0,
+                        'high': 0,
+                        'medium': 0,
+                        'low': 0,
+                        'fixable': 0
+                    }
                 
-            # Подсчет по категориям
-            category = issue.get('type', '').split('_')[0]
-            if category not in statistics['categories']:
-                statistics['categories'][category] = 0
-            statistics['categories'][category] += 1
-            
-            # Подсчет автоматически исправляемых проблем
-            if issue.get('auto_fixable'):
-                statistics['auto_fixable_count'] += 1
-                
-            # Подсчет по локации
-            location = issue.get('location')
-            if location not in statistics['issues_by_location']:
-                statistics['issues_by_location'][location] = 0
-            statistics['issues_by_location'][location] += 1
-            
-        return statistics 
+                # Обрабатываем каждую проблему в правиле
+                for issue in rule_result['issues']:
+                    all_issues.append(issue)
+                    
+                    # Подсчет по серьезности
+                    severity = issue.get('severity', 'low')
+                    if severity in statistics['severity']:
+                        statistics['severity'][severity] += 1
+                    
+                    # Подсчет по категориям
+                    statistics['categories'][rule_name]['total'] += 1
+                    if severity in statistics['categories'][rule_name]:
+                        statistics['categories'][rule_name][severity] += 1
+                    
+                    # Подсчет исправляемых проблем
+                    if issue.get('auto_fixable', False):
+                        statistics['auto_fixable_count'] += 1
+                        statistics['categories'][rule_name]['fixable'] += 1
+                    
+                    # Подсчет по местоположению
+                    location = issue.get('location', 'Неизвестно')
+                    if location not in statistics['issues_by_location']:
+                        statistics['issues_by_location'][location] = 0
+                    statistics['issues_by_location'][location] += 1
+        
+        # Добавляем общее количество проблем
+        statistics['total_issues'] = len(all_issues)
+        
+        return statistics
 
     def _check_title_page(self, document_data):
         """
@@ -1100,6 +1170,33 @@ class NormControlChecker:
                     'description': "На титульном листе не должно быть абзацного отступа.",
                     'auto_fixable': True
                 })
+        # Проверка формата "город год" в последней строке
+        last_line_found = False
+        for i in range(len(title_page) - 1, -1, -1):
+            text = title_page[i]['text'].strip()
+            if text:
+                # Проверяем, содержит ли последняя непустая строка город и год через пробел
+                city_year_pattern = r'^[А-Я][а-я]+ \d{4}$'
+                if not re.match(city_year_pattern, text):
+                    issues.append({
+                        'type': 'title_page_city_year',
+                        'severity': 'medium',
+                        'location': f"Титульный лист, последняя строка",
+                        'description': "В нижней части титульного листа должен быть указан город и год через пробел (например, 'Благовещенск 2024').",
+                        'auto_fixable': True
+                    })
+                last_line_found = True
+                break
+        
+        if not last_line_found:
+            issues.append({
+                'type': 'title_page_city_year_missing',
+                'severity': 'medium',
+                'location': 'Титульный лист',
+                'description': "В нижней части титульного листа отсутствует строка с городом и годом.",
+                'auto_fixable': True
+            })
+                
         page_numbers = document_data.get('page_numbers', {})
         if page_numbers.get('has_page_numbers'):
             issues.append({

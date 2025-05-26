@@ -43,9 +43,15 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import DownloadIcon from '@mui/icons-material/Download';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import SpellcheckIcon from '@mui/icons-material/Spellcheck';
+import DataObjectIcon from '@mui/icons-material/DataObject';
 import { CheckHistoryContext } from '../App';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import FilePresentIcon from '@mui/icons-material/FilePresent';
 
 const CheckPage = () => {
   const navigate = useNavigate();
@@ -183,795 +189,480 @@ const CheckPage = () => {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '64px 24px',
-      borderWidth: 3,
-      borderRadius: 24,
-      borderStyle: 'dashed',
+      padding: '40px 20px',
+      borderRadius: 12,
+      position: 'relative',
       background: theme => theme.palette.mode === 'dark'
-        ? 'linear-gradient(120deg, #23272f 0%, #1a1d23 100%)'
-        : 'linear-gradient(120deg, #f8fafc 0%, #e3eafc 100%)',
+        ? 'rgba(15, 23, 42, 0.5)'
+        : 'rgba(248, 250, 252, 0.7)',
       color: theme => theme.palette.text.secondary,
       outline: 'none',
-      transition: 'all .35s cubic-bezier(.4,2,.3,1)',
+      transition: 'all 0.25s ease',
       cursor: 'pointer',
-      minHeight: 320,
+      minHeight: 260,
       textAlign: 'center',
-      boxShadow: theme => theme.palette.mode === 'dark'
-        ? '0 6px 32px rgba(37,99,235,0.13)'
-        : '0 6px 32px rgba(37,99,235,0.07)',
-      position: 'relative',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+      border: '2px dashed',
+      borderColor: theme => theme.palette.mode === 'dark'
+        ? 'rgba(71, 85, 105, 0.4)'
+        : 'rgba(203, 213, 225, 0.8)',
+      '&:hover': {
+        borderColor: 'primary.main',
+        backgroundColor: theme => theme.palette.mode === 'dark'
+          ? 'rgba(15, 23, 42, 0.6)'
+          : 'rgba(248, 250, 252, 0.8)',
+      }
     },
     active: {
-      borderColor: theme => theme.palette.primary.main,
-      background: theme => theme.palette.mode === 'dark'
-        ? 'linear-gradient(120deg, #26334d 0%, #1e293b 100%)'
-        : 'linear-gradient(120deg, #e3f2fd 0%, #bbdefb 100%)',
-      boxShadow: theme => theme.palette.mode === 'dark'
-        ? '0 0 0 6px #2563eb44, 0 8px 32px #2563eb55'
-        : '0 0 0 6px #2563eb22, 0 8px 32px #2563eb33',
+      borderColor: 'primary.main',
+      backgroundColor: theme => theme.palette.mode === 'dark'
+        ? 'rgba(15, 23, 42, 0.7)'
+        : 'rgba(239, 246, 255, 0.7)',
+      boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.3)',
     },
     reject: {
-      borderColor: theme => theme.palette.error.main,
-      background: theme => theme.palette.mode === 'dark'
-        ? 'linear-gradient(120deg, #3a2323 0%, #2d1a1a 100%)'
-        : 'linear-gradient(120deg, #ffebee 0%, #ffcdd2 100%)',
-      boxShadow: theme => theme.palette.mode === 'dark'
-        ? '0 0 0 6px #ff174455, 0 8px 32px #ff174466'
-        : '0 0 0 6px #ff174422, 0 8px 32px #ff174433',
+      borderColor: 'error.main',
+      backgroundColor: theme => theme.palette.mode === 'dark'
+        ? 'rgba(30, 41, 59, 0.7)'
+        : 'rgba(254, 242, 242, 0.7)',
+      boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.3)',
     },
-    disabled: {
-      opacity: 0.6,
-      pointerEvents: 'none'
-    }
   };
 
   return (
-    <>
-      <Backdrop
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={loading}
-      >
-        <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress color="inherit" sx={{ mb: 2 }} />
-          <Typography variant="h6" component="div" color="white">
-            Анализируем документ...
-          </Typography>
-          <Typography variant="body2" color="white" sx={{ mt: 1, opacity: 0.8 }}>
-            Это может занять несколько секунд в зависимости от размера документа
-          </Typography>
-        </Box>
-      </Backdrop>
-      
-      {/* WOW-шапка */}
-      <Box sx={{
-        position: 'relative',
-        overflow: 'hidden',
-        bgcolor: theme.palette.mode === 'dark'
-          ? 'linear-gradient(120deg, #23272f 0%, #1a1d23 100%)'
-          : 'linear-gradient(120deg, #f8fafc 0%, #e3eafc 100%)',
-        pt: { xs: 7, md: 10 },
-        pb: { xs: 5, md: 7 },
-        mb: 4,
-        borderRadius: { xs: 0, md: 6 },
-      }}>
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <CloudUploadIcon sx={{ fontSize: { xs: 36, md: 48 }, color: 'primary.main', filter: 'drop-shadow(0 2px 16px #2563eb33)' }} />
-              <Typography
-                variant="h3"
-                component="h1"
-                sx={{
-                  fontWeight: 900,
-                  letterSpacing: 1.5,
-                  fontSize: { xs: 28, md: 40 },
-                  background: theme.palette.mode === 'dark'
-                    ? 'linear-gradient(90deg,#6366f1,#2563eb 60%,#6366f1)'
-                    : 'linear-gradient(90deg,#2563eb,#60a5fa 60%,#6366f1)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: theme.palette.mode === 'dark'
-                    ? '0 2px 16px #6366f1cc'
-                    : '0 2px 8px #2563eb33',
-                }}
-              >
-                Проверка курсовой работы
-              </Typography>
-            </Box>
-            <Typography
-              variant="h6"
-              color="text.secondary"
-              sx={{
-                maxWidth: 700,
-                mx: 'auto',
-                mb: 1,
-                fontWeight: 500,
-                fontSize: { xs: 16, md: 20 },
-                opacity: 0.92,
-              }}
-            >
-              Загрузите файл DOCX для проверки на соответствие требованиям нормоконтроля и получите подробный отчёт с возможностью автоматического исправления ошибок
-            </Typography>
-          </motion.div>
-        </Container>
-      </Box>
-      
-      <Container maxWidth="lg">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+    <Container maxWidth="lg">
+      <Box sx={{ py: 6 }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          align="center" 
+          gutterBottom
+          sx={{ 
+            fontWeight: 800,
+            mb: 1,
+            background: theme => theme.palette.mode === 'dark'
+              ? 'linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%)'
+              : 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            textFillColor: 'transparent',
+          }}
         >
-          <Box sx={{ 
-            mt: 4, 
-            mb: 4, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center',
-            width: '100%'
-          }}>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              width: '100%',
-              mb: 2
-            }}>
-              <Typography 
-                variant="h4" 
-                component="h1" 
-                gutterBottom
-                sx={{ fontWeight: 700, mb: 0 }}
-              >
-                Проверка курсовой работы
-              </Typography>
-              
-              <Tooltip title="Администрирование">
-                <IconButton 
-                  color="primary" 
-                  onClick={() => navigate('/admin')}
-                  sx={{ ml: 'auto' }}
-                >
-                  <SettingsIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            
-            <Typography 
-              variant="subtitle1" 
-              color="text.secondary" 
-              align="center" 
-              sx={{ maxWidth: 700, mb: 5 }}
-            >
-              Загрузите файл DOCX для проверки на соответствие требованиям нормоконтроля 
-              и получите подробный отчет с возможностью автоматического исправления ошибок
-            </Typography>
-            
-            {/* Progress Steps */}
-            <Box sx={{ width: '100%', mb: 5 }}>
-              <Stepper activeStep={activeStep} alternativeLabel sx={{ width: '100%' }}>
-                {steps.map((label) => (
-                  <Step key={label}>
-                    <StepLabel>{label}</StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
-            </Box>
-          </Box>
+          Проверка курсовой работы
+        </Typography>
+        
+        <Typography 
+          variant="body1" 
+          align="center" 
+          color="text.secondary"
+          sx={{ 
+            maxWidth: 700, 
+            mx: 'auto', 
+            mb: 5,
+            fontSize: '1.1rem',
+          }}
+        >
+          Загрузите документ в формате DOCX для проверки на соответствие требованиям оформления. 
+          Система проанализирует структуру, форматирование и стиль документа.
+        </Typography>
 
-          {error && (
-            <Fade in={!!error}>
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  mb: 3, 
-                  boxShadow: '0 2px 10px rgba(244, 67, 54, 0.1)', 
-                  borderRadius: 2,
-                  width: '100%'
-                }}
-              >
-                <AlertTitle>Ошибка</AlertTitle>
-                {error}
-              </Alert>
+        <Stepper 
+          activeStep={activeStep} 
+          alternativeLabel 
+          sx={{ 
+            mb: 5,
+            '& .MuiStepLabel-root .Mui-completed': {
+              color: 'primary.main',
+            },
+            '& .MuiStepLabel-root .Mui-active': {
+              color: 'primary.main',
+            },
+            '& .MuiStepLabel-label.Mui-active.MuiStepLabel-alternativeLabel': {
+              color: 'primary.main',
+              fontWeight: 700,
+            },
+          }}
+        >
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+          {activeStep === 0 && (
+            <Fade in={activeStep === 0} timeout={500}>
+              <Box>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      mb: 3,
+                      backgroundColor: 'transparent'
+                    }}
+                  >
+                    <Box
+                      {...getRootProps()}
+                      sx={{
+                        ...dropzoneStyles.base,
+                        ...(isDragActive ? dropzoneStyles.active : {}),
+                        ...(isDragReject ? dropzoneStyles.reject : {}),
+                        position: 'relative',
+                        transition: 'box-shadow 0.3s, border-color 0.3s, background 0.3s',
+                        borderRadius: 4,
+                        borderImage: isDragActive
+                          ? 'linear-gradient(90deg, #2563eb 0%, #a78bfa 100%) 1'
+                          : undefined,
+                        boxShadow: isDragActive
+                          ? '0 0 24px 4px #2563eb33'
+                          : '0 4px 12px rgba(0,0,0,0.05)',
+                      }}
+                    >
+                      <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
+                      <CloudUploadIcon 
+                        sx={{ 
+                          fontSize: 60, 
+                          color: isDragReject 
+                            ? 'error.main' 
+                            : (isDragActive ? 'primary.main' : 'text.secondary'),
+                          mb: 2,
+                          opacity: 0.8,
+                          zIndex: 1
+                        }} 
+                      />
+                      {isDragActive ? (
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', zIndex: 1 }}>
+                          Отпустите файл здесь...
+                        </Typography>
+                      ) : isDragReject ? (
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main', zIndex: 1 }}>
+                          Только файлы формата DOCX
+                        </Typography>
+                      ) : (
+                        <Box sx={{ zIndex: 1, position: 'relative', width: '100%' }}>
+                          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                            Перетащите файл сюда или нажмите для выбора
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Поддерживается формат DOCX (Microsoft Word)
+                          </Typography>
+                          <Button 
+                            variant="contained"
+                            startIcon={<FileUploadIcon />}
+                            size="large"
+                            onClick={e => {
+                              e.stopPropagation();
+                              if (fileInputRef.current) fileInputRef.current.click();
+                            }}
+                            sx={{ 
+                              borderRadius: 28,
+                              px: 4,
+                              py: 1.5,
+                              fontWeight: 700,
+                              fontSize: 18,
+                              background: 'linear-gradient(90deg, #2563eb 0%, #a78bfa 100%)',
+                              color: '#fff',
+                              boxShadow: '0 6px 20px #2563eb22',
+                              mb: 2,
+                              '&:hover': {
+                                background: 'linear-gradient(90deg, #1e40af 0%, #7c3aed 100%)',
+                                boxShadow: '0 8px 24px #2563eb33',
+                              }
+                            }}
+                          >
+                            Выбрать файл
+                          </Button>
+                          {/* Подсказки и примеры */}
+                          <Box sx={{ mt: 2, mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              Максимальный размер файла: 10 МБ
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              Пример: <span style={{ fontWeight: 600 }}>Курсовая_Иванов.docx</span>
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              <span style={{ color: '#2563eb', fontWeight: 600 }}>Совет:</span> Файл должен быть в формате DOCX, созданном в Microsoft Word или совместимых редакторах.
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
+
+                  {error && (
+                    <Alert 
+                      severity="error" 
+                      sx={{ 
+                        mb: 3,
+                        borderRadius: 1,
+                        boxShadow: theme => theme.palette.mode === 'dark'
+                          ? '0 4px 16px rgba(239, 68, 68, 0.2)'
+                          : '0 4px 16px rgba(239, 68, 68, 0.1)',
+                      }}
+                    >
+                      <AlertTitle>Ошибка</AlertTitle>
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ textAlign: 'center', mt: 4 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Недавние проверки
+                    </Typography>
+                    
+                    <Grid container spacing={2} justifyContent="center">
+                      {history.slice(0, 3).map((item, index) => (
+                        <Grid item xs={12} sm={4} key={index}>
+                          <Card 
+                            variant="outlined"
+                            sx={{ 
+                              borderRadius: 1,
+                              transition: 'all 0.2s',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                borderColor: 'primary.main',
+                                transform: 'translateY(-2px)',
+                                boxShadow: theme => theme.palette.mode === 'dark'
+                                  ? '0 4px 12px rgba(37, 99, 235, 0.2)'
+                                  : '0 4px 12px rgba(37, 99, 235, 0.1)',
+                              }
+                            }}
+                            onClick={() => navigate('/report', { state: { reportData: item.reportData, fileName: item.fileName } })}
+                          >
+                            <CardContent>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                <DescriptionIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
+                                <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>
+                                  {item.fileName || 'Документ без имени'}
+                                </Typography>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary">
+                                Проверено: {new Date(item.timestamp).toLocaleDateString()}
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                      {history.length === 0 && (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          Нет недавних проверок
+                        </Typography>
+                      )}
+                    </Grid>
+                    
+                    {history.length > 3 && (
+                      <Button 
+                        variant="text" 
+                        size="small"
+                        onClick={() => navigate('/history')}
+                        endIcon={<ArrowForwardIcon />}
+                        sx={{ mt: 2 }}
+                      >
+                        Смотреть всю историю
+                      </Button>
+                    )}
+                  </Box>
+                </motion.div>
+              </Box>
             </Fade>
           )}
 
-          <Grid container spacing={4} sx={{ width: '100%' }}>
-            <Grid item xs={12} md={8} sx={{ width: '100%' }}>
-              <Paper 
-                elevation={0}
-                sx={{
-                  p: 4,
-                  borderRadius: 3,
-                  width: '100%',
-                  backgroundColor: isDragReject 
-                    ? theme.palette.mode === 'light' 
-                      ? 'rgba(244, 67, 54, 0.03)' 
-                      : 'rgba(244, 67, 54, 0.13)'
-                    : theme.palette.background.paper,
-                  border: isDragReject 
-                    ? `2px dashed ${theme.palette.error.main}`
-                    : isDragActive 
-                      ? `2px dashed ${theme.palette.primary.main}`
-                      : file 
-                        ? `2px solid ${theme.palette.success.main}`
-                        : `2px dashed ${theme.palette.divider}`,
-                  transition: 'all 0.3s ease',
-                  boxShadow: theme.palette.mode === 'dark'
-                    ? '0 2px 10px rgba(0,0,0,0.18)'
-                    : '0 2px 10px rgba(0,0,0,0.05)'
-                }}
-              >
-                {activeStep === 0 ? (
-                  <Paper
+          {activeStep === 1 && (
+            <Fade in={activeStep === 1} timeout={500}>
+              <Box>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Paper 
                     elevation={0}
-                    sx={{
-                      p: 4,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 4,
-                      mb: 4
+                    sx={{ 
+                      p: 4, 
+                      borderRadius: 2,
+                      background: theme => theme.palette.mode === 'dark'
+                        ? 'linear-gradient(145deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 41, 59, 0.7) 100%)'
+                        : 'linear-gradient(145deg, rgba(248, 250, 252, 0.7) 0%, rgba(241, 245, 249, 0.7) 100%)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      boxShadow: theme => theme.palette.mode === 'dark'
+                        ? '0 8px 32px rgba(0, 0, 0, 0.2)'
+                        : '0 8px 32px rgba(0, 0, 0, 0.05)',
                     }}
                   >
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.97 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.6, delay: 0.1 }}
-                      whileHover={{ scale: 1.015, boxShadow: '0 0 0 4px #2563eb33, 0 8px 32px #2563eb22' }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Box
-                        {...getRootProps()}
-                        sx={{
-                          ...dropzoneStyles.base,
-                          ...(isDragActive ? dropzoneStyles.active : {}),
-                          ...(isDragReject ? dropzoneStyles.reject : {}),
-                          ...(loading ? dropzoneStyles.disabled : {}),
-                          position: 'relative',
-                          overflow: 'hidden',
-                          '&:hover .chooseFileBtn': { opacity: 1, transform: 'translateY(0)' },
-                        }}
-                      >
-                        <input {...getInputProps()} ref={fileInputRef} />
-                        {/* Анимированный фон при перетаскивании */}
-                        {isDragActive && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              background: 'linear-gradient(120deg, #e3f2fd 0%, #bbdefb 100%)',
-                              zIndex: 0,
-                              animation: 'pulseGlow 2s infinite',
-                            }}
-                          />
-                        )}
-                        <Box sx={{ position: 'relative', zIndex: 1 }}>
-                          <CloudUploadIcon
-                            sx={{
-                              fontSize: isDragActive ? 110 : 90,
-                              mb: 2,
-                              color: isDragActive ? 'primary.main' : isDragReject ? 'error.main' : 'text.secondary',
-                              animation: isDragActive ? 'bounce 1s infinite' : 'none',
-                              transition: 'all 0.3s cubic-bezier(.4,2,.3,1)',
-                              filter: isDragActive ? 'drop-shadow(0 0 16px #2563eb66)' : 'none',
-                            }}
-                          />
-                          <Typography variant="h5" component="h3" gutterBottom fontWeight={700} sx={{ letterSpacing: 0.5 }}>
-                            {isDragActive
-                              ? 'Отпустите файл для загрузки'
-                              : isDragReject
-                              ? 'Этот формат файла не поддерживается'
-                              : 'Перетащите сюда свою курсовую работу'}
-                          </Typography>
-                          <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto', fontSize: 18, opacity: 0.85 }}>
-                            Только DOCX • до 10 МБ
-                          </Typography>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              flexDirection: { xs: 'column', sm: 'row' },
-                              gap: 2,
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              mt: 2,
-                            }}
-                          >
-                            <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.97 }}>
-                              <Button
-                                variant="contained"
-                                className="chooseFileBtn"
-                                sx={{
-                                  px: 5,
-                                  py: 1.5,
-                                  fontWeight: 600,
-                                  fontSize: 18,
-                                  borderRadius: 3,
-                                  boxShadow: theme => theme.palette.mode === 'dark'
-                                    ? '0 2px 8px #2563eb44'
-                                    : '0 2px 8px #2563eb22',
-                                  background: theme => theme.palette.mode === 'dark'
-                                    ? 'linear-gradient(90deg, #1e293b 0%, #2563eb 100%)'
-                                    : undefined,
-                                  color: theme => theme.palette.mode === 'dark'
-                                    ? theme.palette.primary.contrastText
-                                    : undefined,
-                                  transform: 'translateY(12px)',
-                                  transition: 'all 0.3s',
-                                }}
-                                onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                                disabled={loading}
-                              >
-                                Выбрать файл
-                              </Button>
-                            </motion.div>
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1,
-                                  bgcolor: theme => theme.palette.mode === 'dark'
-                                    ? 'rgba(33,150,243,0.13)'
-                                    : 'rgba(33,150,243,0.07)',
-                                  px: 2.5,
-                                  py: 1,
-                                  borderRadius: 2,
-                                  fontSize: 16,
-                                  color: 'primary.main',
-                                  fontWeight: 500,
-                                  boxShadow: theme => theme.palette.mode === 'dark'
-                                    ? '0 1px 4px #2563eb22'
-                                    : '0 1px 4px #2563eb11',
-                                }}
-                              >
-                                <InsertDriveFileIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                DOCX
-                                <Divider orientation="vertical" flexItem sx={{ mx: 2, borderColor: 'primary.light' }} />
-                                <Typography component="span" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                                  до 10 МБ
-                                </Typography>
-                              </Box>
-                            </motion.div>
-                          </Box>
-                        </Box>
-                      </Box>
-                    </motion.div>
-                    {/* Инструкция по проверке документа */}
-                    {!file && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.25 }}
-                      >
-                        <Box sx={{ mt: 4 }}>
-                          <Typography variant="h6" gutterBottom>
-                            Что будет проверено?
-                          </Typography>
-                          <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                                <TextFormatIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="body2">Шрифты и форматирование</Typography>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                                <BorderStyleIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="body2">Поля и отступы</Typography>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                                <FormatLineSpacingIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="body2">Межстрочный интервал</Typography>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                                <MenuBookIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="body2">Список литературы</Typography>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                                <SettingsIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="body2">Структура документа</Typography>
-                              </Box>
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                                <WarningAmberIcon sx={{ mr: 1, color: 'primary.main' }} />
-                                <Typography variant="body2">И многое другое</Typography>
-                              </Box>
-                            </Grid>
-                          </Grid>
-                        </Box>
-                      </motion.div>
-                    )}
-                  </Paper>
-                ) : (
-                  <Box sx={{ px: 2 }}>
-                    {/* Чек-лист проверки с анимацией */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: 0.18 }}
-                    >
-                      <Box sx={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px 20px',
-                        borderRadius: 2,
-                        backgroundColor: theme.palette.mode === 'light'
-                          ? 'rgba(76, 175, 80, 0.08)'
-                          : 'rgba(76, 175, 80, 0.2)',
+                    <Box sx={{ textAlign: 'center', mb: 3 }}>
+                      <Typography variant="h5" component="h2" sx={{ fontWeight: 700, mb: 1 }}>
+                        Файл готов к проверке
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary">
+                        Нажмите кнопку "Проверить" для анализа документа
+                      </Typography>
+                    </Box>
+
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        p: 3,
+                        mb: 3,
+                        borderRadius: 1,
+                        bgcolor: 'background.paper',
                         border: '1px solid',
-                        borderColor: 'success.light',
-                        mb: 3
-                      }}>
-                        <InsertDriveFileIcon sx={{ color: 'success.main', mr: 2, fontSize: 40 }} />
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600, wordBreak: 'break-all' }}>
-                            {file?.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {fileSize} • DOCX документ
-                          </Typography>
-                        </Box>
-                        <Tooltip title="Удалить файл">
-                          <IconButton onClick={handleReset} size="small" sx={{ ml: 1 }}>
-                            <DeleteOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </motion.div>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                      <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.97 }} style={{ display: 'inline-block' }}>
-                        <Button
-                          variant="outlined"
-                          startIcon={<DeleteOutlineIcon />}
-                          onClick={handleReset}
-                          sx={{ mr: 2 }}
-                        >
-                          Выбрать другой файл
-                        </Button>
-                      </motion.div>
-                      <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.97 }} style={{ display: 'inline-block' }}>
-                        <Button
-                          variant="contained"
-                          startIcon={<FileUploadIcon />}
-                          onClick={handleUpload}
-                          disabled={loading}
-                          size="large"
-                        >
-                          Начать проверку
-                        </Button>
-                      </motion.div>
-                    </Box>
-                    <Divider sx={{ my: 4 }} />
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: 0.22 }}
+                        borderColor: 'divider',
+                      }}
                     >
-                      <Typography variant="h6" component="h3" gutterBottom sx={{ fontWeight: 600 }}>
-                        Что будет проверять система:
-                      </Typography>
-                      <Grid container spacing={2} sx={{ mt: 2 }}>
-                        <Grid item xs={12} sm={6}>
-                          <List dense>
-                            <ListItem>
-                              <ListItemIcon sx={{ minWidth: 36 }}>
-                                <TextFormatIcon color="primary" fontSize="small" />
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary="Шрифт и форматирование текста"
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemIcon sx={{ minWidth: 36 }}>
-                                <BorderStyleIcon color="primary" fontSize="small" />
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary="Поля и отступы документа"
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemIcon sx={{ minWidth: 36 }}>
-                                <FormatLineSpacingIcon color="primary" fontSize="small" />
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary="Межстрочные интервалы"
-                              />
-                            </ListItem>
-                          </List>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <List dense>
-                            <ListItem>
-                              <ListItemIcon sx={{ minWidth: 36 }}>
-                                <DescriptionIcon color="primary" fontSize="small" />
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary="Оформление заголовков и разделов"
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemIcon sx={{ minWidth: 36 }}>
-                                <DescriptionIcon color="primary" fontSize="small" />
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary="Нумерацию страниц и разделов"
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemIcon sx={{ minWidth: 36 }}>
-                                <DescriptionIcon color="primary" fontSize="small" />
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary="Оформление таблиц и рисунков"
-                              />
-                            </ListItem>
-                          </List>
-                        </Grid>
-                      </Grid>
-                    </motion.div>
-                  </Box>
-                )}
-              </Paper>
-            </Grid>
-
-            {/* WOW-анимированная боковая панель */}
-            <Grid item xs={12} md={4}>
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.18 }}
-              >
-                <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%', width: '100%' }}>
-                  <CardContent sx={{ width: '100%' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, width: '100%' }}>
-                      <HelpOutlineIcon sx={{ mr: 1 }} color="action" />
-                      <Typography variant="h6" component="h3" sx={{ fontWeight: 600, flexGrow: 1 }}>
-                        Полезная информация
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" paragraph color="text.secondary">
-                      Система проверит ваш документ на соответствие следующим требованиям:
-                    </Typography>
-                    <List dense sx={{ width: '100%' }}>
-                      <ListItem>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <CheckCircleOutlineIcon color="success" fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary="Times New Roman, 14 пт"
-                          secondary="Основной шрифт документа"
-                          sx={{ width: '100%' }}
-                        />
-                      </ListItem>
-                      <ListItem>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <CheckCircleOutlineIcon color="success" fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary="Интервал 1.5 строки"
-                          secondary="Для всего основного текста"
-                          sx={{ width: '100%' }}
-                        />
-                      </ListItem>
-                      <ListItem>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <CheckCircleOutlineIcon color="success" fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary="Поля: 3-1.5-2-2 см"
-                          secondary="Левое-правое-верхнее-нижнее"
-                          sx={{ width: '100%' }}
-                        />
-                      </ListItem>
-                      <ListItem>
-                        <ListItemIcon sx={{ minWidth: 36 }}>
-                          <CheckCircleOutlineIcon color="success" fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary="Отступ 1.25 см"
-                          secondary="Для первой строки абзаца"
-                          sx={{ width: '100%' }}
-                        />
-                      </ListItem>
-                    </List>
-
-                    <Divider sx={{ my: 2, width: '100%' }} />
-                    
-                    <Box sx={{ mb: 2, width: '100%' }}>
-                      <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                        <WarningAmberIcon fontSize="small" color="warning" sx={{ mr: 1 }} />
-                        Обратите внимание
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Проверьте, что ваш документ не защищен паролем и не содержит макросов, иначе система не сможет его обработать.
-                      </Typography>
+                      <InsertDriveFileIcon 
+                        sx={{ 
+                          fontSize: 48, 
+                          color: 'primary.main',
+                          mr: 2 
+                        }} 
+                      />
+                      <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }} noWrap>
+                          {file?.name || 'document.docx'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {fileSize} • DOCX документ
+                        </Typography>
+                      </Box>
+                      <Tooltip title="Удалить файл">
+                        <IconButton onClick={handleReset} color="inherit" size="small">
+                          <DeleteOutlineIcon />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
 
-                    <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
                       <Button 
                         variant="outlined" 
-                        fullWidth 
-                        href="/guidelines" 
-                        sx={{ mt: 2, width: '100%' }}
-                      >
-                        Подробнее о требованиях
-                      </Button>
-                    </motion.div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </Grid>
-          </Grid>
-
-          {/* История последних проверок */}
-          {history && history.length > 0 && (
-            <Box sx={{ mt: 5, width: '100%' }}>
-              <Typography 
-                variant="h6" 
-                component="h3" 
-                gutterBottom 
-                sx={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  fontWeight: 600,
-                  mb: 3,
-                  width: '100%'
-                }}
-              >
-                <DescriptionIcon sx={{ mr: 1 }} fontSize="small" />
-                Последние проверки
-              </Typography>
-              <Grid container spacing={2} sx={{ width: '100%' }}>
-                {history.slice(0, 3).map((item, idx) => (
-                  <Grid item xs={12} sm={6} md={4} key={item.id} sx={{ width: '100%' }}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: 0.15 + idx * 0.13 }}
-                      whileHover={{ scale: 1.025, boxShadow: '0 0 0 4px #2563eb33, 0 8px 32px #2563eb22', borderColor: '#2563eb' }}
-                      style={{ height: '100%' }}
-                    >
-                      <Card 
-                        elevation={0}
-                        sx={{
-                          border: '2px solid',
-                          borderColor: 'divider',
-                          borderRadius: 3,
-                          width: '100%',
-                          transition: 'box-shadow 0.25s, border-color 0.25s',
-                          '&:hover': {
-                            borderColor: 'primary.main',
-                            boxShadow: '0 0 0 4px #2563eb33, 0 8px 32px #2563eb22',
-                          }
+                        onClick={handleReset}
+                        sx={{ 
+                          px: 3,
+                          borderRadius: 1,
+                          fontWeight: 600,
                         }}
                       >
-                        <CardContent sx={{ pb: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                            <InsertDriveFileIcon 
-                              sx={{ 
-                                color: 'primary.main',
-                                mr: 1.5,
-                                mt: 0.5
-                              }} 
-                            />
-                            <Box>
-                              <Typography 
-                                variant="subtitle2" 
-                                sx={{ 
-                                  fontWeight: 600,
-                                  mb: 0.5,
-                                  wordBreak: 'break-all'
-                                }}
-                              >
-                                {item.fileName}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                                {new Date(item.timestamp).toLocaleString('ru-RU')}
-                              </Typography>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                {item.reportData.check_results && (
-                                  <Chip
-                                    size="small"
-                                    label={`${item.reportData.check_results.total_issues_count || 0} проблем`}
-                                    color={item.reportData.check_results.total_issues_count > 0 ? "warning" : "success"}
-                                    variant="outlined"
-                                  />
-                                )}
-                                {(item.correctedFilePath || item.reportData.corrected_file_path) && (
-                                  <Chip
-                                    size="small"
-                                    icon={<CheckCircleOutlineIcon />}
-                                    label="Исправлен"
-                                    color="success"
-                                    variant="outlined"
-                                  />
-                                )}
-                              </Box>
-                            </Box>
-                          </Box>
-                        </CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1, gap: 1 }}>
-                          {(item.correctedFilePath || item.reportData.corrected_file_path) && (
-                            <motion.div whileTap={{ scale: 0.97 }} whileHover={{ scale: 1.07 }}>
-                              <Button 
-                                size="small"
-                                startIcon={<DownloadIcon />}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  downloadDocument(
-                                    item.correctedFilePath || item.reportData.corrected_file_path, 
-                                    item.fileName
-                                  );
-                                }}
-                                color="success"
-                              >
-                                Скачать
-                              </Button>
-                            </motion.div>
-                          )}
-                          <motion.div whileTap={{ scale: 0.97 }} whileHover={{ scale: 1.07 }}>
-                            <Button 
-                              size="small"
-                              onClick={() => navigate('/report', { 
-                                state: { 
-                                  reportData: item.reportData,
-                                  fileName: item.fileName
-                                }
-                              })}
-                            >
-                              Открыть отчет
-                            </Button>
-                          </motion.div>
-                        </Box>
-                      </Card>
-                    </motion.div>
-                  </Grid>
-                ))}
-              </Grid>
-              {history.length > 3 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                  <Button 
-                    variant="text" 
-                    onClick={() => navigate('/history')}
-                  >
-                    Показать все проверки ({history.length})
-                  </Button>
-                </Box>
-              )}
-            </Box>
+                        Отмена
+                      </Button>
+                      <Button 
+                        variant="contained" 
+                        onClick={handleUpload}
+                        startIcon={<CheckCircleOutlineIcon />}
+                        sx={{ 
+                          px: 4,
+                          py: 1.2,
+                          borderRadius: 1,
+                          fontWeight: 600,
+                          background: theme => theme.palette.mode === 'dark'
+                            ? 'linear-gradient(90deg, #2563eb 0%, #6366f1 100%)'
+                            : undefined,
+                          boxShadow: theme => theme.palette.mode === 'dark'
+                            ? '0 4px 16px rgba(37, 99, 235, 0.3)'
+                            : undefined,
+                        }}
+                      >
+                        Проверить
+                      </Button>
+                    </Box>
+                  </Paper>
+
+                  {error && (
+                    <Alert 
+                      severity="error" 
+                      sx={{ 
+                        mt: 3,
+                        borderRadius: 1,
+                        boxShadow: theme => theme.palette.mode === 'dark'
+                          ? '0 4px 16px rgba(239, 68, 68, 0.2)'
+                          : '0 4px 16px rgba(239, 68, 68, 0.1)',
+                      }}
+                    >
+                      <AlertTitle>Ошибка</AlertTitle>
+                      {error}
+                    </Alert>
+                  )}
+                </motion.div>
+              </Box>
+            </Fade>
           )}
-        </motion.div>
-      </Container>
-      {/* Кастомные keyframes для анимаций */}
-      <style jsx global>{`
-        @keyframes pulseGlow {
-          0% { box-shadow: 0 0 0 0 #2563eb33; }
-          70% { box-shadow: 0 0 32px 16px #2563eb22; }
-          100% { box-shadow: 0 0 0 0 #2563eb33; }
-        }
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-12px); }
-        }
-      `}</style>
-    </>
+
+          {activeStep === 2 && (
+            <Fade in={activeStep === 2} timeout={500}>
+              <Box sx={{ textAlign: 'center' }}>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      p: 5, 
+                      borderRadius: 2,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: theme => theme.palette.mode === 'dark'
+                        ? 'linear-gradient(145deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 41, 59, 0.7) 100%)'
+                        : 'linear-gradient(145deg, rgba(248, 250, 252, 0.7) 0%, rgba(241, 245, 249, 0.7) 100%)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      boxShadow: theme => theme.palette.mode === 'dark'
+                        ? '0 8px 32px rgba(0, 0, 0, 0.2)'
+                        : '0 8px 32px rgba(0, 0, 0, 0.05)',
+                    }}
+                  >
+                    <Box sx={{ mb: 3 }}>
+                      <motion.div
+                        animate={{ 
+                          rotate: 360
+                        }}
+                        transition={{ 
+                          repeat: Infinity,
+                          duration: 2,
+                          ease: "linear" 
+                        }}
+                      >
+                        <CircularProgress size={64} thickness={4} />
+                      </motion.div>
+                    </Box>
+                    <Typography variant="h5" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
+                      Анализ документа
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 500 }}>
+                      Пожалуйста, подождите. Система проверяет форматирование, структуру и стиль вашего документа. 
+                      Это может занять до 30 секунд.
+                    </Typography>
+                  </Paper>
+
+                  <Backdrop
+                    sx={{ 
+                      color: '#fff', 
+                      zIndex: (theme) => theme.zIndex.drawer + 1,
+                      backdropFilter: 'blur(4px)',
+                    }}
+                    open={loading}
+                  >
+                    <CircularProgress color="inherit" />
+                  </Backdrop>
+                </motion.div>
+              </Box>
+            </Fade>
+          )}
+        </Box>
+      </Box>
+    </Container>
   );
 };
 

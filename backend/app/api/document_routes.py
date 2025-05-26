@@ -48,6 +48,11 @@ def upload_document():
         # Создаём временную директорию и сохраняем файл с корректным именем
         temp_dir = tempfile.mkdtemp()
         filename = secure_filename(file.filename)
+        
+        # Убедимся, что имя файла имеет расширение .docx
+        if not filename.lower().endswith('.docx'):
+            filename = os.path.splitext(filename)[0] + '.docx'
+            
         file_path = os.path.join(temp_dir, filename)
         
         # Сохраняем с явным закрытием файла
@@ -116,12 +121,13 @@ def correct_document():
     data = request.json
     current_app.logger.info(f"Получен запрос на исправление документа: {data}")
     
-    if not data or 'file_path' not in data:
+    if not data or ('file_path' not in data and 'path' not in data):
         current_app.logger.error("Необходимо указать путь к файлу")
         return jsonify({'error': 'Необходимо указать путь к файлу'}), 400
     
-    file_path = data['file_path']
-    original_filename = data.get('original_filename', '')
+    # Поддержка как 'file_path', так и 'path' для обратной совместимости
+    file_path = data.get('file_path') or data.get('path')
+    original_filename = data.get('original_filename', '') or data.get('filename', '')
     current_app.logger.info(f"Путь к файлу для исправления: {file_path}")
     current_app.logger.info(f"Оригинальное имя файла: {original_filename}")
     
@@ -129,7 +135,19 @@ def correct_document():
         # Проверяем существование файла
         if not os.path.exists(file_path):
             current_app.logger.error(f"Файл не найден: {file_path}")
-            return jsonify({'error': 'Файл не найден'}), 404
+            
+            # Пробуем добавить расширение .docx, если его нет
+            if not file_path.lower().endswith('.docx'):
+                new_file_path = file_path + '.docx'
+                current_app.logger.info(f"Пробуем путь с расширением .docx: {new_file_path}")
+                
+                if os.path.exists(new_file_path):
+                    file_path = new_file_path
+                    current_app.logger.info(f"Файл найден по скорректированному пути: {file_path}")
+                else:
+                    return jsonify({'error': 'Файл не найден'}), 404
+            else:
+                return jsonify({'error': 'Файл не найден'}), 404
         
         current_app.logger.info(f"Файл существует, размер: {os.path.getsize(file_path)} байт")
         
@@ -172,6 +190,7 @@ def correct_document():
         return jsonify({
             'success': True,
             'corrected_file_path': permanent_filename,  # Возвращаем только имя файла
+            'corrected_path': permanent_filename,  # Для обратной совместимости
             'filename': permanent_filename,
             'original_filename': original_filename,
             'correction_id': correction_id
@@ -256,38 +275,72 @@ def download_corrected_file():
         return jsonify({'error': 'Не указан путь к файлу'}), 400
         
     try:
+        # Обработка пути к файлу
+        full_path = None
+        
         # Если путь выглядит как имя файла (без слэшей), то это, скорее всего, просто название файла
         if '/' not in path and '\\' not in path:
-            current_app.logger.info(f"Скорее всего, это просто имя файла: {path}")
-            filename = path
-            redirect_url = f"/corrections/{filename}"
-            current_app.logger.info(f"Перенаправление на {redirect_url}")
+            current_app.logger.info(f"Получено имя файла без пути: {path}")
             
-            # Перенаправляем на URL для статического файла с правильными заголовками
-            response = redirect(redirect_url)
-            response.headers['Content-Disposition'] = f'attachment; filename="{custom_filename or filename}"'
-            return response
-    
-        # Продолжаем поиск по старому алгоритму, если это полный путь
-        # Сначала пробуем найти файл как есть
-        if os.path.exists(path):
-            full_path = path
-            current_app.logger.info(f"Файл найден по абсолютному пути: {full_path}")
-        else:
-            # Проверяем в директории для исправленных файлов
-            filename = os.path.basename(path)
+            # Убедимся, что файл имеет расширение .docx
+            if not path.lower().endswith('.docx'):
+                filename = path + '.docx'
+            else:
+                filename = path
+                
+            # Проверяем в директории исправленных файлов
             full_path = os.path.join(CORRECTIONS_DIR, filename)
-            current_app.logger.info(f"Пробуем найти файл в директории исправлений: {full_path}")
+            current_app.logger.info(f"Проверяем наличие файла: {full_path}")
             
-            # Если не найден, пробуем полный путь относительно базовой директории
+            # Если файл не найден, но запрос был через относительный URL, перенаправляем на статическую директорию
             if not os.path.exists(full_path):
-                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-                full_path = os.path.join(base_dir, path)
-                current_app.logger.info(f"Пробуем найти файл относительно базовой директории: {full_path}")
+                redirect_url = f"/corrections/{filename}"
+                current_app.logger.info(f"Файл не найден по пути {full_path}, перенаправление на {redirect_url}")
+                
+                # Перенаправляем на URL для статического файла с правильными заголовками
+                response = redirect(redirect_url)
+                response.headers['Content-Disposition'] = f'attachment; filename="{custom_filename or filename}"'
+                return response
+        else:
+            # Сначала пробуем найти файл как есть
+            if os.path.exists(path):
+                full_path = path
+                current_app.logger.info(f"Файл найден по указанному пути: {full_path}")
+            else:
+                # Проверяем с добавлением расширения .docx
+                if not path.lower().endswith('.docx'):
+                    path_with_ext = path + '.docx'
+                    if os.path.exists(path_with_ext):
+                        full_path = path_with_ext
+                        current_app.logger.info(f"Файл найден с добавлением расширения: {full_path}")
+                
+                # Если не найден, проверяем в директории для исправленных файлов
+                if not full_path:
+                    filename = os.path.basename(path)
+                    if not filename.lower().endswith('.docx'):
+                        filename += '.docx'
+                    
+                    check_path = os.path.join(CORRECTIONS_DIR, filename)
+                    if os.path.exists(check_path):
+                        full_path = check_path
+                        current_app.logger.info(f"Файл найден в директории исправлений: {full_path}")
+                
+                # Если все еще не найден, пробуем полный путь относительно базовой директории
+                if not full_path:
+                    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                    check_path = os.path.join(base_dir, path)
+                    if os.path.exists(check_path):
+                        full_path = check_path
+                        current_app.logger.info(f"Файл найден относительно базовой директории: {full_path}")
+                    elif not path.lower().endswith('.docx'):
+                        check_path_with_ext = check_path + '.docx'
+                        if os.path.exists(check_path_with_ext):
+                            full_path = check_path_with_ext
+                            current_app.logger.info(f"Файл найден с расширением относительно базовой директории: {full_path}")
         
         # Если файл найден, отправляем на скачивание
-        if os.path.exists(full_path):
-            current_app.logger.info(f"Файл найден: {full_path}")
+        if full_path and os.path.exists(full_path):
+            current_app.logger.info(f"Файл найден и будет отправлен: {full_path}")
             
             # Проверяем размер файла
             file_size = os.path.getsize(full_path)
@@ -296,6 +349,8 @@ def download_corrected_file():
             # Определяем имя файла для скачивания
             if custom_filename:
                 download_name = secure_filename(custom_filename)
+                if not download_name.lower().endswith('.docx'):
+                    download_name += '.docx'
             else:
                 download_name = os.path.basename(full_path)
             
@@ -308,8 +363,11 @@ def download_corrected_file():
                 mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             )
         else:
-            current_app.logger.error(f"Файл не найден. Проверенные пути: {path}, {full_path}")
-            return jsonify({'error': 'Файл не найден'}), 404
+            current_app.logger.error(f"Файл не найден по всем проверенным путям")
+            return jsonify({
+                'error': 'Файл не найден',
+                'searched_paths': [path, full_path],
+            }), 404
             
     except Exception as e:
         current_app.logger.error(f"Ошибка при скачивании исправленного файла: {type(e).__name__}: {str(e)}")

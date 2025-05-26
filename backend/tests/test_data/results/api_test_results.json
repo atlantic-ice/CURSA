@@ -1,0 +1,38 @@
+[
+  {
+    "test_id": "tests/functional/test_document_api.py::TestDocumentAPI::test_upload_invalid_file",
+    "test_name": "test_upload_invalid_file",
+    "test_type": "api",
+    "passed": true,
+    "duration": 0.025837399996817112,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_document_api.py::TestDocumentAPI::test_document_correction_api",
+    "test_name": "test_document_correction_api",
+    "test_type": "api",
+    "passed": true,
+    "duration": 0.05863400000089314,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_document_api.py::TestDocumentAPI::test_download_corrected_file",
+    "test_name": "test_download_corrected_file",
+    "test_type": "api",
+    "passed": true,
+    "duration": 0.05286070000147447,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_document_api.py::TestDocumentAPI::test_large_document_performance",
+    "test_name": "test_large_document_performance",
+    "test_type": "api",
+    "passed": true,
+    "duration": 0.8541408000019146,
+    "failed": false,
+    "skipped": false
+  }
+]

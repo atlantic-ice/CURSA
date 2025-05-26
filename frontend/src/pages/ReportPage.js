@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Box,
@@ -14,7 +14,6 @@ import {
   Button,
   Alert,
   AlertTitle,
-  CircularProgress,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -22,9 +21,7 @@ import {
   Card,
   CardContent,
   Stack,
-  LinearProgress,
   Fade,
-  Tooltip,
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -35,7 +32,6 @@ import DownloadIcon from '@mui/icons-material/Download';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import ArticleIcon from '@mui/icons-material/Article';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import CheckIcon from '@mui/icons-material/Check';
 import TextFormatIcon from '@mui/icons-material/TextFormat';
 import BorderStyleIcon from '@mui/icons-material/BorderStyle';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
@@ -50,6 +46,43 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import axios from 'axios';
 import { CheckHistoryContext } from '../App';
 import StructureAnalysisCard from '../components/StructureAnalysisCard';
+
+// Функция для определения общей оценки документа
+function getDocumentGrade(totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount) {
+  // 5 — Нет критических и средних, ≤ 3 незначительных
+  if (highSeverityCount === 0 && mediumSeverityCount === 0 && lowSeverityCount <= 3) {
+    return { label: 'Отлично, несоответствий нет', color: 'success', score: 5 };
+  }
+  // 4 — Нет критических, ≤ 3 средних, ≤ 10 незначительных
+  if (highSeverityCount === 0 && mediumSeverityCount <= 3 && lowSeverityCount <= 10) {
+    return { label: 'Хорошо, незначительные недочёты', color: 'success', score: 4 };
+  }
+  // 3 — Нет критических, ≤ 10 средних
+  if (highSeverityCount === 0 && mediumSeverityCount <= 10) {
+    return { label: 'Удовлетворительно, есть недочёты', color: 'warning', score: 3 };
+  }
+  // 2 — ≤ 5 критических
+  if (highSeverityCount <= 5) {
+    return { label: 'Неудовлетворительно, требуется доработка', color: 'error', score: 2 };
+  }
+  // 1 — > 5 критических
+  return { label: 'Плохо, требуется серьёзная доработка', color: 'error', score: 1 };
+}
+
+// Функция для группировки одинаковых несоответствий
+function groupIssues(issues) {
+  const map = {};
+  issues.forEach(issue => {
+    const key = issue.type + '|' + issue.description;
+    if (!map[key]) {
+      map[key] = { ...issue, count: 1, locations: [issue.location] };
+    } else {
+      map[key].count += 1;
+      map[key].locations.push(issue.location);
+    }
+  });
+  return Object.values(map);
+}
 
 const ReportPage = () => {
   const location = useLocation();
@@ -67,47 +100,100 @@ const ReportPage = () => {
   // Контекст для истории проверок
   const { addToHistory } = useContext(CheckHistoryContext);
 
+  // Мемоизируем входные данные
+  const memoizedReportData = useMemo(() => reportData || {}, [reportData]);
+  const memoizedFileName = useMemo(() => fileName || '', [fileName]);
+
+  // Мемоизируем issues и статистику
+  const issues = useMemo(() => 
+    memoizedReportData.check_results?.issues || [], 
+    [memoizedReportData]
+  );
+  const totalIssues = useMemo(() => 
+    memoizedReportData.check_results?.total_issues_count || 0, 
+    [memoizedReportData]
+  );
+
+  // Группировка проблем по типу и серьезности
+  const groupedIssues = useMemo(() => 
+    issues.reduce((groups, issue) => {
+      const category = issue.type.split('_')[0];
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(issue);
+      return groups;
+    }, {}), 
+    [issues]
+  );
+
+  // Группировка уникальных проблем
+  const groupedIssuesList = useMemo(() => 
+    groupIssues(issues), 
+    [issues]
+  );
+  const totalGroupedIssues = useMemo(() => 
+    groupedIssuesList.length, 
+    [groupedIssuesList]
+  );
+
+  // Статистика по серьезности
+  const statistics = useMemo(() => 
+    memoizedReportData.check_results?.statistics || {}, 
+    [memoizedReportData]
+  );
+  const highSeverityCount = useMemo(() => 
+    statistics.severity?.high || 0, 
+    [statistics]
+  );
+  const mediumSeverityCount = useMemo(() => 
+    statistics.severity?.medium || 0, 
+    [statistics]
+  );
+  const lowSeverityCount = useMemo(() => 
+    statistics.severity?.low || 0, 
+    [statistics]
+  );
+  const totalAutoFixableCount = useMemo(() => 
+    statistics.auto_fixable_count || 0, 
+    [statistics]
+  );
+
   // Перенаправление, если нет данных
   useEffect(() => {
-    if (!reportData) {
+    if (!memoizedReportData) {
       navigate('/check');
     }
-  }, [reportData, navigate]);
+  }, [memoizedReportData, navigate]);
 
   // Сохраняем результат в истории при первичной загрузке страницы
   useEffect(() => {
-    if (reportData && fileName) {
+    if (memoizedReportData && memoizedFileName) {
       addToHistory({
         id: Date.now().toString(),
-        fileName,
-        reportData,
+        fileName: memoizedFileName,
+        reportData: memoizedReportData,
         timestamp: Date.now(),
-        correctedFilePath: correctedFilePath || reportData.corrected_file_path || null
+        correctedFilePath: correctedFilePath || memoizedReportData.corrected_file_path || null
       });
     }
-  }, [reportData, fileName, addToHistory, correctedFilePath]);
+  }, [memoizedReportData, memoizedFileName, addToHistory, correctedFilePath]);
 
   // Прокрутка вверх при загрузке страницы
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  if (!reportData) {
+  // Определяем общую оценку документа
+  const documentGrade = useMemo(() => 
+    getDocumentGrade(totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount), 
+    [totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount]
+  );
+
+  // Если нет данных - возвращаем null
+  if (!memoizedReportData) {
     return null;
   }
-
-  const issues = reportData.check_results?.issues || [];
-  const totalIssues = reportData.check_results?.total_issues_count || 0;
-
-  // Группировка проблем по типу и серьезности
-  const groupedIssues = issues.reduce((groups, issue) => {
-    const category = issue.type.split('_')[0];
-    if (!groups[category]) {
-      groups[category] = [];
-    }
-    groups[category].push(issue);
-    return groups;
-  }, {});
 
   // Определяем иконку для категории
   const getCategoryIcon = (category) => {
@@ -194,9 +280,17 @@ const ReportPage = () => {
       case 'structure': return 'Структура документа';
       case 'missing': return 'Отсутствующие элементы';
       case 'section': return 'Разделы документа';
-      default: return category;
+      case 'page': return 'Страницы';
+      default: return 'Другое';
     }
   };
+
+  // Функция для склонения слова "проблема"
+  function pluralizeProblem(count) {
+    if (count % 10 === 1 && count % 100 !== 11) return 'проблема';
+    if ([2,3,4].includes(count % 10) && ![12,13,14].includes(count % 100)) return 'проблемы';
+    return 'проблем';
+  }
 
   // Обработка исправления ошибок
   const handleCorrection = async () => {
@@ -206,9 +300,9 @@ const ReportPage = () => {
 
     try {
       const response = await axios.post('http://localhost:5000/api/document/correct', {
-        file_path: reportData.temp_path,
+        file_path: memoizedReportData.temp_path,
         errors: issues.filter(issue => issue.auto_fixable),
-        original_filename: fileName
+        original_filename: memoizedFileName
       });
 
       if (response.data.success) {
@@ -218,9 +312,9 @@ const ReportPage = () => {
         // Обновить запись в истории, добавив путь исправленного файла
         addToHistory({
           id: Date.now().toString(),
-          fileName,
+          fileName: memoizedFileName,
           reportData: {
-            ...reportData,
+            ...memoizedReportData,
             corrected_file_path: response.data.corrected_file_path
           },
           timestamp: Date.now(),
@@ -238,18 +332,6 @@ const ReportPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Подготовка данных для отображения сводки
-  const autoFixableCount = issues.filter(issue => issue.auto_fixable).length;
-  const manualFixCount = totalIssues - autoFixableCount;
-  const autoFixPercentage = totalIssues > 0 ? Math.round((autoFixableCount / totalIssues) * 100) : 0;
-
-  // Подготовка статистики по серьезности
-  const severityCounts = {
-    high: issues.filter(issue => issue.severity === 'high').length,
-    medium: issues.filter(issue => issue.severity === 'medium').length,
-    low: issues.filter(issue => issue.severity === 'low').length,
   };
 
   // Функция для скачивания документа
@@ -270,112 +352,97 @@ const ReportPage = () => {
     }
   };
 
-  // Функция для определения общей оценки документа 
-  const getDocumentGrade = (totalIssues, highSeverityCount) => {
-    if (totalIssues === 0) return { label: 'Отлично', color: 'success', score: 'A+' };
-    if (highSeverityCount === 0 && totalIssues < 5) return { label: 'Хорошо', color: 'success', score: 'A' };
-    if (highSeverityCount === 0 && totalIssues < 10) return { label: 'Очень хорошо', color: 'success', score: 'B+' };
-    if (highSeverityCount < 3 && totalIssues < 15) return { label: 'Удовлетворительно', color: 'warning', score: 'B' };
-    if (highSeverityCount < 5 && totalIssues < 20) return { label: 'Требует доработки', color: 'warning', score: 'C' };
-    return { label: 'Требуется значительная доработка', color: 'error', score: 'D' };
-  };
-
-  // Добавим компонент карточки категории проблем
-  const CategoryCard = ({ category, issues, count, icon }) => {
+  // Улучшенный компонент карточки категории с плавной анимацией и русскими подписями
+  const CategoryCard = ({ category, issues, count, icon, index }) => {
     const highSeverity = issues.filter(issue => 
       issue.type.startsWith(category) && issue.severity === 'high'
     ).length;
-    
     const mediumSeverity = issues.filter(issue => 
       issue.type.startsWith(category) && issue.severity === 'medium'
     ).length;
-    
     const lowSeverity = issues.filter(issue => 
       issue.type.startsWith(category) && issue.severity === 'low'
     ).length;
-    
     const severity = highSeverity > 0 ? 'error' : mediumSeverity > 0 ? 'warning' : 'info';
-    
+
     return (
-      <Card sx={{ 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column',
-        transition: 'all 0.2s',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
-        }
-      }}>
-        <CardContent sx={{ flexGrow: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box
-              sx={{
-                width: 44,
-                height: 44,
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: `${severity}.lighter`,
-                color: `${severity}.main`,
-                mr: 2
-              }}
-            >
-              {icon}
+      <div key={`category-card-${index}`}>
+        <Card sx={{ 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          transition: 'all 0.3s',
+          boxShadow: 3,
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: `${severity}.main`,
+          '&:hover': {
+            transform: 'translateY(-6px) scale(1.03)',
+            boxShadow: '0 12px 32px rgba(25, 118, 210, 0.10)'
+          },
+          p: 2,
+          mb: 2
+        }}>
+          <CardContent sx={{ flexGrow: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: `${severity}.lighter`,
+                  color: `${severity}.main`,
+                  mr: 2,
+                  fontSize: 30
+                }}
+              >
+                {icon}
+              </Box>
+              <Typography variant="h6" component="div" fontWeight={700} sx={{ color: `${severity}.dark` }}>
+                {getCategoryName(category)}
+              </Typography>
             </Box>
-            <Typography variant="h6" component="div" fontWeight={600}>
-              {getCategoryName(category)}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 500 }}>
+              {count} {pluralizeProblem(count)}
             </Typography>
-          </Box>
-          
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {count} {count === 1 ? 'проблема' : count > 1 && count < 5 ? 'проблемы' : 'проблем'}
-          </Typography>
-          
-          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-            {highSeverity > 0 && (
-              <Chip 
-                label={`${highSeverity} крит.`} 
-                size="small" 
-                color="error" 
-                variant="outlined"
-                icon={<ErrorOutlineIcon />}
-              />
-            )}
-            {mediumSeverity > 0 && (
-              <Chip 
-                label={`${mediumSeverity} сред.`} 
-                size="small" 
-                color="warning" 
-                variant="outlined" 
-                icon={<WarningAmberIcon />}
-              />
-            )}
-            {lowSeverity > 0 && (
-              <Chip 
-                label={`${lowSeverity} низ.`} 
-                size="small" 
-                color="info" 
-                variant="outlined"
-                icon={<InfoIcon />}
-              />
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
+            <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+              {highSeverity > 0 && (
+                <Chip 
+                  label={`${highSeverity} крит.`} 
+                  size="small" 
+                  color="error" 
+                  variant="outlined"
+                  icon={<ErrorOutlineIcon />}
+                />
+              )}
+              {mediumSeverity > 0 && (
+                <Chip 
+                  label={`${mediumSeverity} сред.`} 
+                  size="small" 
+                  color="warning" 
+                  variant="outlined" 
+                  icon={<WarningAmberIcon />}
+                />
+              )}
+              {lowSeverity > 0 && (
+                <Chip 
+                  label={`${lowSeverity} низ.`} 
+                  size="small" 
+                  color="info" 
+                  variant="outlined"
+                  icon={<InfoIcon />}
+                />
+              )}
+            </Stack>
+          </CardContent>
+        </Card>
+      </div>
     );
   };
-
-  // Получаем данные для общей статистики
-  const statistics = reportData.check_results?.statistics || {};
-  const highSeverityCount = statistics.severity?.high || 0;
-  const mediumSeverityCount = statistics.severity?.medium || 0;
-  const lowSeverityCount = statistics.severity?.low || 0;
-  const totalAutoFixableCount = statistics.auto_fixable_count || 0;
-
-  // Определяем общую оценку документа
-  const documentGrade = getDocumentGrade(totalIssues, highSeverityCount);
 
   // В компоненте ReportPage добавим функцию загрузки отчета
   const handleGenerateReport = async () => {
@@ -386,8 +453,8 @@ const ReportPage = () => {
     
     try {
       const response = await axios.post('/api/document/generate-report', {
-        check_results: reportData.check_results,
-        filename: fileName
+        check_results: memoizedReportData.check_results,
+        filename: memoizedFileName
       });
       
       if (response.data && response.data.success) {
@@ -430,19 +497,38 @@ const ReportPage = () => {
         }}
       >
         <Box sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography variant="h4" component="h1" gutterBottom fontWeight={700}>
+          <Typography
+            variant="h4"
+            component="h1"
+            align="center"
+            gutterBottom
+            sx={{
+              fontWeight: 800,
+              mb: 1,
+              background: theme => theme.palette.mode === 'dark'
+                ? 'linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%)'
+                : 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              textFillColor: 'transparent',
+              textShadow: theme => theme.palette.mode === 'dark'
+                ? '0 2px 16px #6366f1cc'
+                : '0 2px 8px #2563eb33',
+            }}
+          >
             Отчет о проверке документа
           </Typography>
           
           <Typography variant="h6" sx={{ mb: 3, color: 'text.secondary' }}>
-            {fileName}
+            {memoizedFileName}
           </Typography>
           
           <Grid container spacing={3}>
             <Grid item xs={12} md={7}>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body1">
-                  Обнаружено проблем: <strong>{totalIssues}</strong>
+                  Обнаружено проблем: <strong>{totalGroupedIssues}</strong>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   Автоматически исправляемых: <strong>{totalAutoFixableCount}</strong> ({Math.round(totalAutoFixableCount / totalIssues * 100) || 0}%)
@@ -557,13 +643,14 @@ const ReportPage = () => {
           </Typography>
           
           <Grid container spacing={3}>
-            {Object.entries(groupedIssues).map(([category, categoryIssues]) => (
+            {Object.entries(groupedIssues).map(([category, categoryIssues], idx) => (
               <Grid item xs={12} sm={6} md={4} key={category}>
                 <CategoryCard 
                   category={category} 
                   issues={issues}
                   count={categoryIssues.length}
                   icon={getCategoryIcon(category)}
+                  index={idx}
                 />
               </Grid>
             ))}
@@ -573,7 +660,7 @@ const ReportPage = () => {
       
       {/* Сообщения об исправлении */}
       {correctionSuccess && (
-        <Fade in={true}>
+        <div>
           <Alert 
             severity="success" 
             sx={{ mb: 3 }}
@@ -581,7 +668,7 @@ const ReportPage = () => {
               <Button 
                 color="inherit" 
                 size="small" 
-                onClick={() => downloadDocument(correctedFilePath, fileName)}
+                onClick={() => downloadDocument(correctedFilePath, memoizedFileName)}
                 startIcon={<DownloadIcon />}
               >
                 Скачать
@@ -591,7 +678,7 @@ const ReportPage = () => {
             <AlertTitle>Документ успешно исправлен</AlertTitle>
             Автоматически исправлены все возможные ошибки. Скачайте исправленную версию документа.
           </Alert>
-        </Fade>
+        </div>
       )}
       
       {correctionError && (
@@ -646,17 +733,19 @@ const ReportPage = () => {
           
           <List disablePadding>
             {Object.entries(groupedIssues).map(([category, categoryIssues]) => {
+              // Группируем внутри категории
+              const grouped = groupIssues(categoryIssues);
               // Определяем максимальную серьёзность в категории
-              const maxSeverity = categoryIssues.some(i => i.severity === 'high')
+              const maxSeverity = grouped.some(i => i.severity === 'high')
                 ? 'error'
-                : categoryIssues.some(i => i.severity === 'medium')
+                : grouped.some(i => i.severity === 'medium')
                 ? 'warning'
                 : 'info';
               const severityLabel = maxSeverity === 'error' ? 'Критические' : maxSeverity === 'warning' ? 'Средние' : 'Незначительные';
               const severityColor = maxSeverity;
               return (
                 <React.Fragment key={category}>
-                  <Accordion defaultExpanded TransitionProps={{ unmountOnExit: true }} sx={{
+                  <Accordion defaultExpanded sx={{
                     borderLeft: '6px solid',
                     borderLeftColor: maxSeverity === 'error' ? 'error.main' : maxSeverity === 'warning' ? 'warning.main' : 'info.main',
                     boxShadow: '0 2px 12px #0001',
@@ -679,7 +768,7 @@ const ReportPage = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
                         {getCategoryIcon(category)}
                         <Typography sx={{ ml: 2, fontWeight: 700, fontSize: 20 }}>
-                          {getCategoryName(category)} <span style={{fontWeight:400}}>({categoryIssues.length})</span>
+                          {getCategoryName(category)} <span style={{fontWeight:400}}>({grouped.length})</span>
                         </Typography>
                         <Chip
                           label={severityLabel}
@@ -691,10 +780,10 @@ const ReportPage = () => {
                     </AccordionSummary>
                     <AccordionDetails sx={{ p: 0 }}>
                       <List disablePadding>
-                        {categoryIssues.map((issue, index) => (
-                          <Fade in timeout={400 + index * 80} key={`${category}-${index}`}>
+                        {grouped.map((issue, index) => (
+                          <div key={`${category}-${index}`}>
                             <ListItem
-                              divider={index < categoryIssues.length - 1}
+                              divider={index < grouped.length - 1}
                               sx={{
                                 py: 2.2,
                                 px: 3,
@@ -710,7 +799,7 @@ const ReportPage = () => {
                                 primary={
                                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'wrap' }}>
                                     <Typography component="span" variant="body1" fontWeight={600} sx={{ mr: 1 }}>
-                                      {issue.description}
+                                      {issue.description} {issue.count > 1 && `(×${issue.count})`}
                                     </Typography>
                                     <Chip
                                       label={getSeverityText(issue.severity)}
@@ -731,12 +820,14 @@ const ReportPage = () => {
                                 }
                                 secondary={
                                   <Typography variant="body2" color="text.secondary" component="span">
-                                    Расположение: {issue.location}
+                                    {issue.locations && issue.locations.length > 1
+                                      ? `Расположение: ${issue.locations.join(', ')}`
+                                      : `Расположение: ${issue.location}`}
                                   </Typography>
                                 }
                               />
                             </ListItem>
-                          </Fade>
+                          </div>
                         ))}
                       </List>
                     </AccordionDetails>
@@ -749,9 +840,9 @@ const ReportPage = () => {
       )}
       
       {/* Структурный анализ документа */}
-      {reportData.check_results && (
+      {memoizedReportData.check_results && (
         <Box sx={{ mt: 4 }}>
-          <StructureAnalysisCard documentData={reportData} />
+          <StructureAnalysisCard documentData={memoizedReportData} />
         </Box>
       )}
 
@@ -777,7 +868,7 @@ const ReportPage = () => {
             variant="contained"
             color="secondary"
             startIcon={<FileDownloadIcon />}
-            onClick={() => downloadReport(reportFilePath, `отчет_${fileName}`)}
+            onClick={() => downloadReport(reportFilePath, `отчет_${memoizedFileName}`)}
           >
             Скачать отчет
           </Button>

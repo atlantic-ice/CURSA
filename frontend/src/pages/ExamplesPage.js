@@ -6,7 +6,6 @@ import {
   Tabs,
   Tab,
   Paper,
-  Divider,
   useTheme
 } from '@mui/material';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
@@ -85,28 +84,31 @@ const ExamplesPage = () => {
             transition={{ duration: 0.8 }}
           >
             <Typography
-              variant="h3"
+              variant="h4"
               component="h1"
+              align="center"
               sx={{
                 mb: 2,
-                fontWeight: 900,
+                fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 1.5,
                 letterSpacing: 1.5,
-                fontSize: { xs: 32, md: 44 },
-                background: theme.palette.mode === 'dark'
-                  ? 'linear-gradient(90deg,#6366f1,#2563eb 60%,#6366f1)'
-                  : 'linear-gradient(90deg,#2563eb,#60a5fa 60%,#6366f1)',
+                fontSize: { xs: 28, md: 38 },
+                background: theme => theme.palette.mode === 'dark'
+                  ? 'linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%)'
+                  : 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                textShadow: theme.palette.mode === 'dark'
+                backgroundClip: 'text',
+                textFillColor: 'transparent',
+                textShadow: theme => theme.palette.mode === 'dark'
                   ? '0 2px 16px #6366f1cc'
                   : '0 2px 8px #2563eb33',
               }}
             >
-              <MenuBookOutlinedIcon sx={{ fontSize: { xs: 32, md: 48 } }} />
+              <MenuBookOutlinedIcon sx={{ fontSize: { xs: 28, md: 38 } }} />
               Примеры оформления документов
             </Typography>
             <Typography
@@ -211,6 +213,16 @@ const ExamplesPage = () => {
                 incorrectExplanation="Использован неверный шрифт (Arial вместо Times New Roman) и неверный размер (12 пт вместо 14 пт)."
                 correctExample={`Текст, набранный шрифтом Times New Roman, размером 14 пт, с выравниванием по ширине.`}
                 correctExplanation="Корректный шрифт Times New Roman размером 14 пт с правильным выравниванием."
+                incorrectFormatting={{
+                  fontFamily: "'Arial', sans-serif",
+                  fontSize: '12pt',
+                  textAlign: 'left',
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'justify',
+                }}
               />
 
               <GuidelineExample
@@ -224,6 +236,16 @@ const ExamplesPage = () => {
 Расстояние между строками соответствует требованиям.
 Такое форматирование является правильным.`}
                 correctExplanation="Использован правильный межстрочный интервал 1,5 строки."
+                incorrectFormatting={{
+                  lineHeight: 1.0,
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                }}
+                correctFormatting={{
+                  lineHeight: 1.5,
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                }}
               />
 
               <GuidelineExample
@@ -232,9 +254,21 @@ const ExamplesPage = () => {
                 incorrectExample={`Этот абзац не имеет отступа первой строки.
 Это затрудняет визуальное восприятие разделения текста на смысловые блоки и не соответствует требованиям нормоконтроля.`}
                 incorrectExplanation="Отсутствует отступ первой строки абзаца."
-                correctExample={`    Этот абзац имеет правильный отступ первой строки 1,25 см.
+                correctExample={`Этот абзац имеет правильный отступ первой строки 1,25 см.
 Такое форматирование улучшает читаемость текста и соответствует требованиям оформления.`}
                 correctExplanation="Правильный отступ первой строки абзаца 1,25 см."
+                incorrectFormatting={{
+                  textIndent: 0,
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  lineHeight: 1.5,
+                }}
+                correctFormatting={{
+                  textIndent: '1.25cm',
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  lineHeight: 1.5,
+                }}
               />
 
               <GuidelineExample
@@ -248,6 +282,18 @@ const ExamplesPage = () => {
 Оба края - левый и правый - имеют ровное выравнивание.
 Это правильное форматирование для основного текста курсовой работы.`}
                 correctExplanation="Правильное выравнивание текста по ширине страницы."
+                incorrectFormatting={{
+                  textAlign: 'left',
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  lineHeight: 1.5,
+                }}
+                correctFormatting={{
+                  textAlign: 'justify',
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  lineHeight: 1.5,
+                }}
               />
             </Box>
           </TabPanel>
@@ -269,6 +315,18 @@ const ExamplesPage = () => {
                 incorrectExplanation="Ошибки: есть точка в конце заголовка."
                 correctExample={`1. АНАЛИЗ ФИНАНСОВОГО СОСТОЯНИЯ ПРЕДПРИЯТИЯ`}
                 correctExplanation="Заголовок оформлен правильно: выравнивание по центру, полужирный шрифт, без точки в конце."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                }}
               />
               
               <GuidelineExample
@@ -278,6 +336,20 @@ const ExamplesPage = () => {
                 incorrectExplanation="Ошибки: точка в конце заголовка, отсутствует точка после номера подраздела."
                 correctExample={`1.1. Методы оценки финансовой устойчивости`}
                 correctExplanation="Заголовок оформлен правильно: с абзацного отступа, есть точка после номера, нет точки в конце заголовка."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  fontWeight: 'bold',
+                  textAlign: 'left',
+                  textIndent: '1.25cm',
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  fontWeight: 'bold',
+                  textAlign: 'left',
+                  textIndent: '1.25cm',
+                }}
               />
               
               <GuidelineExample
@@ -299,6 +371,18 @@ const ExamplesPage = () => {
 
 2. ПРАКТИЧЕСКАЯ ЧАСТЬ`}
                 correctExplanation="Правильная последовательная нумерация заголовков."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  fontWeight: 'bold',
+                  whiteSpace: 'pre-line',
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  fontWeight: 'bold',
+                  whiteSpace: 'pre-line',
+                }}
               />
             </Box>
           </TabPanel>
@@ -326,6 +410,18 @@ const ExamplesPage = () => {
 • Простота применения
 • Низкая стоимость`}
                 correctExplanation="Правильно: все элементы списка имеют одинаковые маркеры."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.5,
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.5,
+                }}
               />
               
               <GuidelineExample
@@ -343,6 +439,18 @@ const ExamplesPage = () => {
 3. Тестирование
 4. Внедрение`}
                 correctExplanation="Правильно: все элементы списка имеют одинаковый формат нумерации."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.5,
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.5,
+                }}
               />
               
               <GuidelineExample
@@ -364,6 +472,18 @@ const ExamplesPage = () => {
    а) Экспертные оценки
    б) Интервьюирование`}
                 correctExplanation="Правильно: разные уровни вложенности имеют разный тип нумерации."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.5,
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.5,
+                }}
               />
             </Box>
           </TabPanel>
@@ -385,6 +505,18 @@ const ExamplesPage = () => {
                 incorrectExplanation="Ошибки: неверный порядок элементов, лишние кавычки, отсутствуют необходимые знаки препинания."
                 correctExample={`Иванов, А.Б. Основы экономической теории. - Москва: Экономика, 2020. - 256 с.`}
                 correctExplanation="Соблюдены все правила оформления по ГОСТ 7.1-2003."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'left',
+                  lineHeight: 1.5,
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'left',
+                  lineHeight: 1.5,
+                }}
               />
               
               <GuidelineExample
@@ -394,6 +526,18 @@ const ExamplesPage = () => {
                 incorrectExplanation="Ошибки: отсутствуют необходимые знаки препинания, неверный порядок элементов."
                 correctExample={`Петров, В.В. Анализ финансовых рынков // Финансы и кредит. - 2022. - № 5. - С. 23-29.`}
                 correctExplanation="Правильное оформление с двойной косой чертой, тире и всеми необходимыми знаками препинания."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'left',
+                  lineHeight: 1.5,
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'left',
+                  lineHeight: 1.5,
+                }}
               />
               
               <GuidelineExample
@@ -403,6 +547,18 @@ const ExamplesPage = () => {
                 incorrectExplanation="Ошибки: отсутствует обозначение [Электронный ресурс], неверное оформление URL и даты обращения."
                 correctExample={`Иванов И.И. Особенности современной экономики [Электронный ресурс] // Экономический вестник. – URL: http://example.com/article (дата обращения: 15.03.2023).`}
                 correctExplanation="Правильное оформление с указанием типа ресурса, источника и даты обращения."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'left',
+                  lineHeight: 1.5,
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'left',
+                  lineHeight: 1.5,
+                }}
               />
             </Box>
           </TabPanel>
@@ -420,57 +576,38 @@ const ExamplesPage = () => {
               <GuidelineExample
                 title="Оформление таблицы"
                 description="Таблицы должны иметь номер и название над таблицей."
-                incorrectExample={`Результаты исследования
+                incorrectExample={`Таблица 1
+Финансовые показатели предприятия
 
-+-------+-------+-------+
-| Год   | 2020  | 2021  |
-+-------+-------+-------+
-| Доход | 1500  | 1650  |
-+-------+-------+-------+`}
-                incorrectExplanation="Ошибка: отсутствует номер таблицы и правильное оформление её названия."
-                correctExample={`Таблица 1 – Результаты исследования
+Показатель | 2020 | 2021 | 2022
+Выручка    | 1200 | 1350 | 1420
+Прибыль    | 350  | 420  | 450`}
+                incorrectExplanation="Ошибка: отсутствует название таблицы, неправильное расположение номера."
+                correctExample={`Таблица 1 - Финансовые показатели предприятия
 
-+-------+-------+-------+
-| Год   | 2020  | 2021  |
-+-------+-------+-------+
-| Доход | 1500  | 1650  |
-+-------+-------+-------+`}
-                correctExplanation="Правильное оформление: указан номер таблицы и её название с тире."
-              />
-              
-              <GuidelineExample
-                title="Оформление рисунка"
-                description="Рисунки должны иметь номер и подпись под рисунком."
-                incorrectExample={`[Изображение графика]
-График динамики продаж`}
-                incorrectExplanation="Ошибка: отсутствует номер рисунка и неверное оформление подписи."
-                correctExample={`[Изображение графика]
-
-Рисунок 1 – График динамики продаж`}
-                correctExplanation="Правильное оформление: указан номер рисунка и его название с тире."
-              />
-              
-              <GuidelineExample
-                title="Ссылки на таблицы и рисунки"
-                description="В тексте должны быть ссылки на все таблицы и рисунки."
-                incorrectExample={`Результаты исследования представлены в таблице ниже. На графике можно видеть динамику показателей.`}
-                incorrectExplanation="Ошибка: отсутствуют конкретные ссылки на номера таблиц и рисунков."
-                correctExample={`Результаты исследования представлены в таблице 1. Как видно из рисунка 2, динамика показателей имеет положительный тренд.`}
-                correctExplanation="Правильное оформление: есть конкретные ссылки на номера таблиц и рисунков."
+Показатель | 2020 | 2021 | 2022
+Выручка    | 1200 | 1350 | 1420
+Прибыль    | 350  | 420  | 450`}
+                correctExplanation="Правильно: номер и название таблицы расположены над таблицей, название указано после номера через тире."
+                incorrectFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'left',
+                  whiteSpace: 'pre-line'
+                }}
+                correctFormatting={{
+                  fontFamily: "'Times New Roman', serif",
+                  fontSize: '14pt',
+                  textAlign: 'center',
+                  whiteSpace: 'pre-line'
+                }}
               />
             </Box>
           </TabPanel>
         </motion.div>
-
-        {/* Блок связанных ссылок */}
-        <RelatedLinksCard 
-          title="Связанные разделы"
-          links={relatedLinks}
-          sx={{ mb: 4 }}
-        />
       </Container>
     </Box>
   );
 };
 
-export default ExamplesPage; 
+export default ExamplesPage;

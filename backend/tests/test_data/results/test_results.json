@@ -1,0 +1,173 @@
+[
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_font_check",
+    "test_name": "test_font_check",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.03811289998702705,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_font_size_check",
+    "test_name": "test_font_size_check",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.02402549999533221,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_margins_check",
+    "test_name": "test_margins_check",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.023597799998242408,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_line_spacing_check",
+    "test_name": "test_line_spacing_check",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.02723350000451319,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_auto_correction",
+    "test_name": "test_auto_correction",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.12599679999402724,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_headers_formatting",
+    "test_name": "test_headers_formatting",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.03437090000079479,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_page_numbering",
+    "test_name": "test_page_numbering",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.18712579998828005,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_references_check",
+    "test_name": "test_references_check",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.02590589999454096,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_required_sections",
+    "test_name": "test_required_sections",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.029864399999496527,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_tables_formatting",
+    "test_name": "test_tables_formatting",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.02382509999733884,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_figures_formatting",
+    "test_name": "test_figures_formatting",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.024946599995018914,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_download_corrected_document",
+    "test_name": "test_download_corrected_document",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.06890399999974761,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_large_document",
+    "test_name": "test_large_document",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.19283430000359658,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_perfect_document",
+    "test_name": "test_perfect_document",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.06636930000968277,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_math_formulas",
+    "test_name": "test_math_formulas",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.028587399996467866,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_diagrams",
+    "test_name": "test_diagrams",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.02398289999109693,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_headers_and_footers",
+    "test_name": "test_headers_and_footers",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.022766299996874295,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_multi_upload",
+    "test_name": "test_multi_upload",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.00014970000484026968,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_history",
+    "test_name": "test_history",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 9.31999966269359e-05,
+    "failed": false,
+    "skipped": false
+  }
+]
