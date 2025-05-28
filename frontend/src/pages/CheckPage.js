@@ -383,8 +383,8 @@ const CheckPage = () => {
                           {/* Подсказки и примеры */}
                           <Box sx={{ mt: 2, mb: 1 }}>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                              Максимальный размер файла: 10 МБ
-                            </Typography>
+                            Максимальный размер файла: 10 МБ
+                          </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                               Пример: <span style={{ fontWeight: 600 }}>Курсовая_Иванов.docx</span>
                             </Typography>

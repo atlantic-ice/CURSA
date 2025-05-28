@@ -217,3 +217,154 @@ class TestNormControlChecker:
         statistics = self.checker._calculate_statistics(results)
         assert isinstance(statistics, dict)
         assert 'severity' in statistics 
+        
+    def test_check_ordinals(self):
+        """
+        Проверка правила проверки порядковых числительных
+        """
+        # Пример данных с неправильным оформлением порядковых числительных
+        document_data = {
+            'paragraphs': [
+                {
+                    'index': 0,
+                    'text': 'В 21 веке технологии развиваются очень быстро.',
+                    'style': 'Normal'
+                },
+                {
+                    'index': 1,
+                    'text': 'События происходили на 5 день месяца.',
+                    'style': 'Normal'
+                },
+                {
+                    'index': 2,
+                    'text': 'Это относится к 3 столетию нашей эры.',
+                    'style': 'Normal'
+                },
+                {
+                    'index': 3,
+                    'text': 'Информация находится на 10 стр. документа.',
+                    'style': 'Normal'
+                }
+            ]
+        }
+        
+        # Вызываем метод проверки порядковых числительных
+        issues = self.checker._check_ordinals(document_data)
+        
+        # Проверяем результаты
+        assert isinstance(issues, list)
+        assert len(issues) > 0
+        
+        # Проверяем, что найдены проблемы с порядковыми числительными
+        assert any('ordinal_no_suffix' in issue['type'] for issue in issues)
+        
+        # Проверяем описания найденных проблем
+        assert any('21 век' in issue['description'] for issue in issues)
+        assert any('5 день' in issue['description'] for issue in issues)
+        assert any('3 столетие' in issue['description'] for issue in issues)
+        assert any('10 стр' in issue['description'] for issue in issues)
+        
+    def test_check_surnames(self):
+        """
+        Проверка правила проверки оформления фамилий
+        """
+        # Пример данных с неправильным оформлением фамилий
+        document_data = {
+            'paragraphs': [
+                {
+                    'index': 0,
+                    'text': 'Пушкин А. С. является великим русским поэтом.',
+                    'style': 'Normal'
+                },
+                {
+                    'index': 1,
+                    'text': 'В своих работах А. П. Чехов описывал...',
+                    'style': 'Normal'
+                },
+                {
+                    'index': 2,
+                    'text': 'Список литературы:',
+                    'style': 'Normal'
+                },
+                {
+                    'index': 3,
+                    'text': '1. А.С. Пушкин "Евгений Онегин"',
+                    'style': 'Normal'
+                }
+            ],
+            'bibliography': [
+                {
+                    'index': 3
+                }
+            ]
+        }
+        
+        # Вызываем метод проверки оформления фамилий
+        issues = self.checker._check_surnames(document_data)
+        
+        # Проверяем результаты
+        assert isinstance(issues, list)
+        assert len(issues) > 0
+        
+        # Проверяем, что найдены проблемы с оформлением фамилий
+        assert any('surname_wrong_order_in_text' in issue['type'] for issue in issues)
+        assert any('surname_wrong_order_in_list' in issue['type'] for issue in issues)
+        
+    def test_check_numbering(self):
+        """
+        Проверка правила проверки нумерации таблиц, формул и иллюстраций
+        """
+        # Пример данных с неправильной нумерацией
+        document_data = {
+            'tables': [
+                {
+                    'index': 0,
+                    'caption': 'Таблица данных',
+                    'number': 1
+                },
+                {
+                    'index': 1,
+                    'caption': 'Таблица расчетов',
+                    'number': 3  # Пропущен номер 2
+                }
+            ],
+            'images': [
+                {
+                    'index': 0,
+                    'caption': 'Схема алгоритма',
+                    'number': '1.A'  # Неправильный формат номера
+                }
+            ],
+            'formulas': [
+                {
+                    'index': 0,
+                    'caption': 'Формула расчета',
+                    # Отсутствует номер
+                }
+            ],
+            'appendices': [
+                {
+                    'id': 'А',
+                    'tables': [
+                        {
+                            'index': 0,
+                            'caption': 'Таблица в приложении',
+                            'number': 1  # Неправильный формат для приложения
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        # Вызываем метод проверки нумерации
+        issues = self.checker._check_numbering(document_data)
+        
+        # Проверяем результаты
+        assert isinstance(issues, list)
+        assert len(issues) > 0
+        
+        # Проверяем, что найдены проблемы с нумерацией
+        assert any('table_non_sequential_numbering' in issue['type'] for issue in issues)
+        assert any('image_wrong_number_format' in issue['type'] for issue in issues)
+        assert any('formula_missing_number' in issue['type'] for issue in issues)
+        assert any('appendix_table_wrong_number_format' in issue['type'] for issue in issues) 
