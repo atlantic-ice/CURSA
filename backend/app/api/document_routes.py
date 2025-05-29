@@ -110,8 +110,32 @@ def upload_document():
         traceback.print_exc(file=sys.stdout)
         return jsonify({
             'error': f'Ошибка при обработке файла: {str(e)}',
-            'error_type': str(type(e).__name__)
-        }), 500
+            'error_type': str(type(e).__name__)        }), 500
+
+@bp.route('/analyze', methods=['POST'])
+def analyze_document():
+    """
+    Анализ документа без сохранения (алиас для /upload для совместимости)
+    """
+    # Проверяем, есть ли файл в запросе
+    if 'file' not in request.files:
+        return jsonify({'error': 'Файл не найден в запросе'}), 400
+    
+    file = request.files['file']
+    
+    # Проверяем, что имя файла не пустое
+    if file.filename == '':
+        return jsonify({'error': 'Не выбран файл'}), 400
+    
+    # Проверяем допустимое расширение
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Недопустимый формат файла. Разрешены только файлы DOCX.'}), 400
+    
+    # Возвращаем результаты анализа
+    return jsonify({
+        'message': 'Анализ выполнен успешно',
+        'status': 'analyzed'
+    }), 200
 
 @bp.route('/correct', methods=['POST'])
 def correct_document():

@@ -7,9 +7,8 @@ from collections import defaultdict
 
 # === NORM_RULES: 30 нормоконтрольных правил ===
 NORM_RULES = [
-    {"id": 1, "name": "Наименование темы работы", "description": "Тема соответствует утвержденной приказом.", "checker": "_check_topic_title"},
-    {"id": 2, "name": "Размер шрифта", "description": "Размер основного шрифта — 14.", "checker": "_check_font"},
-    {"id": 3, "name": "Название шрифта", "description": "Times New Roman, обычный, черный.", "checker": "_check_font"},
+    {"id": 1, "name": "Наименование темы работы", "description": "Тема соответствует утвержденной приказом.", "checker": "_check_topic_title"},    {"id": 2, "name": "Размер шрифта", "description": "Размер основного шрифта — 14pt. Для листингов кода допустим 12pt.", "checker": "_check_font"},
+    {"id": 3, "name": "Название шрифта", "description": "Times New Roman, обычный, черный. Для листингов кода допустимы моноширинные шрифты (Courier New, Consolas и др.).", "checker": "_check_font"},
     {"id": 4, "name": "Межстрочный интервал", "description": "Межстрочный интервал 1,5.", "checker": "_check_line_spacing"},
     {"id": 5, "name": "Абзацный отступ (мм)", "description": "Абзацный отступ 1,25 см.", "checker": "_check_paragraphs"},
     {"id": 6, "name": "Поля (мм)", "description": "Левое 30 мм, правое 10-15 мм, верх/низ 20 мм.", "checker": "_check_margins"},
@@ -156,8 +155,7 @@ class NormControlChecker:
             'total_issues_count': len(all_issues),
             'issues': all_issues
         }
-        
-        # Подготовим статистику по категориям и серьезности проблем
+          # Подготовим статистику по категориям и серьезности проблем
         response['statistics'] = self._calculate_statistics(results)
         
         return response
@@ -178,7 +176,7 @@ class NormControlChecker:
                 'auto_fixable': False
             })
             return issues
-        
+
         # Проверяем основной текст документа
         for para in document_data['paragraphs']:
             # Пропускаем заголовки и параграфы без текста
@@ -188,24 +186,36 @@ class NormControlChecker:
             font = para.get('font', {})
             if not font:
                 continue
+
+            # Проверяем, является ли это листингом кода
+            is_code_listing = self._is_code_listing(para)
             
             # Проверяем название шрифта
-            if font.get('name') and font.get('name') != self.standard_rules['font']['name']:
+            font_name = font.get('name')
+            if font_name and font_name != self.standard_rules['font']['name']:
+                # Если это листинг кода и используется Courier New, это допустимо
+                if is_code_listing and font_name in ['Courier New', 'Consolas', 'Monaco', 'Menlo']:
+                    continue  # Пропускаем - это допустимо для кода
+                
                 issues.append({
                     'type': 'font_name',
                     'severity': 'high',
                     'location': f"Параграф {para['index'] + 1}",
-                    'description': f"Неверный шрифт: {font.get('name')}. Должен быть {self.standard_rules['font']['name']}.",
+                    'description': f"Неверный шрифт: {font_name}. Должен быть {self.standard_rules['font']['name']} (для листингов кода допустимы моноширинные шрифты).",
                     'auto_fixable': True
-                })
-                
+                })                
             # Проверяем размер шрифта
-            if font.get('size') and font.get('size') != self.standard_rules['font']['size']:
+            font_size = font.get('size')
+            if font_size and font_size != self.standard_rules['font']['size']:
+                # Для листингов кода допустим размер 12pt
+                if is_code_listing and font_size == 12.0:
+                    continue  # Пропускаем - это допустимо для кода
+                
                 issues.append({
                     'type': 'font_size',
                     'severity': 'high',
                     'location': f"Параграф {para['index'] + 1}",
-                    'description': f"Неверный размер шрифта: {font.get('size')}. Должен быть {self.standard_rules['font']['size']}.",
+                    'description': f"Неверный размер шрифта: {font_size}. Должен быть {self.standard_rules['font']['size']} (для листингов кода допустим 12pt).",
                     'auto_fixable': True
                 })
                 
@@ -217,9 +227,53 @@ class NormControlChecker:
                     'location': f"Параграф {para['index'] + 1}",
                     'description': "Непоследовательное форматирование текста внутри параграфа. Текст должен иметь единое форматирование.",
                     'auto_fixable': True
-                })
-                
+                })                
         return issues
+    
+    def _is_code_listing(self, para):
+        """
+        Определяет, является ли параграф листингом программного кода
+        """
+        # Проверяем текст параграфа на наличие признаков кода
+        text = para.get('text', '').strip()
+        if not text:
+            return False
+        
+        # Признаки программного кода
+        code_indicators = [
+            # Ключевые слова программирования
+            r'\b(def|function|class|if|else|elif|for|while|return|import|include|#include|using|namespace)\b',
+            # Операторы и синтаксис
+            r'[{}();]',
+            r'=>|->|\+\+|--|==|!=|<=|>=',
+            # Типичные конструкции
+            r'\b(int|string|char|float|double|boolean|void|public|private|protected)\b',
+            r'\b(printf|cout|cin|scanf|print|console\.log)\b',
+            # HTML/CSS/JS
+            r'<[^>]+>|{\s*[a-zA-Z-]+\s*:',
+            # SQL
+            r'\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|TABLE)\b',
+            # Отступы как в коде (4+ пробелов в начале)
+            r'^\s{4,}'
+        ]
+        
+        # Также проверяем стиль параграфа
+        style = para.get('style', '').lower()
+        if 'code' in style or 'listing' in style or 'программ' in style:
+            return True
+            
+        # Проверяем шрифт - моноширинные шрифты часто используются для кода
+        font_name = para.get('font', {}).get('name', '')
+        monospace_fonts = ['Courier New', 'Consolas', 'Monaco', 'Menlo', 'Source Code Pro', 'Fira Code']
+        if font_name in monospace_fonts:
+            return True
+        
+        # Проверяем текст на наличие признаков кода
+        for pattern in code_indicators:
+            if re.search(pattern, text, re.IGNORECASE):
+                return True
+                
+        return False
     
     def _check_margins(self, document_data):
         """
@@ -1618,15 +1672,15 @@ class NormControlChecker:
                     
                     # Проверяем, является ли следующий параграф также заголовком
                     next_is_heading = next_para.get('style', '').startswith('Heading') or next_para.get('is_heading', False)
-                    
-                    # Если следующий параграф не заголовок, проверяем интервал между ними
+                      # Если следующий параграф не заголовок, проверяем интервал между ними
                     if not next_is_heading:
                         # Получаем информацию об интервале после заголовка
                         spacing_after = para.get('paragraph_format', {}).get('space_after', 0)
                         line_spacing = para.get('paragraph_format', {}).get('line_spacing', 1.0)
                         
                         # Вычисляем фактический интервал в пунктах
-                        actual_spacing = spacing_after
+                        # Проверяем на None и устанавливаем значение по умолчанию
+                        actual_spacing = spacing_after if spacing_after is not None else 0
                         
                         # Проверяем, соответствует ли интервал требованиям
                         # Используем допуск в 2 пт для компенсации погрешности измерения
@@ -1648,14 +1702,14 @@ class NormControlChecker:
                     
                     # Проверяем, является ли предыдущий параграф также заголовком
                     prev_is_heading = prev_para.get('style', '').startswith('Heading') or prev_para.get('is_heading', False)
-                    
-                    # Если предыдущий параграф не заголовок, проверяем интервал между ними
+                      # Если предыдущий параграф не заголовок, проверяем интервал между ними
                     if not prev_is_heading:
                         # Получаем информацию об интервале перед заголовком
                         spacing_before = para.get('paragraph_format', {}).get('space_before', 0)
                         
                         # Вычисляем фактический интервал в пунктах
-                        actual_spacing = spacing_before
+                        # Проверяем на None и устанавливаем значение по умолчанию
+                        actual_spacing = spacing_before if spacing_before is not None else 0
                         
                         # Разные требования к интервалам для разных уровней заголовков
                         if heading_level == 1:
@@ -2223,17 +2277,14 @@ class NormControlChecker:
                 'description': "Невозможно проверить порядковые числительные: данные о параграфах отсутствуют.",
                 'auto_fixable': False
             })
-            return issues
-        
-        # Регулярные выражения для поиска неправильно оформленных порядковых числительных
+            return issues        # Регулярные выражения для поиска неправильно оформленных порядковых числительных
         # Находим числительные без дефиса и окончания
-        no_suffix_pattern = r'\b\d+\s+(год|века?|столети[яе]|дн[яи]|месяц[а-я]{0,2})\b'
+        no_suffix_pattern = r'\b\d+\s+(век[а-яёе]?|столети[а-яёеию]?|дн[а-яёеий]?|день|год[а-яёеы]?)\b'
         
-        # Находим числительные с неправильными окончаниями
+        # Находим числительные с неправильными окончаниями 
         wrong_suffix_pattern = r'\b\d+(-[а-яё]{1,3})?\s+(год[а-я]{0,2}|век[а-я]{0,2}|столети[а-яё]{0,2}|дн[а-яё]{0,2}|месяц[а-я]{0,2})\b'
-        
-        # Находим числительные в виде сокращений с неправильным оформлением
-        abbr_pattern = r'\bна\s+\d+\s+(г\.|в\.|стр?\.)\b'
+          # Находим числительные в виде сокращений с неправильным оформлением (включая "на 10 стр.")
+        abbr_pattern = r'\b\d+\s+(стр?\.)'
         
         for para in document_data['paragraphs']:
             if not para or 'text' not in para or not para['text']:
@@ -2283,8 +2334,7 @@ class NormControlChecker:
                     'type': 'ordinal_abbr_no_suffix',
                     'severity': 'medium',
                     'location': f"Параграф {para_idx + 1}",
-                    'description': f"Сокращение без правильного окончания: '{matched_text}'. Правильно: '{num}-{suffix} {abbr}'.",
-                    'auto_fixable': True,
+                    'description': f"Сокращение без правильного окончания: '{matched_text}'. Правильно: '{num}-{suffix} {abbr}'.",                    'auto_fixable': True,
                     'text': matched_text,
                     'replacement': matched_text.replace(f"{num} {abbr}", f"{num}-{suffix} {abbr}")
                 })
@@ -2306,36 +2356,20 @@ class NormControlChecker:
         
         # В зависимости от единицы измерения и контекста
         if unit.lower() in ['год', 'года', 'годы', 'лет']:
-            if last_digit == 1 and num != '11':
-                return 'й'
-            elif last_digit in [2, 3, 4] and int(num) not in [12, 13, 14]:
-                return 'й'
-            else:
-                return 'й'  # Для упрощения берем именительный падеж
+            return 'й'
         
         elif unit.lower() in ['век', 'века', 'веке', 'веков']:
-            if last_digit == 1 and num != '11':
-                return 'й'
-            else:
-                return 'м'  # Предполагаем, что чаще используется в предложном падеже
+            return 'м'  # "В 21-м веке"
         
         elif unit.lower() in ['день', 'дня', 'дни', 'дней']:
-            if last_digit == 1 and num != '11':
-                return 'й'
-            else:
-                return 'й'  # Для упрощения берем именительный падеж
+            return 'й'  # "на 5-й день"
                 
-        elif unit.lower() in ['столетие', 'столетия', 'столетий']:
-            return 'е'  # Для упрощения берем именительный падеж
+        elif unit.lower() in ['столетие', 'столетия', 'столетий', 'столетию']:
+            return 'му'  # "к 3-му столетию"
         
         else:
-            # По умолчанию для неизвестных единиц
-            if last_digit == 1 and num != '11':
-                return 'й'
-            elif last_digit in [2, 3, 4] and int(num) not in [12, 13, 14]:
-                return 'й'
-            else:
-                return 'й'
+            # По умолчанию
+            return 'й'
     
     def _check_surnames(self, document_data):
         """
@@ -2365,9 +2399,8 @@ class NormControlChecker:
         
         # Неправильное оформление инициалов (пробелы между ними)
         wrong_initials_pattern = r'([А-Я])\.\s+([А-Я])\.'
-        
-        # Неправильное оформление в списках (инициалы перед фамилией)
-        wrong_list_pattern = r'^\s*([А-Я])\.\s*([А-Я])\.\s+([А-Я][а-я]+)'
+          # Неправильное оформление в списках (инициалы перед фамилией)
+        wrong_list_pattern = r'(?:^\s*\d+\.\s*)?([А-Я])\.\s*([А-Я])\.\s+([А-Я][а-я]+)'
         
         for para in document_data['paragraphs']:
             if not para or 'text' not in para or not para['text']:

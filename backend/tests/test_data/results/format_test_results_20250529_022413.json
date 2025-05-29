@@ -1,0 +1,12 @@
+[
+    {
+        "test_name": "Скачивание исправленного документа",
+        "requirement": "Приложение должно позволять скачивать исправленный документ",
+        "input_data": "Исправленный документ",
+        "expected_result": "Система позволяет скачать исправленный документ",
+        "actual_result": "Файл для скачивания: C:\\Users\\neytq\\AppData\\Local\\Temp\\tmpen4ahdyp\\corrected_all_errors.docx",
+        "success": true,
+        "error_message": null,
+        "timestamp": "2025-05-29T02:24:13.914371"
+    }
+]

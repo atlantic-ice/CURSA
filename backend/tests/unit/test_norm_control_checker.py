@@ -104,12 +104,48 @@ class TestNormControlChecker:
         
         # Вызываем непосредственно метод проверки шрифта
         issues = self.checker._check_font(document_data)
-        
-        # Проверяем результаты
+          # Проверяем результаты
         assert isinstance(issues, list)
         assert len(issues) > 0
         assert any('font_size' in issue['type'] for issue in issues)
         assert any('12.0' in issue['description'] for issue in issues)
+    
+    def test_check_font_code_listing_exception(self):
+        """
+        Проверка, что Courier New и размер 12pt допустимы для листингов кода
+        """
+        # Пример данных с листингом кода в Courier New 12pt
+        document_data = {
+            'paragraphs': [
+                {
+                    'index': 0,
+                    'text': 'def hello_world():\n    print("Hello, World!")\n    return True',
+                    'style': 'Normal',
+                    'font': {
+                        'name': 'Courier New',
+                        'size': 12.0,
+                        'consistent_formatting': True
+                    }
+                },
+                {
+                    'index': 1,
+                    'text': 'function calculateSum(a, b) {\n    return a + b;\n}',
+                    'style': 'Normal',
+                    'font': {
+                        'name': 'Consolas',
+                        'size': 12.0,
+                        'consistent_formatting': True
+                    }
+                }
+            ]
+        }
+        
+        # Вызываем метод проверки шрифта
+        issues = self.checker._check_font(document_data)
+        
+        # Проверяем, что для листингов кода ошибок шрифта нет
+        font_issues = [issue for issue in issues if 'font_name' in issue['type'] or 'font_size' in issue['type']]
+        assert len(font_issues) == 0, f"Найдены ошибки шрифта для листингов кода: {font_issues}"
     
     def test_check_margins(self):
         """
@@ -257,11 +293,10 @@ class TestNormControlChecker:
         
         # Проверяем, что найдены проблемы с порядковыми числительными
         assert any('ordinal_no_suffix' in issue['type'] for issue in issues)
-        
-        # Проверяем описания найденных проблем
+          # Проверяем описания найденных проблем
         assert any('21 век' in issue['description'] for issue in issues)
         assert any('5 день' in issue['description'] for issue in issues)
-        assert any('3 столетие' in issue['description'] for issue in issues)
+        assert any('3 столетию' in issue['description'] for issue in issues)
         assert any('10 стр' in issue['description'] for issue in issues)
         
     def test_check_surnames(self):

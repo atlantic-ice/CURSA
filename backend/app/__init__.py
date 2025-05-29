@@ -7,7 +7,13 @@ import sys
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    
+    # Настройка CORS с правильными параметрами
+    CORS(app, 
+         origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5000'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+         allow_headers=['Content-Type', 'Authorization'],
+         supports_credentials=True)
     
     # Настройка логгирования
     setup_logging(app)

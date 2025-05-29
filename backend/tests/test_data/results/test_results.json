@@ -1,10 +1,64 @@
 [
   {
+    "test_id": "tests/functional/test_document_processing.py::TestDocumentProcessing::test_document_upload",
+    "test_name": "test_document_upload",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.028186499985167757,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_document_processing.py::TestDocumentProcessing::test_font_check",
+    "test_name": "test_font_check",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.02444190002279356,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_document_processing.py::TestDocumentProcessing::test_font_size_check",
+    "test_name": "test_font_size_check",
+    "test_type": "functional",
+    "passed": false,
+    "duration": 0.02374000000418164,
+    "failed": true,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_document_processing.py::TestDocumentProcessing::test_margins_check",
+    "test_name": "test_margins_check",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.023728900006972253,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_document_processing.py::TestDocumentProcessing::test_line_spacing_check",
+    "test_name": "test_line_spacing_check",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.025210200023138896,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/functional/test_document_processing.py::TestDocumentProcessing::test_document_correction",
+    "test_name": "test_document_correction",
+    "test_type": "functional",
+    "passed": true,
+    "duration": 0.17145009999512695,
+    "failed": false,
+    "skipped": false
+  },
+  {
     "test_id": "tests/functional/test_format_requirements.py::TestFormatRequirements::test_font_check",
     "test_name": "test_font_check",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.03811289998702705,
+    "duration": 0.024604099977295846,
     "failed": false,
     "skipped": false
   },
@@ -13,7 +67,7 @@
     "test_name": "test_font_size_check",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.02402549999533221,
+    "duration": 0.033662900008494034,
     "failed": false,
     "skipped": false
   },
@@ -22,7 +76,7 @@
     "test_name": "test_margins_check",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.023597799998242408,
+    "duration": 0.02330989998881705,
     "failed": false,
     "skipped": false
   },
@@ -31,7 +85,7 @@
     "test_name": "test_line_spacing_check",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.02723350000451319,
+    "duration": 0.023693399998592213,
     "failed": false,
     "skipped": false
   },
@@ -40,7 +94,7 @@
     "test_name": "test_auto_correction",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.12599679999402724,
+    "duration": 0.11397120001493022,
     "failed": false,
     "skipped": false
   },
@@ -49,7 +103,7 @@
     "test_name": "test_headers_formatting",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.03437090000079479,
+    "duration": 0.024057499977061525,
     "failed": false,
     "skipped": false
   },
@@ -58,7 +112,7 @@
     "test_name": "test_page_numbering",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.18712579998828005,
+    "duration": 0.1618923000060022,
     "failed": false,
     "skipped": false
   },
@@ -67,7 +121,7 @@
     "test_name": "test_references_check",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.02590589999454096,
+    "duration": 0.02564810001058504,
     "failed": false,
     "skipped": false
   },
@@ -76,7 +130,7 @@
     "test_name": "test_required_sections",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.029864399999496527,
+    "duration": 0.02475320000667125,
     "failed": false,
     "skipped": false
   },
@@ -85,7 +139,7 @@
     "test_name": "test_tables_formatting",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.02382509999733884,
+    "duration": 0.02299459997448139,
     "failed": false,
     "skipped": false
   },
@@ -94,7 +148,7 @@
     "test_name": "test_figures_formatting",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.024946599995018914,
+    "duration": 0.032074399990960956,
     "failed": false,
     "skipped": false
   },
@@ -103,7 +157,7 @@
     "test_name": "test_download_corrected_document",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.06890399999974761,
+    "duration": 0.06460069998865947,
     "failed": false,
     "skipped": false
   },
@@ -112,7 +166,7 @@
     "test_name": "test_large_document",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.19283430000359658,
+    "duration": 0.18741740001132712,
     "failed": false,
     "skipped": false
   },
@@ -121,7 +175,7 @@
     "test_name": "test_perfect_document",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.06636930000968277,
+    "duration": 0.05855489999521524,
     "failed": false,
     "skipped": false
   },
@@ -130,7 +184,7 @@
     "test_name": "test_math_formulas",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.028587399996467866,
+    "duration": 0.025567800010321662,
     "failed": false,
     "skipped": false
   },
@@ -139,7 +193,7 @@
     "test_name": "test_diagrams",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.02398289999109693,
+    "duration": 0.023233999992953613,
     "failed": false,
     "skipped": false
   },
@@ -148,7 +202,7 @@
     "test_name": "test_headers_and_footers",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.022766299996874295,
+    "duration": 0.021550300007220358,
     "failed": false,
     "skipped": false
   },
@@ -157,7 +211,7 @@
     "test_name": "test_multi_upload",
     "test_type": "functional",
     "passed": true,
-    "duration": 0.00014970000484026968,
+    "duration": 0.0001619999820832163,
     "failed": false,
     "skipped": false
   },
@@ -166,7 +220,7 @@
     "test_name": "test_history",
     "test_type": "functional",
     "passed": true,
-    "duration": 9.31999966269359e-05,
+    "duration": 0.00010049997945316136,
     "failed": false,
     "skipped": false
   }

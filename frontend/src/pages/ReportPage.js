@@ -27,7 +27,16 @@ import {
   Avatar,
   LinearProgress,
   Tooltip,
-  Badge
+  Badge,
+  CardActions,
+  IconButton,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  useTheme,
+  alpha,
+  CircularProgress
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -51,9 +60,22 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import CategoryIcon from '@mui/icons-material/Category';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import SecurityIcon from '@mui/icons-material/Security';
+import SpeedIcon from '@mui/icons-material/Speed';
+import BuildIcon from '@mui/icons-material/Build';
+import InsightsIcon from '@mui/icons-material/Insights';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import ScienceIcon from '@mui/icons-material/Science';
+import StarIcon from '@mui/icons-material/Star';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import DataUsageIcon from '@mui/icons-material/DataUsage';
+import VerifiedIcon from '@mui/icons-material/Verified';
 import axios from 'axios';
 import { CheckHistoryContext } from '../App';
-import StructureAnalysisCard from '../components/StructureAnalysisCard';
 
 // Функция для определения общей оценки документа
 function getDocumentGrade(totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount) {
@@ -95,161 +117,303 @@ function groupIssues(issues) {
 // Для оптимизации производительности - константа конфигурации
 const ENABLE_ANIMATIONS = false; // Отключаем анимации для повышения производительности
 
-// Компонент статистики документа
+// Компонент статистики документа с современным дизайном
 const DocumentStatistics = ({ totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount, totalAutoFixableCount, documentGrade }) => {
+  const theme = useTheme();
+  
+  // Данные для диаграммы
+  const chartData = [
+    { label: 'Критические', value: highSeverityCount, color: 'error', icon: <ErrorOutlineIcon /> },
+    { label: 'Средние', value: mediumSeverityCount, color: 'warning', icon: <WarningAmberIcon /> },
+    { label: 'Незначительные', value: lowSeverityCount, color: 'info', icon: <InfoIcon /> }
+  ].filter(item => item.value > 0);
+
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12} md={7}>
-        <Box sx={{ 
-          mb: 2, 
-          p: 2, 
-          borderRadius: 2, 
-          bgcolor: 'background.paper', 
-          boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.05)' 
-        }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            Обнаружено проблем: <strong>{totalIssues}</strong>
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Автоматически исправляемых: <strong>{totalAutoFixableCount}</strong> ({Math.round(totalAutoFixableCount / totalIssues * 100) || 0}%)
-          </Typography>
-          
-          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
-            <Box sx={{ 
-              flex: 1, 
-              height: 8, 
-              borderRadius: 4, 
-              bgcolor: 'grey.100', 
+    <Box sx={{ mb: 4 }}>
+      <Grid container spacing={4}>
+        {/* Левая панель - детальная статистика */}
+        <Grid item xs={12} lg={8}>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              p: 3,
+              borderRadius: 3,
+              background: theme => `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
+              border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
               position: 'relative',
-              overflow: 'hidden',
-              mr: 2
-            }}>
-              {highSeverityCount > 0 && (
-                <Box sx={{ 
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  height: '100%',
-                  width: `${(highSeverityCount / totalIssues) * 100}%`,
-                  bgcolor: 'error.main',
-                  borderRadius: 'inherit'
-                }} />
-              )}
-              {mediumSeverityCount > 0 && (
-                <Box sx={{ 
-                  position: 'absolute',
-                  left: `${(highSeverityCount / totalIssues) * 100}%`,
-                  top: 0,
-                  height: '100%',
-                  width: `${(mediumSeverityCount / totalIssues) * 100}%`,
-                  bgcolor: 'warning.main',
-                  borderRadius: 'inherit'
-                }} />
-              )}
-              {lowSeverityCount > 0 && (
-                <Box sx={{ 
-                  position: 'absolute',
-                  left: `${((highSeverityCount + mediumSeverityCount) / totalIssues) * 100}%`,
-                  top: 0,
-                  height: '100%',
-                  width: `${(lowSeverityCount / totalIssues) * 100}%`,
-                  bgcolor: 'info.main',
-                  borderRadius: 'inherit'
-                }} />
-              )}
-            </Box>
-          </Box>
-        </Box>
-        
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-          <Chip 
-            icon={<ErrorOutlineIcon />} 
-            label={`Критических: ${highSeverityCount}`} 
-            color="error" 
-            variant={highSeverityCount > 0 ? "filled" : "outlined"}
-            sx={{ fontWeight: 500 }}
-            title="Критические ошибки требуют обязательного исправления"
-          />
-          <Chip 
-            icon={<WarningAmberIcon />} 
-            label={`Средних: ${mediumSeverityCount}`} 
-            color="warning"
-            variant={mediumSeverityCount > 0 ? "filled" : "outlined"}
-            sx={{ fontWeight: 500 }}
-            title="Средние ошибки рекомендуется исправить"
-          />
-          <Chip 
-            icon={<InfoIcon />} 
-            label={`Незначительных: ${lowSeverityCount}`} 
-            color="info"
-            variant={lowSeverityCount > 0 ? "filled" : "outlined"}
-            sx={{ fontWeight: 500 }}
-            title="Незначительные ошибки можно оставить на ваше усмотрение"
-          />
-        </Box>
-      </Grid>
-      
-      <Grid item xs={12} md={5}>
-        <Box 
-          sx={{ 
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            p: 2,
-            backgroundColor: theme => `${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'}`,
-            borderRadius: 3
-          }}
-        >
-          <Box 
-            sx={{
-              width: 100,
-              height: 100,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: `${documentGrade.color}.lighter`,
-              border: 3,
-              borderColor: `${documentGrade.color}.main`,
-              position: 'relative',
-              boxShadow: `0 8px 24px ${documentGrade.color}.main`
+              overflow: 'hidden'
             }}
           >
-            <Typography 
-              variant="h2" 
-              component="div"
-              sx={{ fontWeight: 700, color: `${documentGrade.color}.dark` }}
-            >
-              {documentGrade.score}
-            </Typography>
-          </Box>
-          <Box sx={{ ml: 3 }}>
-            <Typography variant="h6" fontWeight={600}>
-              Общая оценка
-            </Typography>
-            <Typography 
-              variant="h5" 
-              color={`${documentGrade.color}.main`}
-              fontWeight={700}
-            >
-              {documentGrade.label}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {totalIssues === 0 
-                ? 'Документ полностью соответствует требованиям!' 
-                : `Обнаружено ${totalIssues} ${totalIssues === 1 ? 'несоответствие' : totalIssues > 1 && totalIssues < 5 ? 'несоответствия' : 'несоответствий'}`}
-            </Typography>
-          </Box>
-        </Box>
+            {/* Фоновый декоративный элемент */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: -50,
+                right: -50,
+                width: 150,
+                height: 150,
+                borderRadius: '50%',
+                background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.05)}, ${alpha(theme.palette.secondary.main, 0.03)})`,
+                zIndex: 0
+              }}
+            />
+            
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                <AssessmentIcon sx={{ mr: 1, color: 'primary.main' }} />
+                Детальная статистика
+              </Typography>
+              
+              {/* Основные метрики */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={6} sm={3}>
+                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.background.paper, 0.7), borderRadius: 2 }}>
+                    <Typography variant="h4" fontWeight={800} color="text.primary">
+                      {totalIssues}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      Всего проблем
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.success.main, 0.1), borderRadius: 2 }}>
+                    <Typography variant="h4" fontWeight={800} color="success.main">
+                      {totalAutoFixableCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      Исправляемых
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.info.main, 0.1), borderRadius: 2 }}>
+                    <Typography variant="h4" fontWeight={800} color="info.main">
+                      {totalIssues > 0 ? Math.round(totalAutoFixableCount / totalIssues * 100) : 0}%
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      Автоисправление
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.warning.main, 0.1), borderRadius: 2 }}>
+                    <Typography variant="h4" fontWeight={800} color="warning.main">
+                      {totalIssues - totalAutoFixableCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      Ручных
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              {/* Прогресс-бар распределения ошибок */}
+              {totalIssues > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                    Распределение по серьезности
+                  </Typography>
+                  <Box sx={{ 
+                    position: 'relative',
+                    height: 12, 
+                    borderRadius: 6, 
+                    bgcolor: alpha(theme.palette.grey[300], 0.3),
+                    overflow: 'hidden',
+                    mb: 2
+                  }}>
+                    {highSeverityCount > 0 && (
+                      <Box sx={{ 
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        height: '100%',
+                        width: `${(highSeverityCount / totalIssues) * 100}%`,
+                        bgcolor: 'error.main',
+                        borderRadius: '6px 0 0 6px'
+                      }} />
+                    )}
+                    {mediumSeverityCount > 0 && (
+                      <Box sx={{ 
+                        position: 'absolute',
+                        left: `${(highSeverityCount / totalIssues) * 100}%`,
+                        top: 0,
+                        height: '100%',
+                        width: `${(mediumSeverityCount / totalIssues) * 100}%`,
+                        bgcolor: 'warning.main'
+                      }} />
+                    )}
+                    {lowSeverityCount > 0 && (
+                      <Box sx={{ 
+                        position: 'absolute',
+                        left: `${((highSeverityCount + mediumSeverityCount) / totalIssues) * 100}%`,
+                        top: 0,
+                        height: '100%',
+                        width: `${(lowSeverityCount / totalIssues) * 100}%`,
+                        bgcolor: 'info.main',
+                        borderRadius: '0 6px 6px 0'
+                      }} />
+                    )}
+                  </Box>
+                  
+                  {/* Легенда */}
+                  <Stack direction="row" spacing={2} flexWrap="wrap">
+                    {chartData.map((item) => (
+                      <Box key={item.label} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box 
+                          sx={{ 
+                            width: 12, 
+                            height: 12, 
+                            borderRadius: '50%', 
+                            bgcolor: `${item.color}.main`,
+                            mr: 1 
+                          }} 
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          {item.label}: {item.value}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+        
+        {/* Правая панель - общая оценка */}
+        <Grid item xs={12} lg={4}>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              p: 3,
+              borderRadius: 3,
+              height: '100%',
+              background: theme => {
+                const baseColor = documentGrade.color === 'success' ? theme.palette.success.main :
+                                documentGrade.color === 'warning' ? theme.palette.warning.main :
+                                theme.palette.error.main;
+                return `linear-gradient(135deg, ${alpha(baseColor, 0.08)} 0%, ${alpha(baseColor, 0.03)} 100%)`;
+              },
+              border: `2px solid ${alpha(theme.palette[documentGrade.color].main, 0.2)}`,
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              textAlign: 'center'
+            }}
+          >
+            {/* Фоновые декоративные элементы */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: -30,
+                left: -30,
+                width: 100,
+                height: 100,
+                borderRadius: '50%',
+                background: `linear-gradient(45deg, ${alpha(theme.palette[documentGrade.color].main, 0.1)}, transparent)`,
+                zIndex: 0
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: -20,
+                right: -20,
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                background: `linear-gradient(45deg, transparent, ${alpha(theme.palette[documentGrade.color].main, 0.08)})`,
+                zIndex: 0
+              }}
+            />
+            
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              {/* Индикатор оценки */}
+              <Box 
+                sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: `linear-gradient(135deg, ${theme.palette[documentGrade.color].main}, ${theme.palette[documentGrade.color].dark})`,
+                  boxShadow: `0 8px 32px ${alpha(theme.palette[documentGrade.color].main, 0.4)}`,
+                  mb: 3,
+                  position: 'relative'
+                }}
+              >
+                <Typography 
+                  variant="h2" 
+                  component="div"
+                  sx={{ 
+                    fontWeight: 900, 
+                    color: 'white',
+                    textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  {documentGrade.score}
+                </Typography>
+                
+                {/* Звездочки для высоких оценок */}
+                {documentGrade.score >= 4 && (
+                  <Box sx={{ position: 'absolute', top: -10, right: -10 }}>
+                    <StarIcon sx={{ color: '#FFD700', fontSize: 24 }} />
+                  </Box>
+                )}
+              </Box>
+              
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 1, color: `${documentGrade.color}.dark` }}>
+                Общая оценка
+              </Typography>
+              
+              <Typography 
+                variant="h5" 
+                fontWeight={600}
+                sx={{ 
+                  mb: 2,
+                  color: `${documentGrade.color}.main`,
+                  lineHeight: 1.2
+                }}
+              >
+                {documentGrade.label}
+              </Typography>
+              
+              <Box sx={{ 
+                p: 2, 
+                bgcolor: alpha(theme.palette.background.paper, 0.7), 
+                borderRadius: 2,
+                border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+              }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  {totalIssues === 0 
+                    ? 'Документ полностью соответствует требованиям!' 
+                    : `Обнаружено ${totalIssues} ${totalIssues === 1 ? 'несоответствие' : totalIssues > 1 && totalIssues < 5 ? 'несоответствия' : 'несоответствий'}`}
+                </Typography>
+              </Box>
+              
+              {/* Дополнительные индикаторы */}
+              <Stack direction="row" spacing={1} sx={{ mt: 2, justifyContent: 'center' }}>
+                {documentGrade.score === 5 && <VerifiedIcon sx={{ color: 'success.main' }} />}
+                {documentGrade.score >= 4 && <ThumbUpIcon sx={{ color: 'success.main' }} />}
+                {totalAutoFixableCount > 0 && <BuildIcon sx={{ color: 'info.main' }} />}
+              </Stack>
+            </Box>
+          </Paper>
+        </Grid>
       </Grid>
-    </Grid>
+    </Box>
   );
 };
 
 const ReportPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const theme = useTheme();
   const { reportData, fileName } = location.state || {};
   const [loading, setLoading] = useState(false);
   const [correctionSuccess, setCorrectionSuccess] = useState(false);
@@ -260,6 +424,7 @@ const ReportPage = () => {
   const [reportError, setReportError] = useState(null);
   const [reportFilePath, setReportFilePath] = useState(null);
   const [tabValue, setTabValue] = useState(0); // Состояние для табов
+  const [showInsights, setShowInsights] = useState(false); // Для показа аналитики
   
   // Контекст для истории проверок
   const { addToHistory } = useContext(CheckHistoryContext);
@@ -523,8 +688,7 @@ const ReportPage = () => {
       window.location.href = `http://localhost:5000/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(fileName)}`;
     }
   };
-
-  // Улучшенный компонент карточки категории
+  // Улучшенный компонент карточки категории с современным дизайном
   const CategoryCard = ({ category, issues, count, icon, index }) => {
     const highSeverity = issues.filter(issue => 
       issue.type.startsWith(category) && issue.severity === 'high'
@@ -545,59 +709,65 @@ const ReportPage = () => {
         height: '100%', 
         display: 'flex', 
         flexDirection: 'column',
-        alignItems: 'stretch',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        borderRadius: 3,
-        borderTop: '4px solid',
-        borderColor: `${severity}.main`,
-        p: 2,
-        mb: 2,
+        borderRadius: 4,
+        border: '1px solid',
+        borderColor: alpha(theme.palette[severity].main, 0.2),
+        background: `linear-gradient(135deg, ${alpha(theme.palette[severity].main, 0.02)} 0%, ${alpha(theme.palette.background.paper, 1)} 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
-          boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)'
+          transform: 'translateY(-4px)',
+          boxShadow: `0 12px 40px ${alpha(theme.palette[severity].main, 0.15)}`,
+          borderColor: `${severity}.main`
         }
       }}>
-        <CardContent sx={{ flexGrow: 1, p: 1.5, '&:last-child': { pb: 1.5 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        {/* Декоративная полоса сверху */}
+        <Box 
+          sx={{ 
+            height: 4, 
+            background: `linear-gradient(90deg, ${theme.palette[severity].main}, ${theme.palette[severity].light})` 
+          }} 
+        />
+        
+        <CardContent sx={{ flexGrow: 1, p: 3 }}>
+          {/* Заголовок категории */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
             <Box
               sx={{
-                width: 46,
-                height: 46,
-                borderRadius: '12px',
+                width: 56,
+                height: 56,
+                borderRadius: 3,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                bgcolor: `${severity}.lighter`,
-                color: `${severity}.main`,
-                mr: 2
+                background: `linear-gradient(135deg, ${theme.palette[severity].main}, ${theme.palette[severity].dark})`,
+                color: 'white',
+                mr: 2,
+                boxShadow: `0 4px 16px ${alpha(theme.palette[severity].main, 0.3)}`
               }}
             >
-              {icon}
+              {React.cloneElement(icon, { fontSize: 'large' })}
             </Box>
-            <Typography variant="h6" component="div" fontWeight={700} sx={{ color: `${severity}.dark` }}>
-              {getCategoryName(category)}
-            </Typography>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" component="div" fontWeight={700} sx={{ mb: 0.5 }}>
+                {getCategoryName(category)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                {count} {pluralizeProblem(count)}
+              </Typography>
+            </Box>
           </Box>
 
-          <Box sx={{ mb: 2, px: 0.5 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: 0.5, display: 'flex', justifyContent: 'space-between' }}>
-              <span>{count} {pluralizeProblem(count)}</span>
-              {autoFixableCount > 0 && (
-                <Chip 
-                  size="small" 
-                  icon={<AutoFixHighIcon fontSize="small" />} 
-                  label={`${autoFixableCount} авто`} 
-                  color="success" 
-                  sx={{ height: 22, '& .MuiChip-label': { px: 1 } }}
-                  title="Автоматически исправляемых проблем"
-                />
-              )}
-            </Typography>
+          {/* Статистика по серьезности */}
+          <Box sx={{ mb: 3 }}>
             <Box sx={{ 
-              height: 6, 
-              borderRadius: 3, 
-              bgcolor: 'grey.100', 
+              height: 8, 
+              borderRadius: 4, 
+              bgcolor: alpha(theme.palette.grey[300], 0.2), 
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              mb: 2
             }}>
               {highSeverity > 0 && (
                 <Box sx={{ 
@@ -606,8 +776,8 @@ const ReportPage = () => {
                   top: 0,
                   height: '100%',
                   width: `${(highSeverity / count) * 100}%`,
-                  bgcolor: 'error.main',
-                  borderRadius: 'inherit'
+                  background: `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light})`,
+                  borderRadius: '4px 0 0 4px'
                 }} />
               )}
               {mediumSeverity > 0 && (
@@ -617,8 +787,7 @@ const ReportPage = () => {
                   top: 0,
                   height: '100%',
                   width: `${(mediumSeverity / count) * 100}%`,
-                  bgcolor: 'warning.main',
-                  borderRadius: 'inherit'
+                  background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.warning.light})`
                 }} />
               )}
               {lowSeverity > 0 && (
@@ -628,53 +797,191 @@ const ReportPage = () => {
                   top: 0,
                   height: '100%',
                   width: `${(lowSeverity / count) * 100}%`,
-                  bgcolor: 'info.main',
-                  borderRadius: 'inherit'
+                  background: `linear-gradient(90deg, ${theme.palette.info.main}, ${theme.palette.info.light})`,
+                  borderRadius: '0 4px 4px 0'
                 }} />
               )}
             </Box>
+            
+            {/* Чипы с количеством */}
+            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+              {highSeverity > 0 && (
+                <Chip 
+                  label={`${highSeverity} крит.`} 
+                  size="small" 
+                  sx={{ 
+                    bgcolor: alpha(theme.palette.error.main, 0.1),
+                    color: 'error.dark',
+                    fontWeight: 600,
+                    border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`
+                  }}
+                />
+              )}
+              {mediumSeverity > 0 && (
+                <Chip 
+                  label={`${mediumSeverity} сред.`} 
+                  size="small" 
+                  sx={{ 
+                    bgcolor: alpha(theme.palette.warning.main, 0.1),
+                    color: 'warning.dark',
+                    fontWeight: 600,
+                    border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`
+                  }}
+                />
+              )}
+              {lowSeverity > 0 && (
+                <Chip 
+                  label={`${lowSeverity} низ.`} 
+                  size="small" 
+                  sx={{ 
+                    bgcolor: alpha(theme.palette.info.main, 0.1),
+                    color: 'info.dark',
+                    fontWeight: 600,
+                    border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+                  }}
+                />
+              )}
+            </Stack>
           </Box>
-          <Stack direction="row" spacing={1} sx={{ mb: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-            {highSeverity > 0 && (
-              <Chip 
-                label={`${highSeverity} крит.`} 
-                size="small" 
-                color="error" 
-                variant="outlined"
-                icon={<ErrorOutlineIcon fontSize="small" />}
-                sx={{ height: 22, '& .MuiChip-label': { px: 1 } }}
-                title="Критические ошибки"
-              />
-            )}
-            {mediumSeverity > 0 && (
-              <Chip 
-                label={`${mediumSeverity} сред.`} 
-                size="small" 
-                color="warning" 
-                variant="outlined" 
-                icon={<WarningAmberIcon fontSize="small" />}
-                sx={{ height: 22, '& .MuiChip-label': { px: 1 } }}
-                title="Средние ошибки"
-              />
-            )}
-            {lowSeverity > 0 && (
-              <Chip 
-                label={`${lowSeverity} низ.`} 
-                size="small" 
-                color="info" 
-                variant="outlined"
-                icon={<InfoIcon fontSize="small" />}
-                sx={{ height: 22, '& .MuiChip-label': { px: 1 } }}
-                title="Незначительные ошибки"
-              />
-            )}
-          </Stack>
+          
+          {/* Индикатор автоисправления */}
+          {autoFixableCount > 0 && (
+            <Box sx={{ 
+              p: 2, 
+              bgcolor: alpha(theme.palette.success.main, 0.08), 
+              borderRadius: 2,
+              border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <AutoFixHighIcon sx={{ color: 'success.main', mr: 1, fontSize: 20 }} />
+              <Typography variant="body2" color="success.dark" fontWeight={600}>
+                {autoFixableCount} автоисправимых
+              </Typography>
+            </Box>
+          )}
         </CardContent>
       </Card>
     );
   };
 
-  // В компоненте ReportPage добавим функцию загрузки отчета
+  // Компонент аналитических инсайтов
+  const AnalyticsInsights = ({ issues, totalIssues, documentGrade }) => {
+    const insights = useMemo(() => {
+      const tips = [];
+      
+      // Анализ по типам ошибок
+      if (issues.filter(i => i.type.startsWith('font')).length > 0) {
+        tips.push({
+          icon: <TextFormatIcon />,
+          title: 'Форматирование шрифта',
+          description: 'Обратите внимание на единообразие шрифтов в документе',
+          severity: 'info'
+        });
+      }
+      
+      if (issues.filter(i => i.type.startsWith('margins')).length > 0) {
+        tips.push({
+          icon: <BorderStyleIcon />,
+          title: 'Поля страницы',
+          description: 'Проверьте соответствие полей требованиям ГОСТ',
+          severity: 'warning'
+        });
+      }
+      
+      // Анализ автоисправимости
+      const autoFixablePercent = Math.round((totalAutoFixableCount / totalIssues) * 100);
+      if (autoFixablePercent > 70) {
+        tips.push({
+          icon: <BuildIcon />,
+          title: 'Высокий потенциал автоисправления',
+          description: `${autoFixablePercent}% ошибок можно исправить автоматически`,
+          severity: 'success'
+        });
+      }
+      
+      // Рекомендации по оценке
+      if (documentGrade.score >= 4) {
+        tips.push({
+          icon: <WorkspacePremiumIcon />,
+          title: 'Отличное качество',
+          description: 'Документ соответствует высоким стандартам оформления',
+          severity: 'success'
+        });
+      } else if (documentGrade.score === 3) {
+        tips.push({
+          icon: <TipsAndUpdatesIcon />,
+          title: 'Есть потенциал для улучшения',
+          description: 'Исправление найденных ошибок повысит качество документа',
+          severity: 'warning'
+        });
+      }
+      
+      return tips;
+    }, [issues, totalIssues, documentGrade]);
+
+    return (
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: 3,
+          borderRadius: 3,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.02)} 0%, ${alpha(theme.palette.primary.main, 0.01)} 100%)`,
+          border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          mb: 4
+        }}
+      >
+        <Typography variant="h6" fontWeight={700} sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+          <InsightsIcon sx={{ mr: 1, color: 'info.main' }} />
+          Аналитические рекомендации
+        </Typography>
+        
+        <Grid container spacing={2}>
+          {insights.map((insight, index) => (
+            <Grid item xs={12} md={6} key={index}>
+              <Card 
+                elevation={0}
+                sx={{ 
+                  p: 2,
+                  height: '100%',
+                  border: `1px solid ${alpha(theme.palette[insight.severity].main, 0.2)}`,
+                  bgcolor: alpha(theme.palette[insight.severity].main, 0.05),
+                  borderRadius: 2
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: `${insight.severity}.main`,
+                      color: 'white',
+                      mr: 2,
+                      flexShrink: 0
+                    }}
+                  >
+                    {insight.icon}
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                      {insight.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {insight.description}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Paper>
+    );
+  };
   const handleGenerateReport = async () => {
     if (reportLoading) return;
     
@@ -710,101 +1017,179 @@ const ReportPage = () => {
     // Открываем URL для скачивания
     window.open(downloadUrl, '_blank');
   };
-
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Секция заголовка и общей информации */}
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: { xs: 2, md: 4 },
-          mb: 4,
-          borderRadius: 4,
-          border: '1px solid',
-          borderColor: 'divider',
-          background: theme => `linear-gradient(to bottom, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        <Box sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography
-            variant="h4"
-            component="h1"
-            align="center"
-            gutterBottom
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.background.default, 1)} 50%, ${alpha(theme.palette.secondary.main, 0.01)} 100%)`,
+      pb: 6
+    }}>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        {/* Hero секция с заголовком */}
+        <Paper 
+          elevation={0}
+          sx={{ 
+            p: { xs: 3, md: 5 },
+            mb: 4,
+            borderRadius: 4,
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Декоративные элементы фона */}
+          <Box
             sx={{
-              fontWeight: 800,
-              mb: 1,
-              background: theme => theme.palette.mode === 'dark'
-                ? 'linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%)'
-                : 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              textFillColor: 'transparent',
-              textShadow: theme => theme.palette.mode === 'dark'
-                ? '0 2px 16px #6366f1cc'
-                : '0 2px 8px #2563eb33',
+              position: 'absolute',
+              top: -100,
+              right: -100,
+              width: 300,
+              height: 300,
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 70%)`,
+              zIndex: 0
             }}
-          >
-            Отчет о проверке документа
-          </Typography>
-          
-          <Typography variant="subtitle1" align="center" sx={{ mb: 3, color: 'text.secondary', fontWeight: 500 }}>
-            {memoizedFileName}
-          </Typography>
-          
-          {/* Используем компонент статистики */}
-          <DocumentStatistics 
-            totalIssues={totalIssues}
-            highSeverityCount={highSeverityCount}
-            mediumSeverityCount={mediumSeverityCount}
-            lowSeverityCount={lowSeverityCount}
-            totalAutoFixableCount={totalAutoFixableCount}
-            documentGrade={documentGrade}
+          />
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: -80,
+              left: -80,
+              width: 200,
+              height: 200,
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.06)} 0%, transparent 70%)`,
+              zIndex: 0
+            }}
           />
           
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<AutoFixHighIcon />}
-              onClick={handleCorrection}
-              disabled={loading || correctionSuccess || totalIssues === 0}
-              sx={{ 
-                mr: 2,
-                py: 1.2,
-                px: 3,
-                borderRadius: 2,
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
+          <Box sx={{ position: 'relative', zIndex: 1 }}>
+            <Typography
+              variant="h3"
+              component="h1"
+              align="center"
+              gutterBottom
+              sx={{
+                fontWeight: 900,
+                mb: 2,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                textShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                fontSize: { xs: '2rem', md: '3rem' }
               }}
             >
-              {loading ? 'Исправление...' : 'Исправить все возможные ошибки'}
-            </Button>
+              Анализ документа завершен
+            </Typography>
             
-            <Button
-              variant="outlined"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/check')}
-              disabled={loading}
-              sx={{ borderRadius: 2 }}
-            >
-              Проверить другой документ
-            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 4 }}>
+              <ArticleIcon sx={{ mr: 1, color: 'text.secondary' }} />
+              <Typography variant="h6" align="center" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                {memoizedFileName}
+              </Typography>
+            </Box>
+            
+            {/* Используем новый компонент статистики */}
+            <DocumentStatistics 
+              totalIssues={totalIssues}
+              highSeverityCount={highSeverityCount}
+              mediumSeverityCount={mediumSeverityCount}
+              lowSeverityCount={lowSeverityCount}
+              totalAutoFixableCount={totalAutoFixableCount}
+              documentGrade={documentGrade}
+            />
+            
+            {/* Кнопки действий */}
+            <Box sx={{ 
+              mt: 4, 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'center',
+              gap: 2,
+              alignItems: 'center'
+            }}>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AutoFixHighIcon />}
+                onClick={handleCorrection}
+                disabled={loading || correctionSuccess || totalIssues === 0}
+                sx={{ 
+                  py: 1.5,
+                  px: 4,
+                  borderRadius: 3,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                  boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.4)}`
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              >
+                {loading ? 'Исправление...' : 'Автоматическое исправление'}
+              </Button>
+              
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<ArrowBackIcon />}
+                onClick={() => navigate('/check')}
+                disabled={loading}
+                sx={{ 
+                  py: 1.5,
+                  px: 4,
+                  borderRadius: 3,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  borderWidth: 2,
+                  '&:hover': {
+                    borderWidth: 2,
+                    transform: 'translateY(-2px)'
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              >
+                Проверить другой документ
+              </Button>
+              
+              <Button
+                variant="text"
+                startIcon={<InsightsIcon />}
+                onClick={() => setShowInsights(!showInsights)}
+                sx={{ 
+                  py: 1.5,
+                  px: 3,
+                  borderRadius: 3,
+                  fontWeight: 600
+                }}
+              >
+                {showInsights ? 'Скрыть' : 'Показать'} аналитику
+              </Button>
+            </Box>
           </Box>
-        </Box>
-      </Paper>
-      
-      {/* Сообщения об исправлении */}
-      {correctionSuccess && (
-        <div>
+        </Paper>        
+        {/* Аналитические инсайты */}
+        {showInsights && (
+          <AnalyticsInsights 
+            issues={issues}
+            totalIssues={totalIssues}
+            documentGrade={documentGrade}
+          />
+        )}
+        
+        {/* Сообщения об исправлении */}
+        {correctionSuccess && (
           <Alert 
             severity="success" 
             sx={{ 
               mb: 3, 
-              borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(0, 200, 83, 0.15)'
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+              bgcolor: alpha(theme.palette.success.main, 0.08)
             }}
             action={
               <Button 
@@ -818,320 +1203,364 @@ const ReportPage = () => {
               </Button>
             }
           >
-            <AlertTitle>Документ успешно исправлен</AlertTitle>
+            <AlertTitle sx={{ fontWeight: 700 }}>Документ успешно исправлен</AlertTitle>
             Автоматически исправлены все возможные ошибки. Скачивание документа началось автоматически.
           </Alert>
-        </div>
-      )}
-      
-      {correctionError && (
-        <Alert severity="error" sx={{ 
-          mb: 3, 
-          borderRadius: 2,
-          boxShadow: '0 4px 12px rgba(244, 67, 54, 0.15)'
-        }}>
-          <AlertTitle>Ошибка при исправлении</AlertTitle>
-          {correctionError}
-        </Alert>
-      )}
-      
-      {/* Если документ идеален */}
-      {totalIssues === 0 && (
+        )}
+        
+        {correctionError && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3, 
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+              bgcolor: alpha(theme.palette.error.main, 0.08)
+            }}
+          >
+            <AlertTitle sx={{ fontWeight: 700 }}>Ошибка при исправлении</AlertTitle>
+            {correctionError}
+          </Alert>
+        )}
+        
+        {/* Если документ идеален */}
+        {totalIssues === 0 && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 5,
+              mb: 4,
+              borderRadius: 4,
+              textAlign: 'center',
+              background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.light, 0.05)} 100%)`,
+              border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`
+            }}
+          >
+            <Box sx={{ mb: 3 }}>
+              <CheckCircleOutlineIcon sx={{ fontSize: 100, color: 'success.main', mb: 2 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
+                {[...Array(5)].map((_, i) => (
+                  <StarIcon key={i} sx={{ color: '#FFD700', fontSize: 32 }} />
+                ))}
+              </Box>
+            </Box>
+            <Typography variant="h4" gutterBottom fontWeight={700} color="success.dark">
+              Превосходно!
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 3, color: 'text.secondary' }}>
+              Ваш документ полностью соответствует требованиям нормоконтроля
+            </Typography>
+            <Button
+              variant="contained"
+              color="success"
+              size="large"
+              startIcon={<VerifiedIcon />}
+              sx={{ borderRadius: 3, py: 1.5, px: 4 }}
+            >
+              Документ готов к сдаче
+            </Button>
+          </Paper>
+        )}
+        
+        {/* Список найденных проблем с современными табами */}
+        {totalIssues > 0 && (
+          <Paper 
+            elevation={0}
+            sx={{ 
+              borderRadius: 4,
+              overflow: 'hidden',
+              border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+              mb: 4,
+              background: alpha(theme.palette.background.paper, 0.8)
+            }}
+          >
+            <Box sx={{ 
+              p: 3,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.background.paper, 1)} 100%)`,
+              borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`
+            }}>
+              <Typography variant="h5" fontWeight={700} sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                <ScienceIcon sx={{ mr: 1, color: 'primary.main' }} />
+                Детализация проблем
+              </Typography>
+              
+              <Tabs 
+                value={tabValue} 
+                onChange={handleTabChange} 
+                sx={{ 
+                  '& .MuiTabs-indicator': {
+                    height: 4,
+                    borderRadius: '2px 2px 0 0',
+                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                  },
+                  '& .MuiTab-root': {
+                    borderRadius: '12px 12px 0 0',
+                    mr: 1,
+                    transition: 'all 0.3s',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.04)
+                    }
+                  }
+                }}
+              >
+                <Tab 
+                  icon={<CategoryIcon />} 
+                  label="По категориям" 
+                  iconPosition="start"
+                  sx={{ 
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    minHeight: 56,
+                    fontSize: '1rem'
+                  }} 
+                />
+                <Tab 
+                  icon={<FormatListNumberedIcon />} 
+                  label="Полный список" 
+                  iconPosition="start"
+                  sx={{ 
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    minHeight: 56,
+                    fontSize: '1rem'
+                  }} 
+                />
+              </Tabs>
+            </Box>
+            
+            {/* Контент для таба "Категории" */}
+            {tabValue === 0 && (
+              <Box sx={{ p: 4 }}>
+                <Grid container spacing={3}>
+                  {Object.entries(groupedIssues).map(([category, categoryIssues], idx) => (
+                    <Grid item xs={12} md={6} lg={4} key={category}>
+                      <CategoryCard 
+                        category={category} 
+                        issues={issues}
+                        count={categoryIssues.length}
+                        icon={getCategoryIcon(category)}
+                        index={idx}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+            
+            {/* Контент для таба "Все проблемы" */}
+            {tabValue === 1 && (
+              <List disablePadding sx={{ maxHeight: 700, overflow: 'auto' }}>
+                {Object.entries(groupedIssues).map(([category, categoryIssues], categoryIndex) => {
+                  const grouped = groupIssues(categoryIssues);
+                  const maxSeverity = grouped.some(i => i.severity === 'high')
+                    ? 'error'
+                    : grouped.some(i => i.severity === 'medium')
+                    ? 'warning'
+                    : 'info';
+                  const severityLabel = maxSeverity === 'error' ? 'Критические' : maxSeverity === 'warning' ? 'Средние' : 'Незначительные';
+                  
+                  return (
+                    <Accordion 
+                      defaultExpanded={categoryIndex === 0} 
+                      sx={{
+                        borderLeft: `6px solid ${theme.palette[maxSeverity].main}`,
+                        boxShadow: 'none',
+                        mb: 1,
+                        borderRadius: 0,
+                        '&:before': { display: 'none' },
+                        '&:not(:last-child)': {
+                          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`
+                        },
+                        bgcolor: alpha(theme.palette[maxSeverity].main, 0.02)                      }} 
+                      key={category}
+                    >
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{
+                          minHeight: 72,
+                          '&:hover': { 
+                            bgcolor: alpha(theme.palette[maxSeverity].main, 0.06),
+                            transform: 'translateY(-1px)',
+                            boxShadow: `0 2px 8px ${alpha(theme.palette[maxSeverity].main, 0.15)}`
+                          },
+                          transition: 'all 0.2s ease-in-out',
+                          borderRadius: '8px 8px 0 0'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+                          <Box
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: 3,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: `linear-gradient(135deg, ${theme.palette[maxSeverity].main}, ${theme.palette[maxSeverity].dark})`,
+                              color: 'white',
+                              mr: 3,
+                              boxShadow: `0 4px 12px ${alpha(theme.palette[maxSeverity].main, 0.3)}`
+                            }}
+                          >
+                            {getCategoryIcon(category)}
+                          </Box>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', mb: 0.5 }}>
+                              {getCategoryName(category)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {grouped.length} {pluralizeProblem(grouped.length)}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={severityLabel}
+                            color={maxSeverity}
+                            sx={{ fontWeight: 600, mr: 2 }}
+                          />
+                        </Box>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ p: 0 }}>
+                        <List disablePadding>
+                          {grouped.map((issue, index) => (                            <ListItem
+                              key={`${category}-${index}`}
+                              divider={index < grouped.length - 1}
+                              sx={{
+                                py: 3,
+                                px: 4,
+                                alignItems: 'flex-start',
+                                '&:hover': { 
+                                  bgcolor: alpha(theme.palette.primary.main, 0.03),
+                                  transform: 'translateY(-1px)',
+                                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                                borderRadius: 1
+                              }}
+                            >
+                              <ListItemIcon sx={{ mt: 0.5 }}>
+                                {getSeverityIcon(issue.severity)}
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                                    <Typography component="span" variant="body1" fontWeight={600}>
+                                      {issue.description}
+                                    </Typography>
+                                    {issue.count > 1 && (
+                                      <Badge 
+                                        badgeContent={issue.count} 
+                                        color="primary"
+                                        sx={{ ml: 1 }}
+                                      />
+                                    )}
+                                    <Chip
+                                      label={getSeverityText(issue.severity)}
+                                      color={getSeverityColor(issue.severity)}
+                                      size="small"
+                                      sx={{ fontWeight: 600 }}
+                                    />
+                                    {issue.auto_fixable && (
+                                      <Chip
+                                        label="Автоисправимая"
+                                        size="small"
+                                        color="success"
+                                        icon={<AutoFixHighIcon fontSize="small" />}
+                                        sx={{ fontWeight: 600 }}
+                                      />
+                                    )}
+                                  </Box>
+                                }
+                                secondary={
+                                  <Typography variant="body2" color="text.secondary">
+                                    {issue.locations && issue.locations.length > 1
+                                      ? `Расположение: ${issue.locations.join(', ')}`
+                                      : `Расположение: ${issue.location}`}
+                                  </Typography>
+                                }
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </AccordionDetails>
+                    </Accordion>
+                  );
+                })}
+              </List>
+            )}
+          </Paper>        )}
+
+        {/* Панель действий с отчетами */}
         <Paper
           elevation={0}
           sx={{
-            p: 4,
-            mb: 4,
-            borderRadius: 4,
-            border: '1px solid',
-            borderColor: 'success.light',
-            bgcolor: 'success.lighter',
-            textAlign: 'center',
-            boxShadow: '0 4px 20px rgba(0, 200, 83, 0.15)'
+            p: 3,
+            borderRadius: 3,
+            border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+            background: alpha(theme.palette.background.paper, 0.6),
+            mt: 4
           }}
         >
-          <CheckCircleOutlineIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-          <Typography variant="h5" gutterBottom fontWeight={600}>
-            Отличная работа!
+          <Typography variant="h6" fontWeight={700} sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+            <DescriptionIcon sx={{ mr: 1, color: 'secondary.main' }} />
+            Экспорт отчетов
           </Typography>
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            Ваш документ полностью соответствует требованиям нормоконтроля.
-          </Typography>
-        </Paper>
-      )}
-      
-      {/* Список найденных проблем с табами */}
-      {totalIssues > 0 && (
-        <Paper 
-          elevation={0}
-          sx={{ 
-            borderRadius: 4,
-            overflow: 'hidden',
-            border: '1px solid',
-            borderColor: 'divider',
-            mb: 4,
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)'
-          }}
-        >
-          <Box sx={{ 
-            px: 3, 
-            py: 2, 
-            bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-            borderBottom: '1px solid',
-            borderColor: 'divider'
-          }}>
-            <Typography variant="h5" fontWeight={600} sx={{ mb: 2 }}>
-              Обнаруженные проблемы
-            </Typography>
-            
-            {/* Добавление табов */}
-            <Tabs 
-              value={tabValue} 
-              onChange={handleTabChange} 
+          
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
+            <Button
+              variant="outlined"
+              startIcon={reportLoading ? <CircularProgress size={16} /> : <DescriptionIcon />}
+              onClick={handleGenerateReport}
+              disabled={reportLoading || totalIssues === 0}
               sx={{ 
-                mb: -1.5,
-                '& .MuiTabs-indicator': {
-                  height: 3,
-                  borderRadius: '3px 3px 0 0'
-                }
+                borderRadius: 3,
+                py: 1.2,
+                px: 3,
+                fontWeight: 600,
+                borderWidth: 2,
+                '&:hover': { borderWidth: 2 }
               }}
             >
-              <Tab 
-                icon={<CategoryIcon sx={{ mr: 1 }} />} 
-                label="Категории" 
-                iconPosition="start"
+              {reportLoading ? 'Генерация...' : 'Создать DOCX отчет'}
+            </Button>
+            
+            {reportSuccess && (
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<FileDownloadIcon />}
+                onClick={() => downloadReport(reportFilePath, `отчет_${memoizedFileName}`)}
                 sx={{ 
+                  borderRadius: 3,
+                  py: 1.2,
+                  px: 3,
                   fontWeight: 600,
-                  textTransform: 'none',
-                  minHeight: 48
-                }} 
-              />
-              <Tab 
-                icon={<FormatListNumberedIcon sx={{ mr: 1 }} />} 
-                label="Все проблемы" 
-                iconPosition="start"
-                sx={{ 
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  minHeight: 48
-                }} 
-              />
-            </Tabs>
-          </Box>
-          
-          {/* Контент для таба "Категории" */}
-          {tabValue === 0 && (
-            <Box sx={{ p: 3 }}>
-              <Grid container spacing={3}>
-                {Object.entries(groupedIssues).map(([category, categoryIssues], idx) => (
-                  <Grid item xs={12} sm={6} md={4} key={category}>
-                    <CategoryCard 
-                      category={category} 
-                      issues={issues}
-                      count={categoryIssues.length}
-                      icon={getCategoryIcon(category)}
-                      index={idx}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
-          
-          {/* Контент для таба "Все проблемы" */}
-          {tabValue === 1 && (
-            <List disablePadding sx={{ maxHeight: 600, overflow: 'auto' }}>
-              {Object.entries(groupedIssues).map(([category, categoryIssues], categoryIndex) => {
-                // Группируем внутри категории
-                const grouped = groupIssues(categoryIssues);
-                // Определяем максимальную серьёзность в категории
-                const maxSeverity = grouped.some(i => i.severity === 'high')
-                  ? 'error'
-                  : grouped.some(i => i.severity === 'medium')
-                  ? 'warning'
-                  : 'info';
-                const severityLabel = maxSeverity === 'error' ? 'Критические' : maxSeverity === 'warning' ? 'Средние' : 'Незначительные';
-                const severityColor = maxSeverity;
-                return (
-                  <Accordion defaultExpanded={categoryIndex === 0} sx={{
-                    borderLeft: '6px solid',
-                    borderLeftColor: maxSeverity === 'error' ? 'error.main' : maxSeverity === 'warning' ? 'warning.main' : 'info.main',
-                    boxShadow: 'none',
-                    mb: 0.5,
-                    borderRadius: 0,
-                    '&:before': {
-                      display: 'none'
-                    },
-                    '&:not(:last-child)': {
-                      borderBottom: '1px solid',
-                      borderColor: 'divider'
-                    }
-                  }} key={category}>
-                    <AccordionSummary
-                      expandIcon={<ExpandMoreIcon />}
-                      sx={{
-                        bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)',
-                        '&:hover': { bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' },
-                        minHeight: 64,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                        <Box
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: `${maxSeverity}.lighter`,
-                            color: `${maxSeverity}.dark`,
-                            mr: 2
-                          }}
-                        >
-                          {getCategoryIcon(category)}
-                        </Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: 18 }}>
-                          {getCategoryName(category)} <span style={{fontWeight:400, opacity: 0.7}}>({grouped.length})</span>
-                        </Typography>
-                        <Chip
-                          label={severityLabel}
-                          color={severityColor}
-                          size="small"
-                          sx={{ ml: 2, fontWeight: 600, fontSize: 14, letterSpacing: 0.5 }}
-                        />
-                      </Box>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{ p: 0 }}>
-                      <List disablePadding>
-                        {grouped.map((issue, index) => (
-                          <ListItem
-                            key={`${category}-${index}`}
-                            divider={index < grouped.length - 1}
-                            sx={{
-                              py: 2.2,
-                              px: 3,
-                              alignItems: 'flex-start',
-                              '&:hover': { bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.01)' },
-                            }}
-                          >
-                            <ListItemIcon sx={{ mt: 0.5 }}>
-                              {getSeverityIcon(issue.severity)}
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'wrap' }}>
-                                  <Typography component="span" variant="body1" fontWeight={600} sx={{ mr: 1 }}>
-                                    {issue.description} {issue.count > 1 && (
-                                      <Chip 
-                                        label={`${issue.count}`} 
-                                        size="small" 
-                                        color="default" 
-                                        variant="filled"
-                                        sx={{ height: 20, fontWeight: 700, ml: 0.5, fontSize: 12 }}
-                                      />
-                                    )}
-                                  </Typography>
-                                  <Chip
-                                    label={getSeverityText(issue.severity)}
-                                    color={getSeverityColor(issue.severity)}
-                                    size="small"
-                                    sx={{ fontWeight: 600, fontSize: 14, mr: 1, height: 24 }}
-                                  />
-                                  {issue.auto_fixable && (
-                                    <Chip
-                                      label="Исправляемая"
-                                      size="small"
-                                      color="success"
-                                      icon={<AutoFixHighIcon fontSize="small" />}
-                                      sx={{ height: 24, fontSize: 14 }}
-                                      title="Эта проблема может быть исправлена автоматически"
-                                    />
-                                  )}
-                                </Box>
-                              }
-                              secondary={
-                                <Typography variant="body2" color="text.secondary" component="span">
-                                  {issue.locations && issue.locations.length > 1
-                                    ? `Расположение: ${issue.locations.join(', ')}`
-                                    : `Расположение: ${issue.location}`}
-                                </Typography>
-                              }
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                    </AccordionDetails>
-                  </Accordion>
-                );
-              })}
-            </List>
+                  background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
+                  boxShadow: `0 4px 16px ${alpha(theme.palette.secondary.main, 0.3)}`
+                }}
+              >
+                Скачать отчет
+              </Button>
+            )}
+          </Stack>
+
+          {reportError && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mt: 2, 
+                borderRadius: 2,
+                border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                bgcolor: alpha(theme.palette.error.main, 0.08)
+              }}
+            >
+              <AlertTitle sx={{ fontWeight: 700 }}>Ошибка при генерации отчета</AlertTitle>
+              {reportError}
+            </Alert>
           )}
         </Paper>
-      )}
-      
-      {/* Структурный анализ документа */}
-      {memoizedReportData.check_results && (
-        <Box sx={{ mt: 4 }}>
-          <StructureAnalysisCard documentData={memoizedReportData} />
-        </Box>
-      )}
-
-      {/* Добавим в UI после кнопок с исправлениями */}
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        gap: 2,
-        justifyContent: 'flex-end',
-        mt: 3
-      }}>
-        <Button
-          variant="outlined"
-          startIcon={<DescriptionIcon />}
-          onClick={handleGenerateReport}
-          disabled={reportLoading || totalIssues === 0}
-          sx={{ borderRadius: 2 }}
-        >
-          {reportLoading ? 'Генерация...' : 'Сгенерировать DOCX отчет'}
-        </Button>
-        
-        {reportSuccess && (
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<FileDownloadIcon />}
-            onClick={() => downloadReport(reportFilePath, `отчет_${memoizedFileName}`)}
-            sx={{ 
-              borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(156, 39, 176, 0.2)'
-            }}
-          >
-            Скачать отчет
-          </Button>
-        )}
-      </Box>
-
-      {reportError && (
-        <Alert severity="error" sx={{ 
-          mt: 2, 
-          borderRadius: 2,
-          boxShadow: '0 4px 12px rgba(244, 67, 54, 0.15)'
-        }}>
-          <AlertTitle>Ошибка при генерации отчета</AlertTitle>
-          {reportError}
-        </Alert>
-      )}
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
-export default ReportPage; 
-
-// Упрощенные стили для повышения производительности
-<style jsx global>{`
-  .MuiAccordion-root {
-    transition: box-shadow 0.2s;
-  }
-`}</style> 
+export default ReportPage;

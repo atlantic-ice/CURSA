@@ -4,7 +4,7 @@
     "test_name": "test_upload_invalid_file",
     "test_type": "api",
     "passed": true,
-    "duration": 0.025837399996817112,
+    "duration": 0.03781660000095144,
     "failed": false,
     "skipped": false
   },
@@ -13,7 +13,7 @@
     "test_name": "test_document_correction_api",
     "test_type": "api",
     "passed": true,
-    "duration": 0.05863400000089314,
+    "duration": 0.06598139999550767,
     "failed": false,
     "skipped": false
   },
@@ -22,7 +22,7 @@
     "test_name": "test_download_corrected_file",
     "test_type": "api",
     "passed": true,
-    "duration": 0.05286070000147447,
+    "duration": 0.05127540000830777,
     "failed": false,
     "skipped": false
   },
@@ -31,7 +31,7 @@
     "test_name": "test_large_document_performance",
     "test_type": "api",
     "passed": true,
-    "duration": 0.8541408000019146,
+    "duration": 1.0632888000109233,
     "failed": false,
     "skipped": false
   }

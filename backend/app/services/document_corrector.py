@@ -561,26 +561,25 @@ class DocumentCorrector:
                             continue
                         
                         # Выравниваем текст в ячейках по ширине
-                        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-                        
-                        # Включаем автоматические переносы для улучшения выравнивания
+                        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY                        # Включаем автоматические переносы для улучшения выравнивания
                         self._enable_hyphenation(paragraph)
-    
+
     def _enable_hyphenation(self, paragraph):
         """
         Включает автоматические переносы для параграфа
         """
         try:
-            if paragraph._element.get_or_add_pPr():
+            pPr = paragraph._element.get_or_add_pPr()
+            if pPr is not None:
                 # Добавляем свойство автоматического переноса слов
                 hyphenation_element = OxmlElement('w:autoSpaceDE')
                 hyphenation_element.set(qn('w:val'), '1')
-                paragraph._element.get_or_add_pPr().append(hyphenation_element)
+                pPr.append(hyphenation_element)
                 
                 # Добавляем свойство выравнивания последней строки
                 last_line_element = OxmlElement('w:contextualSpacing')
                 last_line_element.set(qn('w:val'), '1')
-                paragraph._element.get_or_add_pPr().append(last_line_element)
+                pPr.append(last_line_element)
         except Exception as e:
             print(f"Предупреждение: Не удалось включить переносы слов: {str(e)}")
     
