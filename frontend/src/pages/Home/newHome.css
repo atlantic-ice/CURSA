@@ -1,118 +1,111 @@
-/* New WOW Home styles: aurora background, clean CTA, accessible motion */
+/* Clean, white dashboard-like home with widget cards */
 
 .nh-root {
   position: relative;
   min-height: calc(100vh - 80px);
-  overflow: clip;
-  background: linear-gradient(180deg, #0b1020 0%, #0a0e1a 60%, #070b16 100%);
+  background: #ffffff;
+  padding: clamp(16px, 2.5vw, 32px);
 }
 
-/* Light mode fallback via data-theme attr set on <html> in App */
-[data-theme='light'] .nh-root {
-  background: linear-gradient(180deg, #eef3ff 0%, #e9f0ff 60%, #e6ecff 100%);
+.nh-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(12px, 1.6vw, 20px);
 }
 
-.nh-aurora {
-  position: absolute;
-  inset: -20% -10% -10% -10%;
-  background: radial-gradient(60% 80% at 20% 10%, rgba(74, 222, 255, 0.18) 0%, rgba(74, 222, 255, 0) 60%),
-              radial-gradient(70% 90% at 80% 20%, rgba(99, 102, 241, 0.22) 0%, rgba(99, 102, 241, 0) 62%),
-              radial-gradient(80% 100% at 50% 90%, rgba(45, 212, 191, 0.16) 0%, rgba(45, 212, 191, 0) 60%);
-  filter: blur(48px) saturate(140%);
-  transform: translateZ(0);
-  animation: nh-aurora-move 16s ease-in-out infinite alternate;
-  pointer-events: none;
+/* Card base */
+.nh-card {
+  background: #fff;
+  border-radius: 22px;
+  border: 1px solid rgba(2, 6, 23, 0.06);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  overflow: hidden;
 }
 
-[data-theme='light'] .nh-aurora {
-  background: radial-gradient(60% 80% at 20% 10%, rgba(59, 130, 246, 0.18) 0%, rgba(59, 130, 246, 0) 60%),
-              radial-gradient(70% 90% at 80% 20%, rgba(56, 189, 248, 0.22) 0%, rgba(56, 189, 248, 0) 62%),
-              radial-gradient(80% 100% at 50% 90%, rgba(99, 102, 241, 0.16) 0%, rgba(99, 102, 241, 0) 60%);
+.nh-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.10);
+  border-color: rgba(2, 6, 23, 0.12);
 }
 
-@keyframes nh-aurora-move {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(2%, -1%, 0) scale(1.06);
-  }
-  100% {
-    transform: translate3d(-1%, 1%, 0) scale(1.02);
-  }
+.nh-card:active { transform: translateY(-2px); }
+
+.nh-card-body { padding: clamp(16px, 2vw, 24px); }
+
+/* Grid spans */
+.nh-col-2 { grid-column: span 2; }
+.nh-col-3 { grid-column: span 3; }
+.nh-col-4 { grid-column: span 4; }
+.nh-col-5 { grid-column: span 5; }
+.nh-col-6 { grid-column: span 6; }
+.nh-col-7 { grid-column: span 7; }
+
+.nh-row-2 { grid-row: span 2; }
+.nh-row-3 { grid-row: span 3; }
+
+/* Responsive fallbacks */
+@media (max-width: 1100px) {
+  .nh-col-7 { grid-column: span 12; }
+  .nh-col-6 { grid-column: span 12; }
+  .nh-col-5 { grid-column: span 6; }
+  .nh-col-4 { grid-column: span 6; }
+  .nh-col-3 { grid-column: span 6; }
+  .nh-col-2 { grid-column: span 6; }
 }
 
-.nh-noise {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='2' seed='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 0 0.03 0.06 0.1 0.06 0.03 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: 0.45;
-  mix-blend-mode: overlay;
+@media (max-width: 640px) {
+  .nh-col-5, .nh-col-4, .nh-col-3, .nh-col-2 { grid-column: span 12; }
 }
 
-.nh-wrap {
-  position: relative;
-  z-index: 1;
-  padding-block: clamp(48px, 10vh, 120px);
+/* Upload card specifics */
+.nh-card-upload {
+  background:
+    linear-gradient(180deg, rgba(59,130,246,0.08), rgba(59,130,246,0.0)) no-repeat,
+    #fff;
 }
 
-.nh-title {
+.nh-title-tech {
   font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.06em;
-  line-height: 0.9;
-  margin: 0;
-  background: linear-gradient(135deg, #e8edff 10%, #b5c7ff 45%, #7ea1ff 80%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-transform: uppercase;
-  font-size: clamp(48px, 9vw, 104px);
-}
-
-[data-theme='light'] .nh-title {
-  background: linear-gradient(135deg, #0b1220 10%, #1d3dbb 50%, #3b82f6 90%);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: clamp(22px, 2.6vw, 28px);
+  color: #0f172a;
 }
 
 .nh-sub {
-  max-width: 640px;
-  color: rgba(226,232,240,0.88);
-  font-size: clamp(16px, 1.6vw, 20px);
-}
-
-[data-theme='light'] .nh-sub {
-  color: rgba(30,41,59,0.82);
+  margin-top: 6px;
+  color: #334155;
+  max-width: 720px;
 }
 
 .nh-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
+  margin-top: 16px;
 }
 
 .nh-dropzone {
   position: relative;
-  border-radius: 18px;
-  border: 1px dashed rgba(147, 197, 253, 0.45);
-  background: rgba(12, 18, 32, 0.4);
-  color: rgba(226,232,240,0.88);
-  padding: 16px 18px;
+  border-radius: 999px;
+  border: 1px dashed rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.06);
+  color: #0f172a;
+  padding: 12px 16px;
   display: inline-grid;
   grid-auto-flow: column;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   transition: border-color .2s ease, background .2s ease, transform .2s ease;
 }
 
-[data-theme='light'] .nh-dropzone {
-  background: rgba(255,255,255,0.7);
-  color: rgba(30,41,59,0.86);
-}
-
 .nh-dropzone:hover {
-  border-color: rgba(99, 102, 241, 0.7);
+  border-color: rgba(99, 102, 241, 0.55);
+  background: rgba(99, 102, 241, 0.1);
   transform: translateY(-1px);
 }
 
@@ -126,8 +119,26 @@
 .nh-small {
   opacity: 0.7;
   font-size: 12px;
+  margin-top: 10px;
+}
+
+/* Card content styles */
+.nh-card-title {
+  font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.nh-card-text { color: #334155; margin: 0; }
+.nh-card-muted { color: #64748b; margin-top: 6px; font-size: 13px; }
+
+.nh-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #334155;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nh-aurora { animation: none; }
+  .nh-card:hover { transform: none; }
 }

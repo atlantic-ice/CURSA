@@ -1,20 +1,20 @@
 import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Container, Stack, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { motion } from 'framer-motion';
 import { uploadDocument } from '../../api/document';
 import { useToast } from '../../components/toast/ToastProvider';
 import { CheckHistoryContext } from '../../App';
 import './newHome.css';
-
-const MotionBox = motion(Box);
+import '@fontsource/space-grotesk/600.css';
+import '@fontsource/space-grotesk/700.css';
 
 export default function HomePage() {
   const theme = useTheme();
   const toast = useToast();
   const navigate = useNavigate();
-  const { addToHistory } = useContext(CheckHistoryContext) || {};
+  const ctx = useContext(CheckHistoryContext) || {};
+  const { addToHistory, history = [] } = ctx;
 
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -76,47 +76,82 @@ export default function HomePage() {
   return (
     <Box component="main" sx={{ flexGrow: 1 }}>
       <div className="nh-root" {...dragHandlers}>
-        <div className="nh-aurora" />
-        <div className="nh-noise" />
-        <Container className="nh-wrap" maxWidth="lg">
-          <Stack spacing={{ xs: 4, md: 6 }}>
-            <MotionBox
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: [0.16, 0.84, 0.44, 1] }}
-            >
-              <Stack spacing={2}>
-                <h1 className="nh-title">CURSA</h1>
-                <Typography className="nh-sub">
-                  Онлайн нормоконтроль с эффектом «вау»: мгновенный анализ, подсказки и идеальный стиль.
-                </Typography>
-                <Stack className="nh-actions" direction="row">
-                  <Button
-                    variant="contained"
-                    size="large"
-                    disableElevation
-                    onClick={onPick}
-                    disabled={uploading}
-                  >
-                    {uploading ? `Загрузка… ${progress}%` : 'Загрузить DOCX'}
-                  </Button>
-                  <label className="nh-dropzone" style={{ outline: dragActive ? `2px solid ${alpha(theme.palette.primary.main, 0.6)}` : 'none' }}>
-                    <input
-                      type="file"
-                      ref={inputRef}
-                      onChange={onInputChange}
-                      accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    />
-                    <span>{dragActive ? 'Отпустите файл здесь' : 'Перетащите DOCX сюда'}</span>
-                  </label>
-                </Stack>
-                <Typography className="nh-small">
-                  Данные обрабатываются локально сервером CURSA. Поддерживаются файлы до 20 МБ.
-                </Typography>
-              </Stack>
-            </MotionBox>
-          </Stack>
-        </Container>
+        <div className="nh-container">
+          {/* Upload widget - large */}
+          <section className="nh-card nh-card-upload nh-col-7 nh-row-3" aria-label="Загрузка документа">
+            <div className="nh-card-body">
+              <div className="nh-title-tech">CURSA</div>
+              <p className="nh-sub">
+                Проверка документа по стандартам. Загрузите DOCX или перетащите файл в область.
+              </p>
+              <div className="nh-actions">
+                <Button
+                  variant="contained"
+                  size="large"
+                  disableElevation
+                  onClick={onPick}
+                  disabled={uploading}
+                >
+                  {uploading ? `Загрузка… ${progress}%` : 'Загрузить DOCX'}
+                </Button>
+                <label
+                  className="nh-dropzone"
+                  style={{ outline: dragActive ? `2px solid ${alpha(theme.palette.primary.main, 0.3)}` : 'none' }}
+                >
+                  <input
+                    type="file"
+                    ref={inputRef}
+                    onChange={onInputChange}
+                    accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  />
+                  <span>{dragActive ? 'Отпустите файл здесь' : 'Перетащите DOCX сюда'}</span>
+                </label>
+              </div>
+              <Typography className="nh-small">
+                Данные обрабатываются локально сервером CURSA. Поддерживаются файлы до 20 МБ.
+              </Typography>
+            </div>
+          </section>
+
+          {/* History widget */}
+          <section className="nh-card nh-col-3 nh-row-2">
+            <div className="nh-card-body">
+              <h3 className="nh-card-title">История</h3>
+              <p className="nh-card-text">Последние проверки: {Array.isArray(history) ? history.length : 0}</p>
+              <p className="nh-card-muted">Открывайте последние отчеты быстрее.</p>
+            </div>
+          </section>
+
+          {/* Standards widget */}
+          <section className="nh-card nh-col-2 nh-row-2">
+            <div className="nh-card-body">
+              <h3 className="nh-card-title">Стандарты</h3>
+              <ul className="nh-list">
+                <li>ГОСТ 7.32</li>
+                <li>ГОСТ 7.0.5</li>
+                <li>ГОСТ Р 1.5</li>
+              </ul>
+            </div>
+          </section>
+
+          {/* Tips widget */}
+          <section className="nh-card nh-col-4 nh-row-2">
+            <div className="nh-card-body">
+              <h3 className="nh-card-title">Подсказки оформления</h3>
+              <p className="nh-card-text">• Выравнивайте таблицы по сетке
+                <br />• Используйте единый стиль заголовков
+                <br />• Проверяйте межстрочный интервал</p>
+            </div>
+          </section>
+
+          {/* Quality widget */}
+          <section className="nh-card nh-col-5 nh-row-2">
+            <div className="nh-card-body">
+              <h3 className="nh-card-title">Качество документа</h3>
+              <p className="nh-card-text">Аналитика появится после загрузки файла.</p>
+            </div>
+          </section>
+        </div>
       </div>
 
       <input
