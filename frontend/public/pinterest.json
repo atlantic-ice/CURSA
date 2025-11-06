@@ -1,0 +1,16 @@
+[
+  {
+    "url": "https://images.unsplash.com/photo-1547721064-da6cfb341d50?w=1200&q=80&auto=format&fit=crop",
+    "title": "Пример мема с Pinterest 1",
+    "source": "Pinterest",
+    "postLink": "https://www.pinterest.com/",
+    "author": "user1"
+  },
+  {
+    "url": "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?w=1200&q=80&auto=format&fit=crop",
+    "title": "Пример мема с Pinterest 2",
+    "source": "Pinterest",
+    "postLink": "https://www.pinterest.com/",
+    "author": "user2"
+  }
+]

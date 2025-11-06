@@ -1,11 +1,24 @@
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 import os
+from dotenv import load_dotenv
 import logging
 from logging.handlers import RotatingFileHandler
 import sys
 
 def create_app():
+    # Load repository-level .env if present so env vars like PINTEREST_RSS_URL are available
+    try:
+        repo_env = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+        if os.path.exists(repo_env):
+            load_dotenv(repo_env)
+        else:
+            # fallback to any default .env on PYTHONPATH
+            load_dotenv()
+    except Exception:
+        # don't fail startup if dotenv isn't available or there's an issue reading the file
+        pass
+
     app = Flask(__name__)
     
     # Настройка CORS с правильными параметрами
@@ -45,27 +58,28 @@ def setup_logging(app):
         '[%(asctime)s] %(levelname)s в %(module)s: %(message)s'
     )
     
-    # Настройка логирования в файл
+    # Настройка логирования в файл с UTF-8
     file_handler = RotatingFileHandler(
         os.path.join(log_dir, 'app.log'), 
         maxBytes=10485760,  # 10MB
-        backupCount=10
+        backupCount=10,
+        encoding='utf-8'
     )
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.INFO)
     
-    # Настройка логирования в консоль
-    console_handler = logging.StreamHandler(sys.stdout)
+    # Настройка логирования в консоль с UTF-8
+    import io
+    console_handler = logging.StreamHandler(
+        io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
+    )
     console_handler.setFormatter(formatter)
     console_handler.setLevel(logging.INFO)
     
-    # Добавляем обработчики к логгеру приложения
+    # Сначала очищаем существующие обработчики (если есть), затем добавляем наши
+    app.logger.handlers = []
+    app.logger.setLevel(logging.INFO)
     app.logger.addHandler(file_handler)
     app.logger.addHandler(console_handler)
-    app.logger.setLevel(logging.INFO)
     
-    # Заменяем стандартный обработчик Flask на наш
-    for handler in app.logger.handlers:
-        app.logger.removeHandler(handler)
-    
-    app.logger.info("Логирование настроено") 
+    app.logger.info("Логирование настроено")

@@ -7,10 +7,17 @@ import shutil
 import sys
 import uuid
 import datetime
+import hashlib
+import re
+import random
+import urllib.request
+from lxml import etree
 
 from app.services.document_processor import DocumentProcessor
 from app.services.norm_control_checker import NormControlChecker
 from app.services.document_corrector import DocumentCorrector
+from app.services.ai_config import get_ai_status, save_api_key, clear_api_key
+from app.services.ai_client import is_configured as ai_is_configured, suggest_for_check_results, complete_prompt
 
 bp = Blueprint('document', __name__, url_prefix='/api/document')
 
@@ -24,6 +31,168 @@ os.makedirs(CORRECTIONS_DIR, exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _extract_items_from_rss(xml_bytes: bytes):
+    """Парсит RSS (Pinterest board) и достает элементы с картинками.
+    Возвращает список словарей: { 'title', 'link', 'images': [urls...] }
+    """
+    items = []
+    try:
+        root = etree.fromstring(xml_bytes)
+        # обычная структура: rss/channel/item
+        channel = root.find('channel')
+        if channel is None:
+            # иногда namespace, попробуем через XPath на всякий случай
+            channel = root.find('.//channel')
+        if channel is None:
+            return items
+        for it in channel.findall('item'):
+            title = (it.findtext('title') or '').strip()
+            link = (it.findtext('link') or '').strip()
+            # content:encoded с namespace
+            content = it.findtext('{http://purl.org/rss/1.0/modules/content/}encoded')
+            if not content:
+                content = it.findtext('description')
+            content = content or ''
+            # вытаскиваем все src из тегов img
+            image_urls = re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', content, flags=re.IGNORECASE)
+            # фильтруем базовые неподходящие
+            image_urls = [u for u in image_urls if u.startswith('http')]
+            if image_urls:
+                items.append({'title': title, 'link': link, 'images': image_urls})
+    except Exception:
+        # если XML парсинг упал, попробуем простым регексом выдрать картинки из всего текста
+        try:
+            text = xml_bytes.decode('utf-8', errors='ignore')
+            image_urls = re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', text, flags=re.IGNORECASE)
+            image_urls = [u for u in image_urls if u.startswith('http')]
+            if image_urls:
+                # эмулируем один item без title/link
+                items.append({'title': '', 'link': '', 'images': image_urls})
+        except Exception:
+            pass
+    return items
+
+
+@bp.route('/memes/random', methods=['GET'])
+def random_pinterest_meme():
+    """Возвращает случайный мем из RSS публичной доски Pinterest.
+
+    Источник RSS берется из query-параметра `rss` либо из переменной окружения PINTEREST_RSS_URL.
+    Формат ответа: { url, title, postLink, author, source }
+    """
+    rss_url = (request.args.get('rss') or os.environ.get('PINTEREST_RSS_URL') or '').strip()
+    if not rss_url:
+        return jsonify({'error': 'Не задан RSS URL (параметр rss или переменная окружения PINTEREST_RSS_URL)'}), 400
+    try:
+        req = urllib.request.Request(rss_url, headers={'User-Agent': 'Mozilla/5.0 (compatible; CURSA/1.0)'})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            xml_bytes = resp.read()
+        items = _extract_items_from_rss(xml_bytes)
+        # отберем те, у которых есть картинки
+        valid = [it for it in items if it.get('images')]
+        if not valid:
+            return jsonify({'error': 'В RSS не найдено изображений'}), 404
+        chosen_item = random.choice(valid)
+        chosen_img = random.choice(chosen_item['images'])
+        title = chosen_item.get('title') or 'мем'
+        link = chosen_item.get('link') or rss_url
+        return jsonify({
+            'url': chosen_img,
+            'title': title,
+            'postLink': link,
+            'author': '',
+            'source': 'Pinterest RSS'
+        }), 200
+    except Exception as e:
+        current_app.logger.warning(f"Не удалось получить RSS Pinterest: {type(e).__name__}: {str(e)}")
+        return jsonify({'error': 'Не удалось загрузить RSS Pinterest'}), 502
+
+
+@bp.route('/ai/status', methods=['GET'])
+def ai_status():
+    """Возвращает состояние настройки Gemini без раскрытия ключа."""
+    try:
+        status = get_ai_status()
+        return jsonify({'success': True, 'status': status}), 200
+    except Exception as e:
+        current_app.logger.error(f"Ошибка при получении статуса ИИ: {type(e).__name__}: {str(e)}")
+        return jsonify({'error': 'Не удалось получить статус ИИ'}), 500
+
+
+@bp.route('/ai/key', methods=['POST'])
+def ai_save_key():
+    """Сохраняет Gemini API ключ, переданный из интерфейса."""
+    payload = request.get_json(silent=True) or {}
+    api_key = (payload.get('api_key') or '').strip()
+
+    if not api_key:
+        return jsonify({'error': 'API ключ не может быть пустым'}), 400
+
+    try:
+        status = save_api_key(api_key)
+        current_app.logger.info("Gemini API ключ сохранен через веб-интерфейс")
+        return jsonify({'success': True, 'status': status}), 200
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Ошибка при сохранении ключа ИИ: {type(e).__name__}: {str(e)}")
+        return jsonify({'error': 'Не удалось сохранить ключ ИИ'}), 500
+
+
+@bp.route('/ai/key', methods=['DELETE'])
+def ai_clear_key():
+    """Удаляет сохраненный Gemini API ключ."""
+    try:
+        status = clear_api_key()
+        current_app.logger.info("Gemini API ключ удален через веб-интерфейс")
+        return jsonify({'success': True, 'status': status}), 200
+    except Exception as e:
+        current_app.logger.error(f"Ошибка при удалении ключа ИИ: {type(e).__name__}: {str(e)}")
+        return jsonify({'error': 'Не удалось удалить ключ ИИ'}), 500
+
+
+@bp.route('/ai/suggest', methods=['POST'])
+def ai_suggest():
+    """Возвращает краткие рекомендации по устранению проблем на основе результатов проверки.
+
+    Ожидает JSON с ключом check_results и необязательным filename.
+    """
+    if not ai_is_configured():
+        return jsonify({'error': 'ИИ не настроен. Добавьте ключ Gemini в настройках.'}), 400
+
+    payload = request.get_json(silent=True) or {}
+    check_results = payload.get('check_results')
+    filename = payload.get('filename')
+    if not check_results:
+        return jsonify({'error': 'Не предоставлены результаты проверки (check_results).'}), 400
+
+    try:
+        text = suggest_for_check_results(check_results, filename)
+        return jsonify({'success': True, 'suggestions': text}), 200
+    except Exception as e:
+        current_app.logger.error(f"Ошибка AI suggest: {type(e).__name__}: {str(e)}")
+        return jsonify({'error': 'Не удалось получить рекомендации ИИ'}), 500
+
+
+@bp.route('/ai/complete', methods=['POST'])
+def ai_complete():
+    """Простой прокси для свободной генерации текста ИИ (для внутренних нужд UI)."""
+    if not ai_is_configured():
+        return jsonify({'error': 'ИИ не настроен. Добавьте ключ Gemini в настройках.'}), 400
+
+    payload = request.get_json(silent=True) or {}
+    prompt = (payload.get('prompt') or '').strip()
+    if not prompt:
+        return jsonify({'error': 'Требуется prompt'}), 400
+
+    try:
+        text = complete_prompt(prompt)
+        return jsonify({'success': True, 'text': text}), 200
+    except Exception as e:
+        current_app.logger.error(f"Ошибка AI complete: {type(e).__name__}: {str(e)}")
+        return jsonify({'error': 'Не удалось выполнить запрос к ИИ'}), 500
 
 @bp.route('/upload', methods=['POST'])
 def upload_document():
@@ -88,12 +257,101 @@ def upload_document():
             check_results = checker.check_document(document_data)
             
             current_app.logger.info("Шаг 5: Проверка завершена успешно")
-            
-            # Возвращаем результаты проверки
+
+            # Дополнительно: Автоисправление для достижения безупречного результата
+            correction_success = False
+            corrected_filename = None
+            corrected_file_path = None
+            corrected_check_results = None
+            ai_suggestions = {}
+            ai_error = None
+            ai_enabled = ai_is_configured()
+            try:
+                current_app.logger.info("Шаг 6: Автоисправление документа для соответствия нормам")
+                corrector = DocumentCorrector()
+
+                # Генерируем безопасное имя исправленного файла на основе оригинала и времени
+                base_name, _ = os.path.splitext(filename)
+                safe_base = secure_filename(base_name) or "document"
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                corrected_filename = f"{safe_base}_corrected_{timestamp}.docx"
+                permanent_path = os.path.join(CORRECTIONS_DIR, corrected_filename)
+
+                # Применяем все доступные исправления и сохраняем в постоянную директорию
+                # None => применить все доступные исправления
+                corrected_file_path = corrector.correct_document(file_path, None, out_path=permanent_path)
+                correction_success = os.path.exists(corrected_file_path)
+                current_app.logger.info(f"Автоисправление завершено: {correction_success}, путь: {corrected_file_path}")
+
+                # Небольшой итеративный цикл автоисправлений: повторяем до стабилизации (макс. 3 прохода)
+                def _file_hash(path: str) -> str:
+                    try:
+                        with open(path, 'rb') as fh:
+                            return hashlib.sha256(fh.read()).hexdigest()
+                    except Exception:
+                        return ''
+
+                if correction_success:
+                    prev_hash = _file_hash(corrected_file_path)
+                    max_iter = 2  # дополнительно до 2 повторных проходов (итого до 3 применений)
+                    for i in range(max_iter):
+                        iter_filename = f"{safe_base}_corrected_{timestamp}_v{i+2}.docx"
+                        iter_path = os.path.join(CORRECTIONS_DIR, iter_filename)
+                        current_app.logger.info(f"Итерация доп. автоисправления #{i+2}: {iter_path}")
+                        iter_out = corrector.correct_document(corrected_file_path, None, out_path=iter_path)
+                        new_hash = _file_hash(iter_out)
+                        if not new_hash or new_hash == prev_hash:
+                            # Изменений нет — удалим лишний файл, если он появился
+                            try:
+                                if os.path.exists(iter_out) and iter_out != corrected_file_path:
+                                    os.remove(iter_out)
+                            except Exception:
+                                pass
+                            current_app.logger.info("Доп. автоисправления: изменений не обнаружено, завершаем итерации")
+                            break
+                        # Приняли улучшенную версию
+                        corrected_file_path = iter_out
+                        corrected_filename = os.path.basename(iter_out)
+                        prev_hash = new_hash
+
+                # Повторная проверка уже финального исправленного документа
+                if correction_success and corrected_file_path and os.path.exists(corrected_file_path):
+                    current_app.logger.info("Шаг 7: Повторная проверка финального исправленного документа")
+                    corrected_processor = DocumentProcessor(corrected_file_path)
+                    corrected_data = corrected_processor.extract_data()
+                    corrected_check_results = checker.check_document(corrected_data)
+
+                # Формируем подсказки ИИ при наличии ключа
+                if ai_enabled:
+                    try:
+                        ai_suggestions['before'] = suggest_for_check_results(check_results, filename)
+                    except Exception as ai_exc:
+                        current_app.logger.warning(f"AI suggest (до исправления) не удалось: {type(ai_exc).__name__}: {str(ai_exc)}")
+                        ai_error = 'Не удалось получить рекомендации ИИ для исходной версии'
+                    if corrected_check_results:
+                        try:
+                            ai_suggestions['after'] = suggest_for_check_results(corrected_check_results, corrected_filename or filename)
+                        except Exception as ai_exc:
+                            current_app.logger.warning(f"AI suggest (после исправления) не удалось: {type(ai_exc).__name__}: {str(ai_exc)}")
+                            ai_error = ai_error or 'Не удалось получить рекомендации ИИ для исправленной версии'
+            except Exception as auto_fix_err:
+                current_app.logger.warning(f"Автоисправление не выполнено: {type(auto_fix_err).__name__}: {str(auto_fix_err)}")
+                corrected_filename = None
+                corrected_file_path = None
+                corrected_check_results = None
+
+            # Возвращаем результаты проверки (+ сведения об автоисправлении, если успешно)
             return jsonify({
+                'success': True,
                 'filename': filename,
                 'temp_path': file_path,
-                'check_results': check_results
+                'check_results': check_results,
+                'correction_success': correction_success,
+                'corrected_file_path': corrected_filename if correction_success else None,
+                'corrected_check_results': corrected_check_results,
+                'ai_enabled': ai_enabled,
+                'ai_suggestions': ai_suggestions if ai_suggestions else None,
+                'ai_error': ai_error
             }), 200
             
         except Exception as inner_e:
@@ -196,7 +454,15 @@ def correct_document():
         current_app.logger.info(f"Путь для сохранения: {permanent_path}")
         
         # Применяем исправления и сохраняем в постоянную директорию
-        corrected_file_path = corrector.correct_document(file_path, data.get('errors', []), out_path=permanent_path)
+        # Поддерживаем оба ключа: 'errors' (новый) и 'errors_to_fix' (старый тестовый)
+        errors_list = data.get('errors')
+        if errors_list is None:
+            errors_list = data.get('errors_to_fix')
+
+        # Если список пустой или отсутствует — применяем все исправления
+        apply_errors = errors_list if errors_list else None
+
+        corrected_file_path = corrector.correct_document(file_path, apply_errors, out_path=permanent_path)
         
         current_app.logger.info(f"Документ успешно исправлен, новый путь: {corrected_file_path}")
         

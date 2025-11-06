@@ -4,4 +4,5 @@ werkzeug==2.3.7
 python-dotenv==1.0.0
 flask-cors==4.0.0
 docxtpl==0.16.7
-lxml==5.4.0 
+lxml>=5.0.0 
+google-generativeai==0.7.2

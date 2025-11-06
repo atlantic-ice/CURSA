@@ -123,7 +123,6 @@ const CheckPage = () => {
 
     setLoading(true);
     setError('');
-    setActiveStep(2);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -201,31 +200,29 @@ const CheckPage = () => {
       cursor: 'pointer',
       minHeight: 260,
       textAlign: 'center',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-      border: '2px dashed',
-      borderColor: theme => theme.palette.mode === 'dark'
-        ? 'rgba(71, 85, 105, 0.4)'
-        : 'rgba(203, 213, 225, 0.8)',
+      boxShadow: 'none',
+      border: 'none',
+      borderColor: 'transparent',
       '&:hover': {
-        borderColor: 'primary.main',
+        borderColor: 'transparent',
         backgroundColor: theme => theme.palette.mode === 'dark'
           ? 'rgba(15, 23, 42, 0.6)'
           : 'rgba(248, 250, 252, 0.8)',
       }
     },
     active: {
-      borderColor: 'primary.main',
+      borderColor: 'transparent',
       backgroundColor: theme => theme.palette.mode === 'dark'
         ? 'rgba(15, 23, 42, 0.7)'
         : 'rgba(239, 246, 255, 0.7)',
-      boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.3)',
+      boxShadow: 'none',
     },
     reject: {
-      borderColor: 'error.main',
+      borderColor: 'transparent',
       backgroundColor: theme => theme.palette.mode === 'dark'
         ? 'rgba(30, 41, 59, 0.7)'
         : 'rgba(254, 242, 242, 0.7)',
-      boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.3)',
+      boxShadow: 'none',
     },
   };
 
@@ -318,12 +315,8 @@ const CheckPage = () => {
                         position: 'relative',
                         transition: 'box-shadow 0.3s, border-color 0.3s, background 0.3s',
                         borderRadius: 4,
-                        borderImage: isDragActive
-                          ? 'linear-gradient(90deg, #2563eb 0%, #a78bfa 100%) 1'
-                          : undefined,
-                        boxShadow: isDragActive
-                          ? '0 0 24px 4px #2563eb33'
-                          : '0 4px 12px rgba(0,0,0,0.05)',
+                        borderImage: undefined,
+                        boxShadow: 'none',
                       }}
                     >
                       <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
@@ -491,11 +484,11 @@ const CheckPage = () => {
                       background: theme => theme.palette.mode === 'dark'
                         ? 'linear-gradient(145deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 41, 59, 0.7) 100%)'
                         : 'linear-gradient(145deg, rgba(248, 250, 252, 0.7) 0%, rgba(241, 245, 249, 0.7) 100%)',
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
+                      backdropFilter: 'none',
+                      WebkitBackdropFilter: 'none',
                       boxShadow: theme => theme.palette.mode === 'dark'
-                        ? '0 8px 32px rgba(0, 0, 0, 0.2)'
-                        : '0 8px 32px rgba(0, 0, 0, 0.05)',
+                        ? 'none'
+                        : 'none',
                     }}
                   >
                     <Box sx={{ textAlign: 'center', mb: 3 }}>
@@ -616,11 +609,9 @@ const CheckPage = () => {
                       background: theme => theme.palette.mode === 'dark'
                         ? 'linear-gradient(145deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 41, 59, 0.7) 100%)'
                         : 'linear-gradient(145deg, rgba(248, 250, 252, 0.7) 0%, rgba(241, 245, 249, 0.7) 100%)',
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                      boxShadow: theme => theme.palette.mode === 'dark'
-                        ? '0 8px 32px rgba(0, 0, 0, 0.2)'
-                        : '0 8px 32px rgba(0, 0, 0, 0.05)',
+                      backdropFilter: 'none',
+                      WebkitBackdropFilter: 'none',
+                      boxShadow: 'none',
                     }}
                   >
                     <Box sx={{ mb: 3 }}>
@@ -650,7 +641,7 @@ const CheckPage = () => {
                     sx={{ 
                       color: '#fff', 
                       zIndex: (theme) => theme.zIndex.drawer + 1,
-                      backdropFilter: 'blur(4px)',
+                      backdropFilter: 'none',
                     }}
                     open={loading}
                   >

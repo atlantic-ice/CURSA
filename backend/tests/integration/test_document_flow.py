@@ -189,12 +189,14 @@ class TestDocumentIntegrationFlow:
             # Шаг 1: Пытаемся загрузить некорректный файл
             logger.info("Загрузка некорректного файла")
             
-            with open(temp_file.name, 'rb') as f:
-                response = client.post(
-                    '/api/document/upload',
-                    data={'file': (io.BytesIO(f.read()), os.path.basename(temp_file.name))},
-                    content_type='multipart/form-data'
-                )
+            # На Windows NamedTemporaryFile блокирует повторное открытие файла.
+            # Используем уже открытый дескриптор и читаем из него напрямую.
+            temp_file.seek(0)
+            response = client.post(
+                '/api/document/upload',
+                data={'file': (io.BytesIO(temp_file.read()), os.path.basename(temp_file.name))},
+                content_type='multipart/form-data'
+            )
             
             # Шаг 2: Проверяем, что ошибка обрабатывается корректно
             assert response.status_code in [400, 415, 422], f"Неожиданный статус код: {response.status_code}"

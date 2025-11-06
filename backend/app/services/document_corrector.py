@@ -27,7 +27,7 @@ class DocumentCorrector:
             },
             'margins': {
                 'left': 3.0,  # cm
-                'right': 1.5,  # cm
+                'right': 1.0,  # cm (исправлено с 1.5 на 1.0 согласно ГОСТ)
                 'top': 2.0,  # cm
                 'bottom': 2.0,  # cm
             },
@@ -122,6 +122,8 @@ class DocumentCorrector:
             
             # Если список ошибок не предоставлен, исправляем все, что можем
             if errors is None:
+                # Применяем базовые стили перед точечными корректировками, чтобы документ выглядел системно
+                self._apply_core_styles(document)
                 self._correct_all(document)
             else:
                 # Исправляем только указанные ошибки
@@ -147,6 +149,9 @@ class DocumentCorrector:
         
         # Исправляем межстрочный интервал
         self._correct_line_spacing(document)
+
+        # Продвигаем псевдозаголовки (обычный текст, похожий на заголовок) в корректные стили Heading
+        self._promote_pseudo_headings_to_styles(document)
         
         # Исправляем заголовки разделов (улучшенная версия)
         self._correct_section_headings(document)
@@ -190,8 +195,8 @@ class DocumentCorrector:
         # Исправляем нумерацию страниц
         self._correct_page_numbers(document)
         
-        # Исправляем титульный лист
-        self._correct_title_page(document)
+        # ОТКЛЮЧЕНО: Исправление титульного листа (удаляло весь контент)
+        # self._correct_title_page(document)
         
         # Исправляем переносы в тексте
         self._correct_hyphenation(document)
@@ -200,7 +205,232 @@ class DocumentCorrector:
         # для гарантии правильного форматирования всего текста
         self._correct_first_line_indent(document)
         self._correct_paragraph_alignment(document)
+        self._clean_extra_blank_lines(document)
     
+    def _apply_core_styles(self, document):
+        """Подстраивает ключевые стили Word под нормоконтрольный стандарт."""
+        try:
+            normal_style = document.styles['Normal']
+            self._set_style_font_defaults(normal_style, self.standard_rules['font']['size'])
+            normal_style.paragraph_format.first_line_indent = Cm(1.25)
+            normal_style.paragraph_format.left_indent = Cm(0)
+            normal_style.paragraph_format.right_indent = Cm(0)
+            normal_style.paragraph_format.space_before = Pt(0)
+            normal_style.paragraph_format.space_after = Pt(0)
+            normal_style.paragraph_format.line_spacing = self.standard_rules['line_spacing']
+            normal_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+            normal_style.paragraph_format.keep_together = False
+            normal_style.paragraph_format.keep_with_next = False
+        except KeyError:
+            pass
+
+        # Нормоконтрольные интервалы для заголовков:
+        # H1: перед 36 пт (≈3 одинарных), после 24 пт (≈2 одинарных)
+        # H2: перед 24 пт (≈2 одинарных), после 24 пт (≈2 одинарных)
+        heading_defaults = [
+            ('Heading 1', self.standard_rules['headings'].get('h1', {}), Pt(36), Pt(24)),
+            ('Heading 2', self.standard_rules['headings'].get('h2', {}), Pt(24), Pt(24)),
+        ]
+
+        for style_name, rule, space_before, space_after in heading_defaults:
+            try:
+                heading_style = document.styles[style_name]
+            except KeyError:
+                continue
+
+            font_size = rule.get('font_size', self.standard_rules['font']['size'])
+            bold = rule.get('bold', True)
+            all_caps = rule.get('all_caps', False)
+            alignment = rule.get('alignment', WD_PARAGRAPH_ALIGNMENT.LEFT)
+
+            self._set_style_font_defaults(heading_style, font_size, bold=bold, all_caps=all_caps)
+
+            heading_style.paragraph_format.alignment = alignment
+            heading_style.paragraph_format.first_line_indent = Cm(0)
+            heading_style.paragraph_format.left_indent = Cm(0)
+            heading_style.paragraph_format.right_indent = Cm(0)
+            heading_style.paragraph_format.space_before = space_before
+            heading_style.paragraph_format.space_after = space_after
+            heading_style.paragraph_format.keep_with_next = True
+            heading_style.paragraph_format.keep_together = True
+            # Полуторный интервал и для заголовков (требование общего межстрочного интервала)
+            heading_style.paragraph_format.line_spacing = self.standard_rules['line_spacing']
+            heading_style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+
+    def _set_style_font_defaults(self, style, font_size, *, bold=False, all_caps=False):
+        """Применяет единый шрифт Times New Roman к стилю."""
+        font_name = self.standard_rules['font']['name']
+        style.font.name = font_name
+        style.font.size = Pt(font_size)
+        style.font.bold = bold
+        style.font.all_caps = all_caps
+
+        rPr = style._element.get_or_add_rPr()
+        rPr.rFonts_ascii = font_name
+        rPr.rFonts_hAnsi = font_name
+        rPr.rFonts_eastAsia = font_name
+        rPr.rFonts_cs = font_name
+
+    def _clean_extra_blank_lines(self, document):
+        """Удаляет лишние подряд идущие пустые абзацы, сохраняя визуальную чистоту.
+        ВАЖНО: НЕ трогает таблицы - они требуют особой осторожности!
+        """
+        def trim_paragraph_list(paragraphs, in_table=False):
+            consecutive_blank = 0
+            for paragraph in list(paragraphs):
+                # КРИТИЧЕСКИ ВАЖНО: в таблицах НЕ удаляем пустые параграфы!
+                # Они могут быть частью структуры ячеек
+                if in_table:
+                    continue
+                    
+                if paragraph.text.strip():
+                    consecutive_blank = 0
+                    continue
+
+                consecutive_blank += 1
+                # Удаляем только если больше 2 подряд пустых параграфов
+                if consecutive_blank > 2:
+                    try:
+                        element = paragraph._element
+                        parent = element.getparent()
+                        if parent is not None:
+                            parent.remove(element)
+                    except Exception as e:
+                        print(f"Предупреждение: не удалось удалить пустой параграф: {str(e)}")
+                        continue
+
+        # Обрабатываем только основные параграфы документа
+        trim_paragraph_list(document.paragraphs, in_table=False)
+
+        # Таблицы НЕ трогаем - они хрупкие!
+        # Комментируем опасный код:
+        # for table in document.tables:
+        #     for row in table.rows:
+        #         for cell in row.cells:
+        #             trim_paragraph_list(cell.paragraphs, in_table=True)
+
+    def _promote_pseudo_headings_to_styles(self, document):
+        """Находит параграфы, оформленные как заголовки вручную, и присваивает им Heading 1/2.
+
+        Эвристики:
+        - Строки вида: "ГЛАВА 1 ...", "РАЗДЕЛ 2 ..." -> Heading 1
+        - Нумерация вида: "1. ..." (верхний уровень) -> Heading 1
+        - Нумерация вида: "1.1 ..." (второй уровень и глубже) -> Heading 2
+        - ALL-CAPS короткие слова (ВВЕДЕНИЕ, ЗАКЛЮЧЕНИЕ, СПИСОК ЛИТЕРАТУРЫ) -> Heading 1
+        
+        ВАЖНО: НЕ использует paragraph.text = ... для сохранения форматирования
+        """
+        try:
+            h1_style = None
+            h2_style = None
+            try:
+                h1_style = document.styles['Heading 1']
+            except KeyError:
+                pass
+            try:
+                h2_style = document.styles['Heading 2']
+            except KeyError:
+                pass
+
+            if not (h1_style or h2_style):
+                return
+
+            h1_keywords = {
+                'ВВЕДЕНИЕ', 'ЗАКЛЮЧЕНИЕ', 'СПИСОК ЛИТЕРАТУРЫ', 'ПРИЛОЖЕНИЯ', 'ПРИЛОЖЕНИЕ'
+            }
+
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
+
+            for paragraph in document.paragraphs:
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
+                
+                text = paragraph.text.strip()
+                if not text:
+                    continue
+                # Уже нормальный заголовок — пропускаем
+                if paragraph.style and paragraph.style.name.startswith('Heading'):
+                    continue
+
+                try:
+                    lower = text.lower()
+
+                    # ГЛАВА N / РАЗДЕЛ N (только верхний уровень)
+                    if re.match(r'^(глава|раздел)\s+\d+\.?\s*', lower):
+                        if h1_style:
+                            paragraph.style = h1_style
+                        continue
+
+                    # Многоуровневая нумерация: 1., 1.1, 1.1.1 и т.д.
+                    # Определяем уровень по количеству чисел в начале
+                    m = re.match(r'^(\d+(?:\.\d+)*)(?:[\s\.:\-]+)(.*)', text)
+                    if m:
+                        numbering = m.group(1)
+                        rest = m.group(2).strip()
+                        level = numbering.count('.') + 1
+
+                        # Выбираем стиль по уровню (1->Heading 1, 2->Heading 2, >=3->Heading 3)
+                        try:
+                            if level == 1 and h1_style:
+                                paragraph.style = h1_style
+                            elif level == 2 and h2_style:
+                                paragraph.style = h2_style
+                            else:
+                                # Для третьего и более уровней используем Heading 3, если он есть
+                                if 'Heading 3' in document.styles:
+                                    paragraph.style = document.styles['Heading 3']
+                        except Exception as e:
+                            print(f"ОШИБКА при установке стиля заголовка: {str(e)}")
+
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: НЕ используем paragraph.text = ...
+                        # Вместо этого изменяем runs
+                        new_text = rest
+                        if new_text.endswith('.'):
+                            new_text = new_text.rstrip('.')
+                        
+                        if new_text and len(paragraph.runs) > 0:
+                            # Находим первый run с нумерацией и заменяем его текст
+                            for run in paragraph.runs:
+                                if numbering in run.text:
+                                    run.text = run.text.replace(numbering, '', 1).lstrip('. :\-–—')
+                                    break
+                            
+                            # Удаляем завершающую точку из последнего run
+                            if paragraph.runs:
+                                last_run = paragraph.runs[-1]
+                                if last_run.text.endswith('.'):
+                                    last_run.text = last_run.text.rstrip('.')
+                        continue
+
+                    # Нумерация "1. ..." без вложений -> Heading 1
+                    if re.match(r'^\d+\.(\s+|$)', text):
+                        if h1_style:
+                            paragraph.style = h1_style
+                        continue
+
+                    # ALL-CAPS короткие заголовки (часто структурные части)
+                    if text == text.upper() and 2 <= len(text) <= 80 and not text.endswith('.'):
+                        # Неформатированные ключевые слова — точно H1
+                        if text in h1_keywords and h1_style:
+                            paragraph.style = h1_style
+                        continue
+                
+                except Exception as e:
+                    print(f"ОШИБКА при обработке заголовка '{text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _promote_pseudo_headings_to_styles: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
     def _correct_specific_errors(self, document, errors):
         """
         Исправляет только указанные ошибки
@@ -241,44 +471,76 @@ class DocumentCorrector:
             self._correct_page_numbers(document)
         if list_errors:
             self._correct_lists(document)
-        if title_page_errors:
-            self._correct_title_page(document)
+        # ОТКЛЮЧЕНО: Исправление титульного листа удаляет весь контент
+        # if title_page_errors:
+        #     self._correct_title_page(document)
     
     def _correct_font(self, document):
         """
         Исправляет шрифт для всего документа
+        Добавлена защита и обработка ошибок
         """
-        for paragraph in document.paragraphs:
-            # Пропускаем пустые параграфы
-            if not paragraph.text.strip():
-                continue
+        try:
+            # Получаем список всех параграфов внутри таблиц для особой обработки
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
             
-            # Определяем, является ли параграф заголовком
-            is_heading = paragraph.style.name.startswith('Heading')
-            heading_level = None
-            
-            if is_heading:
-                try:
-                    heading_level = int(paragraph.style.name.replace('Heading ', ''))
-                except ValueError:
-                    heading_level = None
-            
-            # Применяем соответствующий стиль шрифта
-            for run in paragraph.runs:
-                # Устанавливаем базовый шрифт для всех элементов
-                run.font.name = self.standard_rules['font']['name']
+            for paragraph in document.paragraphs:
+                # Пропускаем пустые параграфы
+                if not paragraph.text.strip():
+                    continue
                 
-                if is_heading and heading_level == 1:
-                    # Для заголовков 1 уровня
-                    run.font.size = Pt(self.standard_rules['headings']['h1']['font_size'])
-                    run.font.bold = self.standard_rules['headings']['h1']['bold']
-                elif is_heading and heading_level == 2:
-                    # Для заголовков 2 уровня
-                    run.font.size = Pt(self.standard_rules['headings']['h2']['font_size'])
-                    run.font.bold = self.standard_rules['headings']['h2']['bold']
-                else:
-                    # Для обычного текста
-                    run.font.size = Pt(self.standard_rules['font']['size'])
+                try:
+                    # Определяем, является ли параграф заголовком
+                    is_heading = paragraph.style.name.startswith('Heading')
+                    heading_level = None
+                    
+                    if is_heading:
+                        try:
+                            heading_level = int(paragraph.style.name.replace('Heading ', ''))
+                        except ValueError:
+                            heading_level = None
+                    
+                    # Применяем соответствующий стиль шрифта
+                    for run in paragraph.runs:
+                        try:
+                            # Устанавливаем базовый шрифт для всех элементов
+                            if run.font.name != self.standard_rules['font']['name']:
+                                run.font.name = self.standard_rules['font']['name']
+                            
+                            if is_heading and heading_level == 1:
+                                # Для заголовков 1 уровня
+                                if run.font.size != Pt(self.standard_rules['headings']['h1']['font_size']):
+                                    run.font.size = Pt(self.standard_rules['headings']['h1']['font_size'])
+                                if run.font.bold != self.standard_rules['headings']['h1']['bold']:
+                                    run.font.bold = self.standard_rules['headings']['h1']['bold']
+                            elif is_heading and heading_level == 2:
+                                # Для заголовков 2 уровня
+                                if run.font.size != Pt(self.standard_rules['headings']['h2']['font_size']):
+                                    run.font.size = Pt(self.standard_rules['headings']['h2']['font_size'])
+                                if run.font.bold != self.standard_rules['headings']['h2']['bold']:
+                                    run.font.bold = self.standard_rules['headings']['h2']['bold']
+                            else:
+                                # Для обычного текста
+                                if run.font.size != Pt(self.standard_rules['font']['size']):
+                                    run.font.size = Pt(self.standard_rules['font']['size'])
+                        
+                        except Exception as e:
+                            print(f"ОШИБКА при установке шрифта для run: {str(e)}")
+                            continue
+                
+                except Exception as e:
+                    print(f"ОШИБКА при обработке параграфа '{paragraph.text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_font: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def _correct_margins(self, document):
         """
@@ -302,23 +564,54 @@ class DocumentCorrector:
     def _correct_line_spacing(self, document):
         """
         Исправляет межстрочный интервал
+        Добавлена защита от таблиц и обработка ошибок
         """
-        for paragraph in document.paragraphs:
-            # Пропускаем пустые параграфы и заголовки
-            if not paragraph.text.strip() or paragraph.style.name.startswith('Heading'):
-                continue
+        try:
+            # Получаем список всех параграфов внутри таблиц
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
             
-            # Устанавливаем полуторный интервал (1.5)
-            paragraph.paragraph_format.line_spacing = self.standard_rules['line_spacing']
-            paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
-            
-            # Дополнительно устанавливаем правильный интервал перед и после абзаца
-            paragraph.paragraph_format.space_before = Pt(0)
-            paragraph.paragraph_format.space_after = Pt(0)
+            for paragraph in document.paragraphs:
+                # Пропускаем параграфы внутри таблиц - у них свои правила
+                if id(paragraph) in table_paragraphs:
+                    continue
+                
+                # Пропускаем пустые параграфы
+                if not paragraph.text.strip():
+                    continue
+
+                try:
+                    pf = paragraph.paragraph_format
+                    
+                    # Устанавливаем полуторный интервал (1.5) для всех абзацев, включая заголовки
+                    if pf.line_spacing != self.standard_rules['line_spacing']:
+                        pf.line_spacing = self.standard_rules['line_spacing']
+                        pf.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+
+                    # Для обычного текста сбрасываем интервалы до/после; для заголовков их задают стили
+                    if not paragraph.style.name.startswith('Heading'):
+                        if pf.space_before != Pt(0):
+                            pf.space_before = Pt(0)
+                        if pf.space_after != Pt(0):
+                            pf.space_after = Pt(0)
+                
+                except Exception as e:
+                    print(f"ОШИБКА при установке интервала для параграфа '{paragraph.text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_line_spacing: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def _correct_first_line_indent(self, document):
         """
         Исправляет отступы первой строки (абзацный отступ)
+        ВАЖНО: осторожно с таблицами!
         """
         # Обрабатываем основные параграфы документа
         for paragraph in document.paragraphs:
@@ -352,168 +645,277 @@ class DocumentCorrector:
             paragraph.paragraph_format.left_indent = Cm(0)
             paragraph.paragraph_format.right_indent = Cm(0)
         
-        # Обрабатываем параграфы в таблицах
-        for table in document.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    for paragraph in cell.paragraphs:
-                        # Пропускаем пустые параграфы
-                        if not paragraph.text.strip():
-                            continue
+        # ОСТОРОЖНО с таблицами - минимальные изменения!
+        try:
+            for table in document.tables:
+                for row_idx, row in enumerate(table.rows):
+                    for cell in row.cells:
+                        for paragraph in cell.paragraphs:
+                            # Пропускаем пустые параграфы в таблицах!
+                            if not paragraph.text.strip():
+                                continue
                             
-                        # Для заголовков таблиц (первая строка) отступ не нужен
-                        if row == table.rows[0]:
-                            paragraph.paragraph_format.first_line_indent = Cm(0)
-                        else:
-                            # Для остальных строк устанавливаем стандартный отступ
-                            paragraph.paragraph_format.first_line_indent = Cm(1.25)
-                            
-                        # Сбрасываем другие отступы
-                        paragraph.paragraph_format.left_indent = Cm(0)
-                        paragraph.paragraph_format.right_indent = Cm(0)
+                            try:
+                                # Для заголовков таблиц (первая строка) отступ не нужен
+                                if row_idx == 0:
+                                    # Только если отступ не задан явно
+                                    if paragraph.paragraph_format.first_line_indent != Cm(0):
+                                        paragraph.paragraph_format.first_line_indent = Cm(0)
+                                else:
+                                    # Для остальных строк - только если отступа нет
+                                    if paragraph.paragraph_format.first_line_indent is None or paragraph.paragraph_format.first_line_indent == Cm(0):
+                                        paragraph.paragraph_format.first_line_indent = Cm(1.25)
+                                
+                                # НЕ трогаем left/right indent в таблицах!
+                                # paragraph.paragraph_format.left_indent = Cm(0)
+                                # paragraph.paragraph_format.right_indent = Cm(0)
+                            except Exception as e:
+                                print(f"Предупреждение: ошибка установки отступа в ячейке таблицы: {str(e)}")
+                                continue
+        except Exception as e:
+            print(f"ОШИБКА при обработке отступов в таблицах: {str(e)}")
     
     def _correct_section_headings(self, document):
         """
         Улучшенная функция для форматирования заголовков разделов
+        ВАЖНО: НЕ использует paragraph.text = ... для сохранения форматирования
         """
-        # Паттерны для идентификации заголовков разделов
-        chapter_patterns = [
-            r'^глава\s+\d+\.?\s+',
-            r'^раздел\s+\d+\.?\s+',
-            r'^\d+\.\s+[А-Я]',
-            r'^\d+\.\d+\.\s+[А-Я]'
-        ]
-        
-        # Словарь для хранения информации об уровнях заголовков
-        heading_levels = {}
-        
-        # Первый проход: определяем уровни заголовков по нумерации
-        for i, paragraph in enumerate(document.paragraphs):
-            text = paragraph.text.strip()
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
             
-            # Пропускаем пустые параграфы
-            if not text:
-                continue
+            # Паттерны для идентификации заголовков разделов
+            chapter_patterns = [
+                r'^глава\s+\d+\.?\s+',
+                r'^раздел\s+\d+\.?\s+',
+                r'^\d+\.\s+[А-Я]',
+                r'^\d+\.\d+\.\s+[А-Я]'
+            ]
+            
+            # Словарь для хранения информации об уровнях заголовков
+            heading_levels = {}
+            
+            # Первый проход: определяем уровни заголовков по нумерации
+            for i, paragraph in enumerate(document.paragraphs):
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
                 
-            # Проверяем, является ли параграф потенциальным заголовком
-            is_heading = False
-            heading_level = None
-            
-            # Проверяем по регулярным выражениям
-            for pattern in chapter_patterns:
-                if re.match(pattern, text, re.IGNORECASE):
-                    is_heading = True
+                text = paragraph.text.strip()
+                
+                # Пропускаем пустые параграфы
+                if not text:
+                    continue
                     
-                    # Определяем уровень заголовка по количеству чисел в нумерации
-                    numbers = re.findall(r'\d+', text.split()[0])
-                    heading_level = len(numbers)
-                    break
-            
-            # Также проверяем, является ли параграф уже заголовком по стилю
-            if paragraph.style and paragraph.style.name.startswith('Heading'):
-                is_heading = True
                 try:
-                    current_level = int(paragraph.style.name.replace('Heading ', ''))
-                    heading_level = current_level if heading_level is None else heading_level
-                except (ValueError, AttributeError):
-                    pass
+                    # Проверяем, является ли параграф потенциальным заголовком
+                    is_heading = False
+                    heading_level = None
+                    
+                    # Проверяем по регулярным выражениям
+                    for pattern in chapter_patterns:
+                        if re.match(pattern, text, re.IGNORECASE):
+                            is_heading = True
+                            
+                            # Определяем уровень заголовка по количеству чисел в нумерации
+                            numbers = re.findall(r'\d+', text.split()[0])
+                            heading_level = len(numbers)
+                            break
+                    
+                    # Также проверяем, является ли параграф уже заголовком по стилю
+                    if paragraph.style and paragraph.style.name.startswith('Heading'):
+                        is_heading = True
+                        try:
+                            current_level = int(paragraph.style.name.replace('Heading ', ''))
+                            heading_level = current_level if heading_level is None else heading_level
+                        except (ValueError, AttributeError):
+                            pass
+                    
+                    # Если это заголовок, сохраняем информацию
+                    if is_heading and heading_level:
+                        heading_levels[i] = heading_level
+                
+                except Exception as e:
+                    print(f"ОШИБКА при анализе заголовка '{text[:50]}...': {str(e)}")
+                    continue
             
-            # Если это заголовок, сохраняем информацию
-            if is_heading and heading_level:
-                heading_levels[i] = heading_level
+            # Второй проход: форматируем заголовки согласно их уровню
+            for i, paragraph in enumerate(document.paragraphs):
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
+                
+                if i in heading_levels:
+                    try:
+                        level = heading_levels[i]
+                        
+                        # Применяем соответствующий стиль заголовка
+                        if level == 1:
+                            paragraph.style = document.styles['Heading 1']
+                            # Дополнительное форматирование для Heading 1
+                            paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                            paragraph.paragraph_format.space_before = Pt(12)
+                            paragraph.paragraph_format.space_after = Pt(12)
+                            
+                            # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: делаем текст заглавными буквами через runs
+                            for run in paragraph.runs:
+                                run.text = run.text.upper()
+                        
+                        elif level == 2:
+                            paragraph.style = document.styles['Heading 2']
+                            # Дополнительное форматирование для Heading 2
+                            paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                            paragraph.paragraph_format.space_before = Pt(12)
+                            paragraph.paragraph_format.space_after = Pt(6)
+                            
+                            # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: capitalize через runs
+                            # (сохраняем первое слово как есть, т.к. это может быть номер)
+                            if paragraph.runs:
+                                full_text = paragraph.text
+                                parts = full_text.split(' ', 1)
+                                if len(parts) > 1:
+                                    new_text = parts[0] + ' ' + parts[1].capitalize()
+                                    # Применяем к первому run
+                                    for run in paragraph.runs:
+                                        run.text = ''
+                                    if paragraph.runs:
+                                        paragraph.runs[0].text = new_text
+                        
+                        elif level == 3:
+                            paragraph.style = document.styles['Heading 3']
+                            # Дополнительное форматирование для Heading 3
+                            paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                            paragraph.paragraph_format.space_before = Pt(6)
+                            paragraph.paragraph_format.space_after = Pt(3)
+                        
+                        # Общие правила для всех заголовков
+                        paragraph.paragraph_format.first_line_indent = Cm(0)
+                        paragraph.paragraph_format.left_indent = Cm(0)
+                        paragraph.paragraph_format.right_indent = Cm(0)
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: убираем точку через runs
+                        if paragraph.text.strip().endswith('.'):
+                            if paragraph.runs:
+                                last_run = paragraph.runs[-1]
+                                last_run.text = last_run.text.rstrip('.')
+                        
+                        # Форматирование шрифта заголовка
+                        for run in paragraph.runs:
+                            run.font.name = self.standard_rules['font']['name']
+                            if level == 1:
+                                run.font.size = Pt(16)
+                                run.font.bold = True
+                            elif level == 2:
+                                run.font.size = Pt(14)
+                                run.font.bold = True
+                            else:
+                                run.font.size = Pt(14)
+                                run.font.bold = True
+                    
+                    except Exception as e:
+                        print(f"ОШИБКА при форматировании заголовка '{paragraph.text[:50]}...': {str(e)}")
+                        continue
         
-        # Второй проход: форматируем заголовки согласно их уровню
-        for i, paragraph in enumerate(document.paragraphs):
-            if i in heading_levels:
-                level = heading_levels[i]
-                
-                # Применяем соответствующий стиль заголовка
-                if level == 1:
-                    paragraph.style = document.styles['Heading 1']
-                    # Дополнительное форматирование для Heading 1
-                    paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                    paragraph.paragraph_format.space_before = Pt(12)
-                    paragraph.paragraph_format.space_after = Pt(12)
-                    
-                    # Делаем текст заглавными буквами
-                    paragraph.text = paragraph.text.upper()
-                elif level == 2:
-                    paragraph.style = document.styles['Heading 2']
-                    # Дополнительное форматирование для Heading 2
-                    paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                    paragraph.paragraph_format.space_before = Pt(12)
-                    paragraph.paragraph_format.space_after = Pt(6)
-                    
-                    # Первая буква заглавная, остальные строчные
-                    # (сохраняем первое слово как есть, т.к. это может быть номер)
-                    parts = paragraph.text.split(' ', 1)
-                    if len(parts) > 1:
-                        paragraph.text = parts[0] + ' ' + parts[1].capitalize()
-                elif level == 3:
-                    paragraph.style = document.styles['Heading 3']
-                    # Дополнительное форматирование для Heading 3
-                    paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                    paragraph.paragraph_format.space_before = Pt(6)
-                    paragraph.paragraph_format.space_after = Pt(3)
-                
-                # Общие правила для всех заголовков
-                paragraph.paragraph_format.first_line_indent = Cm(0)
-                paragraph.paragraph_format.left_indent = Cm(0)
-                paragraph.paragraph_format.right_indent = Cm(0)
-                
-                # Убираем точку в конце заголовка, если она есть
-                if paragraph.text.strip().endswith('.'):
-                    paragraph.text = paragraph.text.strip().rstrip('.')
-                
-                # Форматирование шрифта заголовка
-                for run in paragraph.runs:
-                    run.font.name = self.standard_rules['font']['name']
-                    if level == 1:
-                        run.font.size = Pt(16)
-                        run.font.bold = True
-                    elif level == 2:
-                        run.font.size = Pt(14)
-                        run.font.bold = True
-                    else:
-                        run.font.size = Pt(14)
-                        run.font.bold = True 
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_section_headings: {str(e)}")
+            import traceback
+            traceback.print_exc() 
 
     def _correct_images(self, document):
         """
         Исправляет подписи к рисункам
+        ВАЖНО: НЕ использует paragraph.text = ... для сохранения форматирования
         """
-        for paragraph in document.paragraphs:
-            # Проверяем, является ли параграф подписью к рисунку
-            if paragraph.text.strip().lower().startswith(('рис.', 'рисунок', 'рис ')):
-                # Заменяем сокращение "рис." на полное "Рисунок"
-                if paragraph.text.strip().lower().startswith('рис.') or paragraph.text.strip().lower().startswith('рис '):
-                    number_match = re.search(r'рис\.?\s*(\d+)', paragraph.text.lower())
-                    if number_match:
-                        number = number_match.group(1)
-                        text_after = paragraph.text[number_match.end():].lstrip()
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
+            
+            for paragraph in document.paragraphs:
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
+                
+                text = paragraph.text.strip()
+                if not text:
+                    continue
+                
+                try:
+                    # Проверяем, является ли параграф подписью к рисунку
+                    if text.lower().startswith(('рис.', 'рисунок', 'рис ')):
+                        # Заменяем сокращение "рис." на полное "Рисунок"
+                        if text.lower().startswith('рис.') or text.lower().startswith('рис '):
+                            number_match = re.search(r'рис\.?\s*(\d+)', text.lower())
+                            if number_match:
+                                number = number_match.group(1)
+                                text_after = text[number_match.end():].lstrip()
+                                
+                                # Проверяем, есть ли разделитель между номером и названием
+                                if text_after.startswith('-'):
+                                    text_after = text_after[1:].lstrip()
+                                elif not text_after.startswith('–') and not text_after.startswith('—'):
+                                    text_after = '– ' + text_after
+                                
+                                # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: изменяем через runs, а не paragraph.text
+                                new_text = f"Рисунок {number} {text_after}"
+                                
+                                # Очищаем все runs и создаём один новый с правильным текстом
+                                # Сохраняем форматирование первого run
+                                if paragraph.runs:
+                                    first_run = paragraph.runs[0]
+                                    # Сохраняем форматирование
+                                    font_name = first_run.font.name
+                                    font_size = first_run.font.size
+                                    
+                                    # Очищаем все runs
+                                    for run in paragraph.runs:
+                                        run.text = ''
+                                    
+                                    # Устанавливаем новый текст в первый run
+                                    paragraph.runs[0].text = new_text
+                                    paragraph.runs[0].font.name = font_name
+                                    if font_size:
+                                        paragraph.runs[0].font.size = font_size
                         
-                        # Проверяем, есть ли разделитель между номером и названием
-                        if text_after.startswith('-'):
-                            text_after = text_after[1:].lstrip()
-                        elif not text_after.startswith('–') and not text_after.startswith('—'):
-                            text_after = '– ' + text_after
-                            
-                        paragraph.text = f"Рисунок {number} {text_after}"
+                        # Добавляем точку в конце подписи, если её нет
+                        if not paragraph.text.strip().endswith('.'):
+                            if paragraph.runs:
+                                last_run = paragraph.runs[-1]
+                                last_run.text = last_run.text.rstrip() + '.'
+                        
+                        # Выравниваем подпись по центру
+                        pf = paragraph.paragraph_format
+                        if pf.alignment != WD_PARAGRAPH_ALIGNMENT.CENTER:
+                            pf.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                        
+                        # Сбрасываем отступы
+                        if pf.first_line_indent != Cm(0):
+                            pf.first_line_indent = Cm(0)
+                        if pf.left_indent != Cm(0):
+                            pf.left_indent = Cm(0)
                 
-                # Добавляем точку в конце подписи, если её нет
-                if not paragraph.text.strip().endswith('.'):
-                    paragraph.text = paragraph.text.strip() + '.'
-                
-                # Выравниваем подпись по центру
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                
-                # Сбрасываем отступы
-                paragraph.paragraph_format.first_line_indent = Cm(0)
-                paragraph.paragraph_format.left_indent = Cm(0)
+                except Exception as e:
+                    print(f"ОШИБКА при обработке подписи к рисунку '{text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_images: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def _correct_paragraph_alignment(self, document):
         """
         Исправляет выравнивание параграфов
+        ВАЖНО: НЕ трогаем параграфы в таблицах - они обрабатываются отдельно!
         """
         # Сначала проходим по всем параграфам в основном документе
         for paragraph in document.paragraphs:
@@ -585,53 +987,94 @@ class DocumentCorrector:
     
     def _correct_tables(self, document):
         """
-        Исправляет оформление таблиц
+        Исправляет оформление таблиц с защитой структуры
         """
-        for table in document.tables:
-            # Устанавливаем единый шрифт и форматирование для всей таблицы
-            for row in table.rows:
-                for cell in row.cells:
-                    for paragraph in cell.paragraphs:
-                        # Устанавливаем шрифт для всех элементов текста
-                        for run in paragraph.runs:
-                            run.font.name = self.standard_rules['font']['name']
-                            run.font.size = Pt(self.standard_rules['font']['size'])
-                        
-                        # Пропускаем пустые параграфы
-                        if not paragraph.text.strip():
-                            continue
-                            
-                        # Устанавливаем выравнивание по ширине для текста в ячейках
-                        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-                        
-                        # Устанавливаем абзацный отступ для текста в ячейках
-                        # (только если это не заголовок таблицы - обычно первая строка)
-                        if row != table.rows[0]:  # Не первая строка таблицы
-                            paragraph.paragraph_format.first_line_indent = Cm(1.25)
-                        else:
-                            # Для заголовка таблицы убираем отступ
-                            paragraph.paragraph_format.first_line_indent = Cm(0)
-                        
-                        # Устанавливаем межстрочный интервал
-                        paragraph.paragraph_format.line_spacing = self.standard_rules['line_spacing']
-                        paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
-                        
-                        # Убираем лишние интервалы до и после параграфа внутри ячейки
-                        paragraph.paragraph_format.space_before = Pt(0)
-                        paragraph.paragraph_format.space_after = Pt(0)
-        
-        # Исправляем заголовки таблиц
-        for paragraph in document.paragraphs:
-            if paragraph.text.strip().lower().startswith('таблица'):
-                # Форматирование заголовка таблицы
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                paragraph.paragraph_format.space_after = Pt(6)
-                paragraph.paragraph_format.space_before = Pt(12)
-                paragraph.paragraph_format.first_line_indent = Cm(0)
+        try:
+            for table in document.tables:
+                # Сохраняем исходные свойства таблицы
+                try:
+                    table_alignment = table.alignment
+                except:
+                    table_alignment = WD_TABLE_ALIGNMENT.LEFT
                 
-                # Добавляем точку в конце подписи, если её нет
-                if not paragraph.text.strip().endswith('.'):
-                    paragraph.text = paragraph.text.strip() + '.'
+                # Обрабатываем каждую ячейку осторожно
+                for row_idx, row in enumerate(table.rows):
+                    for cell_idx, cell in enumerate(row.cells):
+                        # Сохраняем объединения ячеек - НЕ трогаем merged cells
+                        try:
+                            # Проверяем, не является ли ячейка частью объединения
+                            tc = cell._element
+                            tcPr = tc.get_or_add_tcPr()
+                            vMerge = tcPr.find(qn('w:vMerge'))
+                            hMerge = tcPr.find(qn('w:hMerge'))
+                            gridSpan = tcPr.find(qn('w:gridSpan'))
+                            
+                            # Если ячейка объединена - минимальные изменения
+                            is_merged = (vMerge is not None or hMerge is not None or gridSpan is not None)
+                        except:
+                            is_merged = False
+                        
+                        for para_idx, paragraph in enumerate(cell.paragraphs):
+                            # КРИТИЧЕСКИ ВАЖНО: не удаляем пустые параграфы в таблицах!
+                            # Они могут быть частью структуры
+                            
+                            # Применяем форматирование только к непустым параграфам
+                            if paragraph.text.strip():
+                                try:
+                                    # Устанавливаем шрифт
+                                    for run in paragraph.runs:
+                                        if run.font.name != self.standard_rules['font']['name']:
+                                            run.font.name = self.standard_rules['font']['name']
+                                        if run.font.size != Pt(self.standard_rules['font']['size']):
+                                            run.font.size = Pt(self.standard_rules['font']['size'])
+                                    
+                                    # Выравнивание: только если не задано явно
+                                    if paragraph.paragraph_format.alignment is None or paragraph.paragraph_format.alignment == WD_PARAGRAPH_ALIGNMENT.LEFT:
+                                        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                                    
+                                    # Отступ: НЕ трогаем в заголовках (первая строка) и объединённых ячейках
+                                    if row_idx > 0 and not is_merged:
+                                        # Проверяем, не задан ли уже отступ
+                                        if paragraph.paragraph_format.first_line_indent is None or paragraph.paragraph_format.first_line_indent == Cm(0):
+                                            paragraph.paragraph_format.first_line_indent = Cm(1.25)
+                                    elif row_idx == 0:
+                                        # Для первой строки (заголовок) - явно убираем отступ
+                                        paragraph.paragraph_format.first_line_indent = Cm(0)
+                                    
+                                    # Межстрочный интервал - аккуратно
+                                    if paragraph.paragraph_format.line_spacing_rule != WD_LINE_SPACING.MULTIPLE:
+                                        paragraph.paragraph_format.line_spacing = self.standard_rules['line_spacing']
+                                        paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+                                    
+                                    # Убираем интервалы ДО и ПОСЛЕ только внутри ячеек
+                                    paragraph.paragraph_format.space_before = Pt(0)
+                                    paragraph.paragraph_format.space_after = Pt(0)
+                                    
+                                except Exception as e:
+                                    # Логируем ошибку, но продолжаем обработку
+                                    print(f"Предупреждение: ошибка форматирования параграфа в ячейке [{row_idx}][{cell_idx}]: {str(e)}")
+                                    continue
+                
+        except Exception as e:
+            print(f"ОШИБКА при исправлении таблиц: {str(e)}")
+            # Не падаем, просто логируем и продолжаем
+        
+        # Исправляем заголовки таблиц (вне таблицы)
+        try:
+            for paragraph in document.paragraphs:
+                text_lower = paragraph.text.strip().lower()
+                if text_lower.startswith('таблица'):
+                    # Форматирование заголовка таблицы
+                    paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                    paragraph.paragraph_format.space_after = Pt(6)
+                    paragraph.paragraph_format.space_before = Pt(12)
+                    paragraph.paragraph_format.first_line_indent = Cm(0)
+                    
+                    # Добавляем точку в конце подписи, если её нет
+                    if not paragraph.text.strip().endswith('.'):
+                        paragraph.text = paragraph.text.strip() + '.'
+        except Exception as e:
+            print(f"ОШИБКА при исправлении заголовков таблиц: {str(e)}")
     
     def _correct_page_numbers(self, document):
         """
@@ -739,125 +1182,228 @@ class DocumentCorrector:
     def _correct_lists(self, document):
         """
         Исправляет оформление списков
+        ВАЖНО: обрабатывает только списки вне таблиц
         """
-        for paragraph in document.paragraphs:
-            # Проверяем, является ли параграф элементом списка
-            is_list_item = False
-            list_type = None
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
             
-            # Проверка на маркированный список
-            if re.match(r'^[•\-–—]\s', paragraph.text):
-                is_list_item = True
-                list_type = 'bullet'
+            for paragraph in document.paragraphs:
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
+                
+                # Пропускаем пустые параграфы и заголовки
+                if not paragraph.text.strip() or paragraph.style.name.startswith('Heading'):
+                    continue
+                
+                try:
+                    # Проверяем, является ли параграф элементом списка
+                    is_list_item = False
+                    list_type = None
+                    
+                    # Проверка на маркированный список
+                    if re.match(r'^[•\-–—]\s', paragraph.text):
+                        is_list_item = True
+                        list_type = 'bullet'
+                    
+                    # Проверка на нумерованный список
+                    elif re.match(r'^\d+[.)]\s', paragraph.text) or re.match(r'^[a-яa-z][.)]\s', paragraph.text, re.IGNORECASE):
+                        is_list_item = True
+                        list_type = 'numbered'
+                    
+                    # Применяем форматирование к элементам списка
+                    if is_list_item:
+                        pf = paragraph.paragraph_format
+                        
+                        # БЕЗОПАСНАЯ УСТАНОВКА: проверяем текущее значение перед изменением
+                        if pf.left_indent is None or pf.left_indent != Cm(1.0):
+                            pf.left_indent = Cm(1.0)
+                        
+                        if pf.first_line_indent is None or pf.first_line_indent != Cm(-0.5):
+                            pf.first_line_indent = Cm(-0.5)  # Обратный отступ для маркера
+                        
+                        # Устанавливаем межстрочный интервал
+                        if pf.line_spacing != self.standard_rules['line_spacing']:
+                            pf.line_spacing = self.standard_rules['line_spacing']
+                            pf.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+                        
+                        # Выравнивание по ширине только если не установлено
+                        if pf.alignment != WD_PARAGRAPH_ALIGNMENT.JUSTIFY:
+                            pf.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                        
+                        # Шрифт для элементов списка - БЕЗ УДАЛЕНИЯ RUNS
+                        for run in paragraph.runs:
+                            if run.font.name != self.standard_rules['font']['name']:
+                                run.font.name = self.standard_rules['font']['name']
+                            if run.font.size != Pt(self.standard_rules['font']['size']):
+                                run.font.size = Pt(self.standard_rules['font']['size'])
+                
+                except Exception as e:
+                    print(f"ОШИБКА при обработке элемента списка '{paragraph.text[:50]}...': {str(e)}")
+                    continue
             
-            # Проверка на нумерованный список
-            elif re.match(r'^\d+[.)]\s', paragraph.text) or re.match(r'^[a-z][.)]\s', paragraph.text):
-                is_list_item = True
-                list_type = 'numbered'
+            # Дополнительно обрабатываем буквенные перечисления
+            self._correct_letter_lists(document)
             
-            # Применяем форматирование к элементам списка
-            if is_list_item:
-                # Устанавливаем левый отступ
-                paragraph.paragraph_format.left_indent = Cm(1.0)
-                paragraph.paragraph_format.first_line_indent = Cm(-0.5)  # Обратный отступ для маркера
-                
-                # Устанавливаем межстрочный интервал
-                paragraph.paragraph_format.line_spacing = self.standard_rules['line_spacing']
-                paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
-                
-                # Устанавливаем выравнивание по ширине
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-                
-                # Шрифт для элементов списка
-                for run in paragraph.runs:
-                    run.font.name = self.standard_rules['font']['name']
-                    run.font.size = Pt(self.standard_rules['font']['size'])
-        
-        # Дополнительно обрабатываем буквенные перечисления
-        self._correct_letter_lists(document)
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_lists: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def _correct_letter_lists(self, document):
         """
         Исправляет оформление перечислений с буквенной нумерацией
+        ВАЖНО: сохраняет форматирование текста, не перезаписывает paragraph.text
         """
-        # Регулярное выражение для поиска буквенных перечислений
-        letter_list_pattern = r'^([а-я])[)\.]\s'
-        
-        for paragraph in document.paragraphs:
-            text = paragraph.text.strip()
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
             
-            # Пропускаем пустые параграфы и заголовки
-            if not text or paragraph.style.name.startswith('Heading'):
-                continue
+            # Регулярное выражение для поиска буквенных перечислений
+            letter_list_pattern = r'^([а-яa-z])[)\.]\s'
             
-            # Проверяем, является ли параграф элементом буквенного перечисления
-            match = re.match(letter_list_pattern, text)
-            if match:
-                # Форматируем перечисление
-                paragraph.paragraph_format.first_line_indent = Cm(-0.5)  # Обратный отступ для буквы
-                paragraph.paragraph_format.left_indent = Cm(1.0)  # Отступ слева для текста
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+            for paragraph in document.paragraphs:
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
                 
-                # Проверяем формат буквы - должен быть с закрывающей скобкой: а)
-                letter = match.group(1)
+                text = paragraph.text.strip()
                 
-                # Если формат буквы неправильный (с точкой вместо скобки), исправляем
-                if text[1] == '.':
-                    paragraph.text = text.replace(f"{letter}.", f"{letter})", 1)
+                # Пропускаем пустые параграфы и заголовки
+                if not text or paragraph.style.name.startswith('Heading'):
+                    continue
                 
-                # Восстанавливаем форматирование шрифта
-                for run in paragraph.runs:
-                    run.font.name = self.standard_rules['font']['name']
-                    run.font.size = Pt(self.standard_rules['font']['size'])
-        
-        # Ищем многоуровневые перечисления и правильно их форматируем
-        current_level = 0
-        in_list = False
-        
-        for i, paragraph in enumerate(document.paragraphs):
-            text = paragraph.text.strip()
+                try:
+                    # Проверяем, является ли параграф элементом буквенного перечисления
+                    match = re.match(letter_list_pattern, text, re.IGNORECASE)
+                    if match:
+                        pf = paragraph.paragraph_format
+                        
+                        # Форматируем перечисление - БЕЗОПАСНО
+                        if pf.first_line_indent != Cm(-0.5):
+                            pf.first_line_indent = Cm(-0.5)  # Обратный отступ для буквы
+                        
+                        if pf.left_indent != Cm(1.0):
+                            pf.left_indent = Cm(1.0)  # Отступ слева для текста
+                        
+                        if pf.alignment != WD_PARAGRAPH_ALIGNMENT.JUSTIFY:
+                            pf.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                        
+                        # Проверяем формат буквы - должен быть с закрывающей скобкой: а)
+                        letter = match.group(1)
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: НЕ ИСПОЛЬЗУЕМ paragraph.text = ...
+                        # Вместо этого изменяем только первый run
+                        if text[1] == '.' and len(paragraph.runs) > 0:
+                            # Ищем точку в первом run и заменяем на скобку
+                            first_run = paragraph.runs[0]
+                            if '.' in first_run.text:
+                                first_run.text = first_run.text.replace(f"{letter}.", f"{letter})", 1)
+                        
+                        # Восстанавливаем форматирование шрифта БЕЗ УНИЧТОЖЕНИЯ runs
+                        for run in paragraph.runs:
+                            if run.font.name != self.standard_rules['font']['name']:
+                                run.font.name = self.standard_rules['font']['name']
+                            if run.font.size != Pt(self.standard_rules['font']['size']):
+                                run.font.size = Pt(self.standard_rules['font']['size'])
+                
+                except Exception as e:
+                    print(f"ОШИБКА при обработке буквенного перечисления '{text[:50]}...': {str(e)}")
+                    continue
             
-            # Пропускаем пустые параграфы и заголовки
-            if not text or paragraph.style.name.startswith('Heading'):
-                in_list = False
-                current_level = 0
-                continue
+            # УЛУЧШЕННАЯ ЛОГИКА многоуровневых перечислений
+            self._correct_multilevel_lists(document, table_paragraphs)
             
-            # Проверяем, является ли параграф началом нумерованного списка
-            num_match = re.match(r'^(\d+)[)\.]\s', text)
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_letter_lists: {str(e)}")
+            import traceback
+            traceback.print_exc()
+    
+    def _correct_multilevel_lists(self, document, table_paragraphs):
+        """
+        Форматирует многоуровневые перечисления с правильными отступами
+        """
+        try:
+            # Регулярные выражения для разных уровней
+            level1_pattern = r'^(\d+)[)\.]\s'  # 1) или 1.
+            level2_pattern = r'^([а-яa-z])[)\.]\s'  # а) или а.
+            level3_pattern = r'^[•\-–—]\s'  # маркеры
             
-            # Проверяем, является ли параграф элементом буквенного перечисления
-            letter_match = re.match(letter_list_pattern, text)
+            in_list = False
             
-            if num_match:
-                # Начало нумерованного списка (первый уровень)
-                in_list = True
-                current_level = 1
+            for paragraph in document.paragraphs:
+                # Пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
                 
-                # Форматируем первый уровень
-                paragraph.paragraph_format.first_line_indent = Cm(-0.5)
-                paragraph.paragraph_format.left_indent = Cm(0.5)
+                text = paragraph.text.strip()
                 
-            elif letter_match and in_list:
-                # Буквенное перечисление (второй уровень)
-                current_level = 2
-                
-                # Форматируем второй уровень с дополнительным отступом
-                paragraph.paragraph_format.first_line_indent = Cm(-0.5)
-                paragraph.paragraph_format.left_indent = Cm(1.5)  # Увеличенный отступ для вложенного списка
-                
-            elif in_list and text and not (num_match or letter_match):
-                # Проверяем наличие тире или маркера (третий уровень)
-                if text.startswith('-') or text.startswith('•'):
-                    current_level = 3
-                    
-                    # Форматируем третий уровень
-                    paragraph.paragraph_format.first_line_indent = Cm(-0.5)
-                    paragraph.paragraph_format.left_indent = Cm(2.5)  # Еще больший отступ
-                else:
-                    # Обычный параграф - конец списка
+                # Пропускаем пустые параграфы и заголовки
+                if not text or paragraph.style.name.startswith('Heading'):
                     in_list = False
-                    current_level = 0 
+                    continue
+                
+                try:
+                    pf = paragraph.paragraph_format
+                    
+                    # Проверяем уровень списка
+                    if re.match(level1_pattern, text):
+                        # Начало нумерованного списка (первый уровень)
+                        in_list = True
+                        
+                        # Форматируем первый уровень - БЕЗОПАСНО
+                        if pf.first_line_indent != Cm(-0.5):
+                            pf.first_line_indent = Cm(-0.5)
+                        if pf.left_indent != Cm(0.5):
+                            pf.left_indent = Cm(0.5)
+                        
+                    elif re.match(level2_pattern, text, re.IGNORECASE) and in_list:
+                        # Буквенное перечисление (второй уровень)
+                        
+                        # Форматируем второй уровень с дополнительным отступом - БЕЗОПАСНО
+                        if pf.first_line_indent != Cm(-0.5):
+                            pf.first_line_indent = Cm(-0.5)
+                        if pf.left_indent != Cm(1.5):
+                            pf.left_indent = Cm(1.5)  # Увеличенный отступ для вложенного списка
+                        
+                    elif re.match(level3_pattern, text) and in_list:
+                        # Маркированный список (третий уровень)
+                        
+                        # Форматируем третий уровень - БЕЗОПАСНО
+                        if pf.first_line_indent != Cm(-0.5):
+                            pf.first_line_indent = Cm(-0.5)
+                        if pf.left_indent != Cm(2.5):
+                            pf.left_indent = Cm(2.5)  # Еще больший отступ
+                        
+                    elif in_list and text:
+                        # Обычный параграф между элементами списка - НЕ СБРАСЫВАЕМ in_list
+                        # Проверяем, является ли это продолжением элемента списка
+                        if not (re.match(level1_pattern, text) or 
+                                re.match(level2_pattern, text, re.IGNORECASE) or 
+                                re.match(level3_pattern, text)):
+                            # Это обычный текст - конец списка только если нет отступа
+                            if pf.left_indent is None or pf.left_indent < Cm(0.5):
+                                in_list = False
+                
+                except Exception as e:
+                    print(f"ОШИБКА при форматировании многоуровневого списка '{text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_multilevel_lists: {str(e)}")
+            import traceback
+            traceback.print_exc() 
 
     def _correct_title_page(self, document):
         """
@@ -959,197 +1505,236 @@ class DocumentCorrector:
     def _correct_formulas(self, document):
         """
         Исправляет оформление формул в документе
+        ОТКЛЮЧЕНО создание таблиц - слишком опасно для структуры документа
+        Теперь только форматирует существующие формулы
         """
-        for i, paragraph in enumerate(document.paragraphs):
-            # Ищем параграфы, которые могут содержать формулы
-            if re.search(r'(?:\(\d+\)|\(\d+\.\d+\))', paragraph.text):  # Формат (1) или (1.1)
-                # Выравниваем формулы по центру
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
+            
+            for paragraph in document.paragraphs:
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
                 
-                # Убираем абзацный отступ
-                paragraph.paragraph_format.first_line_indent = Cm(0)
+                text = paragraph.text.strip()
+                if not text:
+                    continue
                 
-                # Добавляем интервал до и после формулы
-                paragraph.paragraph_format.space_before = Pt(6)
-                paragraph.paragraph_format.space_after = Pt(6)
+                try:
+                    # Ищем параграфы, которые могут содержать формулы
+                    if re.search(r'(?:\(\d+\)|\(\d+\.\d+\))', text):  # Формат (1) или (1.1)
+                        pf = paragraph.paragraph_format
+                        
+                        # Выравниваем формулы по центру
+                        if pf.alignment != WD_PARAGRAPH_ALIGNMENT.CENTER:
+                            pf.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                        
+                        # Убираем абзацный отступ
+                        if pf.first_line_indent != Cm(0):
+                            pf.first_line_indent = Cm(0)
+                        
+                        # Добавляем интервал до и после формулы
+                        if pf.space_before != Pt(6):
+                            pf.space_before = Pt(6)
+                        if pf.space_after != Pt(6):
+                            pf.space_after = Pt(6)
+                        
+                        # ОТКЛЮЧЕНО: создание таблиц для размещения номера формулы
+                        # Это было слишком опасно - удаляло параграфы и могло сломать структуру
+                        # Пользователь должен сам разместить номер формулы справа через табуляцию
                 
-                # Проверяем, есть ли номер формулы
-                formula_number_match = re.search(r'\((\d+(?:\.\d+)?)\)', paragraph.text)
-                if formula_number_match:
-                    # Если номер формулы найден, проверяем правильность его размещения (должен быть справа)
-                    formula_text = paragraph.text.replace(formula_number_match.group(0), '').strip()
-                    formula_number = formula_number_match.group(0)
-                    
-                    # Очищаем параграф
-                    for run in paragraph.runs:
-                        run.text = ''
-                    
-                    # Создаем таблицу для выравнивания формулы и номера
-                    # (это имитация табуляции, которая лучше работает для формул)
-                    table = document.add_table(rows=1, cols=2)
-                    table.autofit = False
-                    table.alignment = WD_TABLE_ALIGNMENT.CENTER
-                    table.style = 'Table Grid'
-                    
-                    # Устанавливаем ширину столбцов (80% и 20%)
-                    table.columns[0].width = Cm(12)  # Примерно 80% ширины
-                    table.columns[1].width = Cm(3)   # Примерно 20% ширины
-                    
-                    # Добавляем формулу в левую ячейку
-                    cell_left = table.cell(0, 0)
-                    cell_left.text = formula_text
-                    cell_left.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                    
-                    # Добавляем номер формулы в правую ячейку
-                    cell_right = table.cell(0, 1)
-                    cell_right.text = formula_number
-                    cell_right.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-                    
-                    # Удаляем границы таблицы
-                    table.style = 'Table Grid'
-                    for row in table.rows:
-                        for cell in row.cells:
-                            for border in ['top', 'bottom', 'left', 'right']:
-                                cell._element.get_or_add_tcPr().first_or_add('w:tcBorders').get_or_add_child('w:{}'.format(border)).set('w:val', 'none')
-                    
-                    # Вставляем таблицу вместо параграфа
-                    p = paragraph._p
-                    p.addnext(table._tbl)
-                    p.getparent().remove(p)
+                except Exception as e:
+                    print(f"ОШИБКА при форматировании формулы '{text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_formulas: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     def _correct_bibliography_references(self, document):
         """
         Исправляет оформление библиографических ссылок в тексте
+        ВАЖНО: НЕ использует paragraph.text = ... для сохранения форматирования
         """
-        # Регулярное выражение для поиска неправильно оформленных ссылок
-        wrong_ref_patterns = [
-            # Ссылки без квадратных скобок
-            r'(?<!\[)(\d+)(?!\])',
-            # Ссылки с круглыми скобками вместо квадратных
-            r'\((\d+)\)',
-            # Ссылки с буквой "с" вне скобок
-            r'\[(\d+)\]\s*с\.\s*(\d+)',
-            # Ссылки без пробела после запятой
-            r'\[(\d+),(\d+)\]'
-        ]
-        
-        # Правильные форматы ссылок
-        correct_formats = {
-            'simple': '[{}]',
-            'page': '[{}, с. {}]',
-            'multiple': '[{}, {}]'
-        }
-        
-        # Проходим по всем параграфам документа
-        for paragraph in document.paragraphs:
-            # Пропускаем пустые параграфы
-            if not paragraph.text.strip():
-                continue
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
+            
+            # Регулярные выражения для поиска и замены
+            replacements = [
+                # Ссылки с круглыми скобками вместо квадратных
+                (r'\((\d+)\)', r'[\1]'),
+                # Ссылки с буквой "с" вне скобок
+                (r'\[(\d+)\]\s*с\.\s*(\d+)', r'[\1, с. \2]'),
+                # Ссылки без пробела после запятой
+                (r'\[(\d+),(\d+)\]', r'[\1, \2]')
+            ]
+            
+            # Проходим по всем параграфам документа
+            for paragraph in document.paragraphs:
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
                 
-            # Исправляем различные форматы ссылок
-            
-            # 1. Исправляем ссылки без квадратных скобок (только цифры)
-            # Находим все вхождения цифр, которые могут быть ссылками
-            text = paragraph.text
-            
-            # Исправляем ссылки с круглыми скобками
-            text = re.sub(r'\((\d+)\)', r'[\1]', text)
-            
-            # Исправляем ссылки с буквой "с" вне скобок
-            text = re.sub(r'\[(\d+)\]\s*с\.\s*(\d+)', r'[\1, с. \2]', text)
-            
-            # Исправляем ссылки без пробела после запятой
-            text = re.sub(r'\[(\d+),(\d+)\]', r'[\1, \2]', text)
-            
-            # Если текст изменился, обновляем параграф
-            if text != paragraph.text:
-                paragraph.text = text
-                
-                # Восстанавливаем форматирование после изменения текста
-                for run in paragraph.runs:
-                    run.font.name = self.standard_rules['font']['name']
-                    run.font.size = Pt(self.standard_rules['font']['size']) 
-
-    def _correct_gost_bibliography(self, document):
-        """
-        Исправляет оформление списка литературы в соответствии с ГОСТ 7.0.100-2018
-        """
-        # Ищем раздел со списком литературы
-        bibliography_started = False
-        bibliography_paragraphs = []
-        
-        # Паттерны для идентификации различных типов источников
-        source_patterns = {
-            'book': r'(?i)(?:^|\s)[а-яА-Я][а-яА-Я\s]+\s[А-Я]\.\s?[А-Я]\.(?:\s|,)',  # Фамилия И. О.
-            'article': r'(?i)(?:^|\s)[а-яА-Я][а-яА-Я\s]+\s[А-Я]\.\s?[А-Я]\.\s[А-Я][а-я]',  # Фамилия И. О. Название статьи
-            'web': r'(?i)(?:https?://|www\.|электронный|ресурс|доступ)',  # Электронный ресурс
-            'law': r'(?i)(?:федеральный закон|приказ|постановление|распоряжение|указ)',  # Нормативные документы
-            'gost': r'(?i)(?:^|\s)ГОСТ\s',  # ГОСТ
-            'dissertation': r'(?i)(?:дис|автореф)\.(?:\s|\.)'  # Диссертации и авторефераты
-        }
-        
-        for i, paragraph in enumerate(document.paragraphs):
-            text = paragraph.text.strip().lower()
-            
-            # Определяем начало списка литературы
-            if not bibliography_started and re.search(r'список\s+(использованн(ой|ых)\s+)?литератур', text):
-                bibliography_started = True
-                # Форматируем заголовок списка литературы
-                paragraph.style = document.styles['Heading 1']
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                paragraph.paragraph_format.first_line_indent = Cm(0)
-                paragraph.paragraph_format.space_after = Pt(12)
-                paragraph.paragraph_format.space_before = Pt(12)
-                
-                # Убираем точку в конце заголовка, если она есть
-                if paragraph.text.strip().endswith('.'):
-                    paragraph.text = paragraph.text.strip().rstrip('.')
-                
-                # Приводим к верхнему регистру
-                paragraph.text = paragraph.text.upper()
-                continue
-            
-            # Собираем параграфы списка литературы
-            if bibliography_started:
-                # Если встретили новый заголовок, значит список литературы закончился
-                if paragraph.style.name.startswith('Heading'):
-                    break
-                
-                # Добавляем параграф в список для дальнейшей обработки
-                bibliography_paragraphs.append((i, paragraph))
-        
-        # Если нашли список литературы, форматируем его
-        if bibliography_paragraphs:
-            for i, (paragraph_index, paragraph) in enumerate(bibliography_paragraphs):
                 # Пропускаем пустые параграфы
                 if not paragraph.text.strip():
                     continue
                 
-                # Определяем тип источника
-                source_type = self._detect_source_type(paragraph.text, source_patterns)
+                try:
+                    # Проверяем, нужны ли исправления
+                    text = paragraph.text
+                    needs_correction = False
+                    
+                    for pattern, _ in replacements:
+                        if re.search(pattern, text):
+                            needs_correction = True
+                            break
+                    
+                    if needs_correction and paragraph.runs:
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: работаем через runs
+                        # Применяем замены к тексту каждого run
+                        for run in paragraph.runs:
+                            if run.text:
+                                new_text = run.text
+                                for pattern, replacement in replacements:
+                                    new_text = re.sub(pattern, replacement, new_text)
+                                run.text = new_text
                 
-                # Форматируем элемент списка литературы
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-                paragraph.paragraph_format.first_line_indent = Cm(-0.75)  # Обратный отступ для номера
-                paragraph.paragraph_format.left_indent = Cm(0.75)  # Отступ слева для текста
-                paragraph.paragraph_format.space_after = Pt(6)
-                paragraph.paragraph_format.space_before = Pt(0)
+                except Exception as e:
+                    print(f"ОШИБКА при исправлении библиографических ссылок '{paragraph.text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_bibliography_references: {str(e)}")
+            import traceback
+            traceback.print_exc() 
+
+    def _correct_gost_bibliography(self, document):
+        """
+        Исправляет оформление списка литературы в соответствии с ГОСТ 7.0.100-2018
+        ВАЖНО: НЕ использует paragraph.text = ... для сохранения форматирования
+        """
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
+            
+            # Ищем раздел со списком литературы
+            bibliography_started = False
+            bibliography_paragraphs = []
+            
+            # Паттерны для идентификации различных типов источников
+            source_patterns = {
+                'book': r'(?i)(?:^|\s)[а-яА-Я][а-яА-Я\s]+\s[А-Я]\.\s?[А-Я]\.(?:\s|,)',
+                'article': r'(?i)(?:^|\s)[а-яА-Я][а-яА-Я\s]+\s[А-Я]\.\s?[А-Я]\.\s[А-Я][а-я]',
+                'web': r'(?i)(?:https?://|www\.|электронный|ресурс|доступ)',
+                'law': r'(?i)(?:федеральный закон|приказ|постановление|распоряжение|указ)',
+                'gost': r'(?i)(?:^|\s)ГОСТ\s',
+                'dissertation': r'(?i)(?:дис|автореф)\.(?:\s|\.)'
+            }
+            
+            for i, paragraph in enumerate(document.paragraphs):
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
                 
-                # Проверяем, есть ли номер в начале строки
-                numbered = re.match(r'^\d+\.?\s', paragraph.text.strip())
+                text = paragraph.text.strip().lower()
                 
-                # Если номера нет, добавляем его
-                if not numbered:
-                    paragraph.text = f"{i + 1}. {paragraph.text.strip()}"
+                try:
+                    # Определяем начало списка литературы
+                    if not bibliography_started and re.search(r'список\s+(использованн(ой|ых)\s+)?литератур', text):
+                        bibliography_started = True
+                        # Форматируем заголовок списка литературы
+                        paragraph.style = document.styles['Heading 1']
+                        pf = paragraph.paragraph_format
+                        pf.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                        pf.first_line_indent = Cm(0)
+                        pf.space_after = Pt(12)
+                        pf.space_before = Pt(12)
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: убираем точку через runs
+                        if paragraph.text.strip().endswith('.'):
+                            if paragraph.runs:
+                                last_run = paragraph.runs[-1]
+                                last_run.text = last_run.text.rstrip('.')
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: upper через runs
+                        for run in paragraph.runs:
+                            run.text = run.text.upper()
+                        continue
+                    
+                    # Собираем параграфы списка литературы
+                    if bibliography_started:
+                        # Если встретили новый заголовок, значит список литературы закончился
+                        if paragraph.style.name.startswith('Heading'):
+                            break
+                        
+                        # Добавляем параграф в список для дальнейшей обработки
+                        bibliography_paragraphs.append((i, paragraph))
                 
-                # Применяем форматирование по ГОСТу в зависимости от типа источника
-                if source_type:
-                    paragraph.text = self._format_source_by_gost(paragraph.text, source_type)
-                
-                # Восстанавливаем форматирование после изменения текста
-                for run in paragraph.runs:
-                    run.font.name = self.standard_rules['font']['name']
-                    run.font.size = Pt(self.standard_rules['font']['size'])
+                except Exception as e:
+                    print(f"ОШИБКА при поиске списка литературы '{text[:50]}...': {str(e)}")
+                    continue
+            
+            # Если нашли список литературы, форматируем его
+            if bibliography_paragraphs:
+                for idx, (paragraph_index, paragraph) in enumerate(bibliography_paragraphs):
+                    # Пропускаем пустые параграфы
+                    if not paragraph.text.strip():
+                        continue
+                    
+                    try:
+                        # Определяем тип источника
+                        source_type = self._detect_source_type(paragraph.text, source_patterns)
+                        
+                        # Форматируем элемент списка литературы
+                        pf = paragraph.paragraph_format
+                        pf.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                        pf.first_line_indent = Cm(-0.75)  # Обратный отступ для номера
+                        pf.left_indent = Cm(0.75)  # Отступ слева для текста
+                        pf.space_after = Pt(6)
+                        pf.space_before = Pt(0)
+                        
+                        # Проверяем, есть ли номер в начале строки
+                        numbered = re.match(r'^\d+\.?\s', paragraph.text.strip())
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: если номера нет, добавляем через runs
+                        if not numbered and paragraph.runs:
+                            # Добавляем номер в начало первого run
+                            first_run = paragraph.runs[0]
+                            first_run.text = f"{idx + 1}. {first_run.text}"
+                        
+                        # Применяем форматирование шрифта
+                        for run in paragraph.runs:
+                            if run.font.name != self.standard_rules['font']['name']:
+                                run.font.name = self.standard_rules['font']['name']
+                            if run.font.size != Pt(self.standard_rules['font']['size']):
+                                run.font.size = Pt(self.standard_rules['font']['size'])
+                    
+                    except Exception as e:
+                        print(f"ОШИБКА при форматировании элемента библиографии '{paragraph.text[:50]}...': {str(e)}")
+                        continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_gost_bibliography: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def _detect_source_type(self, text, patterns):
         """
@@ -1278,140 +1863,216 @@ class DocumentCorrector:
     def _correct_toc(self, document):
         """
         Исправляет оформление оглавления (содержания)
+        ВАЖНО: НЕ использует paragraph.text = ... для сохранения форматирования
         """
-        # Ищем раздел с оглавлением
-        toc_started = False
-        toc_paragraphs = []
-        
-        for i, paragraph in enumerate(document.paragraphs):
-            text = paragraph.text.strip().lower()
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
             
-            # Определяем начало оглавления
-            if not toc_started and re.search(r'^(оглавление|содержание)$', text):
-                toc_started = True
-                # Форматируем заголовок оглавления
-                paragraph.style = document.styles['Heading 1']
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                paragraph.paragraph_format.first_line_indent = Cm(0)
-                paragraph.paragraph_format.space_after = Pt(12)
-                paragraph.paragraph_format.space_before = Pt(12)
-                
-                # Убираем точку в конце заголовка, если она есть
-                if paragraph.text.strip().endswith('.'):
-                    paragraph.text = paragraph.text.strip().rstrip('.')
-                
-                # Приводим к верхнему регистру
-                paragraph.text = paragraph.text.upper()
-                continue
+            # Ищем раздел с оглавлением
+            toc_started = False
+            toc_paragraphs = []
             
-            # Собираем параграфы оглавления
-            if toc_started:
-                # Если встретили заголовок "ВВЕДЕНИЕ", значит оглавление закончилось
-                if text == 'введение' or paragraph.style.name.startswith('Heading'):
-                    break
-                
-                # Добавляем параграф в список для дальнейшей обработки
-                toc_paragraphs.append((i, paragraph))
-        
-        # Если нашли оглавление, форматируем его
-        if toc_paragraphs:
-            for i, paragraph in toc_paragraphs:
-                # Пропускаем пустые параграфы
-                if not paragraph.text.strip():
+            for i, paragraph in enumerate(document.paragraphs):
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
                     continue
                 
-                # Форматируем элемент оглавления
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                paragraph.paragraph_format.first_line_indent = Cm(0)  # Без абзацного отступа
-                paragraph.paragraph_format.left_indent = Cm(0)  # Без отступа слева
-                paragraph.paragraph_format.space_after = Pt(0)
-                paragraph.paragraph_format.space_before = Pt(0)
+                text = paragraph.text.strip().lower()
                 
-                # Восстанавливаем форматирование после изменения текста
-                for run in paragraph.runs:
-                    run.font.name = self.standard_rules['font']['name']
-                    run.font.size = Pt(self.standard_rules['font']['size'])
-                    
-                # Проверяем наличие точек между текстом и номером страницы
-                # Если точек нет, добавляем их
-                if not re.search(r'\.{2,}\s*\d+$', paragraph.text):
-                    # Разделяем текст и номер страницы
-                    match = re.search(r'^(.*?)\s*(\d+)$', paragraph.text)
-                    if match:
-                        text_part = match.group(1).strip()
-                        page_number = match.group(2)
+                try:
+                    # Определяем начало оглавления
+                    if not toc_started and re.search(r'^(оглавление|содержание)$', text):
+                        toc_started = True
+                        # Форматируем заголовок оглавления
+                        paragraph.style = document.styles['Heading 1']
+                        pf = paragraph.paragraph_format
+                        pf.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                        pf.first_line_indent = Cm(0)
+                        pf.space_after = Pt(12)
+                        pf.space_before = Pt(12)
                         
-                        # Добавляем точки между текстом и номером страницы
-                        paragraph.text = f"{text_part} {'.' * 20} {page_number}"
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: убираем точку через runs
+                        if paragraph.text.strip().endswith('.'):
+                            if paragraph.runs:
+                                last_run = paragraph.runs[-1]
+                                last_run.text = last_run.text.rstrip('.')
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: upper через runs
+                        for run in paragraph.runs:
+                            run.text = run.text.upper()
+                        continue
+                    
+                    # Собираем параграфы оглавления
+                    if toc_started:
+                        # Если встретили заголовок "ВВЕДЕНИЕ", значит оглавление закончилось
+                        if text == 'введение' or paragraph.style.name.startswith('Heading'):
+                            break
+                        
+                        # Добавляем параграф в список для дальнейшей обработки
+                        toc_paragraphs.append((i, paragraph))
+                
+                except Exception as e:
+                    print(f"ОШИБКА при поиске оглавления '{text[:50]}...': {str(e)}")
+                    continue
+            
+            # Если нашли оглавление, форматируем его
+            if toc_paragraphs:
+                for i, paragraph in toc_paragraphs:
+                    # Пропускаем пустые параграфы
+                    if not paragraph.text.strip():
+                        continue
+                    
+                    try:
+                        # Форматируем элемент оглавления
+                        pf = paragraph.paragraph_format
+                        pf.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                        pf.first_line_indent = Cm(0)  # Без абзацного отступа
+                        pf.left_indent = Cm(0)  # Без отступа слева
+                        pf.space_after = Pt(0)
+                        pf.space_before = Pt(0)
+                        
+                        # Применяем шрифт
+                        for run in paragraph.runs:
+                            if run.font.name != self.standard_rules['font']['name']:
+                                run.font.name = self.standard_rules['font']['name']
+                            if run.font.size != Pt(self.standard_rules['font']['size']):
+                                run.font.size = Pt(self.standard_rules['font']['size'])
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: добавляем точки через runs
+                        # Проверяем наличие точек между текстом и номером страницы
+                        if not re.search(r'\.{2,}\s*\d+$', paragraph.text):
+                            # Разделяем текст и номер страницы
+                            match = re.search(r'^(.*?)\s*(\d+)$', paragraph.text)
+                            if match and paragraph.runs:
+                                text_part = match.group(1).strip()
+                                page_number = match.group(2)
+                                
+                                # Создаём новый текст с точками
+                                new_text = f"{text_part} {'.' * 20} {page_number}"
+                                
+                                # Очищаем все runs кроме первого
+                                for run in paragraph.runs:
+                                    run.text = ''
+                                
+                                # Устанавливаем новый текст в первый run
+                                if paragraph.runs:
+                                    paragraph.runs[0].text = new_text
+                    
+                    except Exception as e:
+                        print(f"ОШИБКА при форматировании элемента оглавления '{paragraph.text[:50]}...': {str(e)}")
+                        continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_toc: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     def _correct_appendices(self, document):
         """
         Исправляет оформление приложений
+        ВАЖНО: НЕ использует paragraph.text = ... для сохранения форматирования
         """
-        # Ищем начало раздела приложений
-        appendix_started = False
-        current_appendix = None
-        
-        for i, paragraph in enumerate(document.paragraphs):
-            text = paragraph.text.strip()
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
             
-            # Проверяем, не является ли параграф началом приложения
-            if re.match(r'^ПРИЛОЖЕНИЕ\s+[А-Я]', text, re.IGNORECASE):
-                appendix_started = True
-                current_appendix = text
-                
-                # Форматируем заголовок приложения
-                paragraph.style = document.styles['Heading 1']
-                paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                paragraph.paragraph_format.first_line_indent = Cm(0)
-                paragraph.paragraph_format.space_after = Pt(12)
-                paragraph.paragraph_format.space_before = Pt(12)
-                
-                # Убираем точку в конце заголовка, если она есть
-                if paragraph.text.strip().endswith('.'):
-                    paragraph.text = paragraph.text.strip().rstrip('.')
-                
-                # Приводим к верхнему регистру
-                paragraph.text = paragraph.text.upper()
-                
-                # Если после слова "ПРИЛОЖЕНИЕ" и буквы нет названия, ищем следующий параграф с названием
-                if len(paragraph.text.split()) < 3:
-                    next_para_index = i + 1
-                    if next_para_index < len(document.paragraphs):
-                        next_para = document.paragraphs[next_para_index]
-                        if next_para.text.strip() and not next_para.style.name.startswith('Heading'):
-                            # Форматируем название приложения
-                            next_para.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                            next_para.paragraph_format.first_line_indent = Cm(0)
-                            next_para.paragraph_format.space_after = Pt(12)
-                            next_para.paragraph_format.space_before = Pt(0)
-                            
-                            # Приводим к верхнему регистру
-                            next_para.text = next_para.text.upper()
+            # Ищем начало раздела приложений
+            appendix_started = False
+            current_appendix = None
             
-            # Форматируем содержимое приложения, если это не заголовок
-            elif appendix_started and not paragraph.style.name.startswith('Heading') and text:
-                # Для текста внутри приложения применяем стандартное форматирование
-                if not re.match(r'^(рисунок|рис\.|таблица)', text.lower()):
-                    paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
-                    paragraph.paragraph_format.first_line_indent = Cm(1.25)
+            for i, paragraph in enumerate(document.paragraphs):
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
+                
+                text = paragraph.text.strip()
+                
+                try:
+                    # Проверяем, не является ли параграф началом приложения
+                    if re.match(r'^ПРИЛОЖЕНИЕ\s+[А-Я]', text, re.IGNORECASE):
+                        appendix_started = True
+                        current_appendix = text
+                        
+                        # Форматируем заголовок приложения
+                        paragraph.style = document.styles['Heading 1']
+                        pf = paragraph.paragraph_format
+                        pf.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                        pf.first_line_indent = Cm(0)
+                        pf.space_after = Pt(12)
+                        pf.space_before = Pt(12)
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: убираем точку через runs
+                        if paragraph.text.strip().endswith('.'):
+                            if paragraph.runs:
+                                last_run = paragraph.runs[-1]
+                                last_run.text = last_run.text.rstrip('.')
+                        
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: upper через runs
+                        for run in paragraph.runs:
+                            run.text = run.text.upper()
+                        
+                        # Если после слова "ПРИЛОЖЕНИЕ" и буквы нет названия, ищем следующий параграф с названием
+                        if len(paragraph.text.split()) < 3:
+                            next_para_index = i + 1
+                            if next_para_index < len(document.paragraphs):
+                                next_para = document.paragraphs[next_para_index]
+                                if id(next_para) not in table_paragraphs:
+                                    if next_para.text.strip() and not next_para.style.name.startswith('Heading'):
+                                        # Форматируем название приложения
+                                        next_pf = next_para.paragraph_format
+                                        next_pf.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                                        next_pf.first_line_indent = Cm(0)
+                                        next_pf.space_after = Pt(12)
+                                        next_pf.space_before = Pt(0)
+                                        
+                                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: upper через runs
+                                        for run in next_para.runs:
+                                            run.text = run.text.upper()
                     
-                    # Восстанавливаем форматирование шрифта
-                    for run in paragraph.runs:
-                        run.font.name = self.standard_rules['font']['name']
-                        run.font.size = Pt(self.standard_rules['font']['size'])
+                    # Форматируем содержимое приложения, если это не заголовок
+                    elif appendix_started and not paragraph.style.name.startswith('Heading') and text:
+                        # Для текста внутри приложения применяем стандартное форматирование
+                        if not re.match(r'^(рисунок|рис\.|таблица)', text.lower()):
+                            pf = paragraph.paragraph_format
+                            pf.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                            pf.first_line_indent = Cm(1.25)
+                            
+                            # Восстанавливаем форматирование шрифта
+                            for run in paragraph.runs:
+                                if run.font.name != self.standard_rules['font']['name']:
+                                    run.font.name = self.standard_rules['font']['name']
+                                if run.font.size != Pt(self.standard_rules['font']['size']):
+                                    run.font.size = Pt(self.standard_rules['font']['size'])
+                        
+                        # Для подписей к рисункам и таблицам применяем специальное форматирование
+                        elif re.match(r'^(рисунок|рис\.)', text.lower()):
+                            pf = paragraph.paragraph_format
+                            pf.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                            pf.first_line_indent = Cm(0)
+                        elif re.match(r'^таблица', text.lower()):
+                            pf = paragraph.paragraph_format
+                            pf.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                            pf.first_line_indent = Cm(0)
                 
-                # Для подписей к рисункам и таблицам применяем специальное форматирование
-                elif re.match(r'^(рисунок|рис\.)', text.lower()):
-                    paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                    paragraph.paragraph_format.first_line_indent = Cm(0)
-                elif re.match(r'^таблица', text.lower()):
-                    paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                    paragraph.paragraph_format.first_line_indent = Cm(0)
-                
-                # Проверяем наличие нового приложения (если встретился заголовок нового приложения)
-                if re.match(r'^ПРИЛОЖЕНИЕ\s+[А-Я]', text, re.IGNORECASE) and text != current_appendix:
-                    current_appendix = text
+                except Exception as e:
+                    print(f"ОШИБКА при обработке приложения '{text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _correct_appendices: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     def _correct_text_accents(self, document):
         """
@@ -1598,58 +2259,81 @@ class DocumentCorrector:
     def _fix_incorrect_hyphenation(self, document):
         """
         Исправляет неправильные переносы в тексте
+        ВАЖНО: НЕ использует paragraph.text = ... для сохранения форматирования
         """
-        # Список запрещенных переносов (слова, которые не должны переноситься)
-        forbidden_hyphen_words = [
-            r'\bи\b', r'\bа\b', r'\bв\b', r'\bс\b', r'\bк\b', r'\bу\b', r'\bо\b',  # Предлоги из 1 буквы
-            r'\bна\b', r'\bот\b', r'\bдо\b', r'\bза\b', r'\bиз\b', r'\bпо\b',  # Предлоги из 2 букв
-            r'\bт\.д\b', r'\bт\.п\b', r'\bт\.е\b',  # Сокращения
-            r'\bг\.\b', r'\bгг\.\b', r'\bвв\.\b', r'\bстр\.\b'  # Обозначения
-        ]
-        
-        # Список правил для проверки и исправления неправильных переносов
-        hyphen_rules = [
-            (r'(\w)-\s+(\w)', r'\1\2'),  # Убираем переносы внутри слов
-            (r'(\d+)\s*-\s*(\d+)', r'\1-\2'),  # Исправляем дефисы в числовых диапазонах
-            (r'(\w+)\s*-\s*(\w+)', r'\1-\2')  # Исправляем дефисы между словами
-        ]
-        
-        for paragraph in document.paragraphs:
-            # Пропускаем пустые параграфы
-            if not paragraph.text.strip():
-                continue
+        try:
+            # Получаем список всех параграфов внутри таблиц для исключения
+            table_paragraphs = set()
+            for table in document.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for para in cell.paragraphs:
+                            table_paragraphs.add(id(para))
+            
+            # Список запрещенных переносов (слова, которые не должны переноситься)
+            forbidden_hyphen_words = [
+                r'\bи\b', r'\bа\b', r'\bв\b', r'\bс\b', r'\bк\b', r'\bу\b', r'\bо\b',
+                r'\bна\b', r'\bот\b', r'\bдо\b', r'\bза\b', r'\bиз\b', r'\bпо\b',
+                r'\bт\.д\b', r'\bт\.п\b', r'\bт\.е\b',
+                r'\bг\.\b', r'\bгг\.\b', r'\bвв\.\b', r'\bстр\.\b'
+            ]
+            
+            # Список правил для проверки и исправления неправильных переносов
+            hyphen_rules = [
+                (r'(\w)-\s+(\w)', r'\1\2'),  # Убираем переносы внутри слов
+                (r'(\d+)\s*-\s*(\d+)', r'\1-\2'),  # Исправляем дефисы в числовых диапазонах
+                (r'(\w+)\s*-\s*(\w+)', r'\1-\2')  # Исправляем дефисы между словами
+            ]
+            
+            for paragraph in document.paragraphs:
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: пропускаем параграфы внутри таблиц
+                if id(paragraph) in table_paragraphs:
+                    continue
                 
-            # Проверяем наличие переноса запрещенных слов
-            text = paragraph.text
-            modified = False
-            
-            # Проверяем запрещенные переносы
-            for pattern in forbidden_hyphen_words:
-                # Ищем случаи, когда запрещенное слово находится в конце строки
-                # (это можно определить только по XML, в тексте это не видно)
-                # Поэтому мы проверяем наличие слова и в случае необходимости добавляем
-                # неразрывный пробел перед ним
-                if re.search(pattern, text):
-                    # Заменяем обычный пробел перед запрещенным словом на неразрывный
-                    for match in re.finditer(r'\s+(' + pattern[2:-2] + r')\b', text):
-                        word = match.group(1)
-                        text = text.replace(f" {word}", f"\u00A0{word}")  # \u00A0 - неразрывный пробел
-                        modified = True
-            
-            # Применяем правила для исправления переносов
-            for pattern, replacement in hyphen_rules:
-                if re.search(pattern, text):
-                    text = re.sub(pattern, replacement, text)
-                    modified = True
-            
-            # Если были внесены изменения, обновляем текст параграфа
-            if modified:
-                paragraph.text = text
+                # Пропускаем пустые параграфы
+                if not paragraph.text.strip():
+                    continue
                 
-                # Восстанавливаем форматирование
-                for run in paragraph.runs:
-                    run.font.name = self.standard_rules['font']['name']
-                    run.font.size = Pt(self.standard_rules['font']['size'])
+                try:
+                    # Проверяем необходимость изменений
+                    needs_modification = False
+                    for pattern in forbidden_hyphen_words:
+                        if re.search(pattern, paragraph.text):
+                            needs_modification = True
+                            break
+                    
+                    if not needs_modification:
+                        for pattern, _ in hyphen_rules:
+                            if re.search(pattern, paragraph.text):
+                                needs_modification = True
+                                break
+                    
+                    if needs_modification and paragraph.runs:
+                        # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: работаем через runs
+                        for run in paragraph.runs:
+                            if run.text:
+                                text = run.text
+                                
+                                # Применяем замены для запрещенных переносов
+                                for pattern in forbidden_hyphen_words:
+                                    for match in re.finditer(r'\s+(' + pattern[2:-2] + r')\b', text):
+                                        word = match.group(1)
+                                        text = text.replace(f" {word}", f"\u00A0{word}")
+                                
+                                # Применяем правила для исправления переносов
+                                for pattern, replacement in hyphen_rules:
+                                    text = re.sub(pattern, replacement, text)
+                                
+                                run.text = text
+                
+                except Exception as e:
+                    print(f"ОШИБКА при исправлении переносов '{paragraph.text[:50]}...': {str(e)}")
+                    continue
+        
+        except Exception as e:
+            print(f"КРИТИЧЕСКАЯ ОШИБКА в _fix_incorrect_hyphenation: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     def _fix_hanging_prepositions(self, document):
         """

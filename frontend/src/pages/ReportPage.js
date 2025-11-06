@@ -38,6 +38,8 @@ import {
   alpha,
   CircularProgress
 } from '@mui/material';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import InfoIcon from '@mui/icons-material/Info';
@@ -75,7 +77,6 @@ import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import DataUsageIcon from '@mui/icons-material/DataUsage';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import axios from 'axios';
-import { CheckHistoryContext } from '../App';
 
 // Функция для определения общей оценки документа
 function getDocumentGrade(totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount) {
@@ -425,22 +426,56 @@ const ReportPage = () => {
   const [reportFilePath, setReportFilePath] = useState(null);
   const [tabValue, setTabValue] = useState(0); // Состояние для табов
   const [showInsights, setShowInsights] = useState(false); // Для показа аналитики
+  const [autoDownloaded, setAutoDownloaded] = useState(false);
+  const [viewMode, setViewMode] = useState('pre'); // 'pre' | 'post'
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiText, setAiText] = useState('');
+  const [aiAvailable, setAiAvailable] = useState(false);
+  
   
   // Контекст для истории проверок
-  const { addToHistory } = useContext(CheckHistoryContext);
+  // const { addToHistory } = useContext(CheckHistoryContext); // removed - context not available
+  const addToHistory = () => {}; // no-op stub
 
   // Мемоизируем входные данные
   const memoizedReportData = useMemo(() => reportData || {}, [reportData]);
   const memoizedFileName = useMemo(() => fileName || '', [fileName]);
 
+  // Используем ИИ подсказки из backend, если они пришли вместе с отчетом
+  useEffect(() => {
+    const aiBlock = memoizedReportData?.ai_suggestions || {};
+    const backendError = memoizedReportData?.ai_error || '';
+    const initial = viewMode === 'post' ? aiBlock?.after : aiBlock?.before;
+    if (initial) {
+      setAiText(initial);
+      setAiAvailable(true);
+    } else if (aiBlock?.before || aiBlock?.after) {
+      setAiAvailable(true);
+    }
+    if (backendError) {
+      setAiError(backendError);
+    }
+  }, [memoizedReportData, viewMode]);
+
   // Мемоизируем issues и статистику
+  // Предпочитаем результаты после автокоррекции, если они есть и лучше
+  const effectiveResults = useMemo(() => {
+    const corrected = memoizedReportData.corrected_check_results;
+    const original = memoizedReportData.check_results;
+
+    if (viewMode === 'post' && corrected) return corrected;
+    if (viewMode === 'pre') return original || {};
+    return original || {};
+  }, [memoizedReportData, viewMode]);
+
   const issues = useMemo(() => 
-    memoizedReportData.check_results?.issues || [], 
-    [memoizedReportData]
+    effectiveResults?.issues || [], 
+    [effectiveResults]
   );
   const totalIssues = useMemo(() => 
-    memoizedReportData.check_results?.total_issues_count || 0, 
-    [memoizedReportData]
+    effectiveResults?.total_issues_count || 0, 
+    [effectiveResults]
   );
 
   // Группировка проблем по типу и серьезности
@@ -468,8 +503,8 @@ const ReportPage = () => {
 
   // Статистика по серьезности
   const statistics = useMemo(() => 
-    memoizedReportData.check_results?.statistics || {}, 
-    [memoizedReportData]
+    effectiveResults?.statistics || {}, 
+    [effectiveResults]
   );
   const highSeverityCount = useMemo(() => 
     statistics.severity?.high || 0, 
@@ -495,6 +530,15 @@ const ReportPage = () => {
     }
   }, [memoizedReportData, navigate]);
 
+  // Устанавливаем режим просмотра по умолчанию: если есть результаты после исправления — показываем их
+  useEffect(() => {
+    if (memoizedReportData?.corrected_check_results) {
+      setViewMode('post');
+    } else {
+      setViewMode('pre');
+    }
+  }, [memoizedReportData]);
+
   // Сохраняем результат в истории при первичной загрузке страницы
   useEffect(() => {
     if (memoizedReportData && memoizedFileName) {
@@ -507,6 +551,16 @@ const ReportPage = () => {
       });
     }
   }, [memoizedReportData, memoizedFileName, addToHistory, correctedFilePath]);
+
+  // Автоскачивание исправленного документа, если он уже есть после загрузки
+  useEffect(() => {
+    const serverCorrected = memoizedReportData?.corrected_file_path;
+    const success = memoizedReportData?.correction_success;
+    if (!autoDownloaded && success && serverCorrected) {
+      setAutoDownloaded(true);
+      downloadDocument(serverCorrected, memoizedFileName);
+    }
+  }, [memoizedReportData, memoizedFileName, autoDownloaded]);
 
   // Прокрутка вверх при загрузке страницы
   useEffect(() => {
@@ -522,6 +576,31 @@ const ReportPage = () => {
   // Обработчик изменения таба
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleViewModeChange = (event, newMode) => {
+    if (newMode !== null) setViewMode(newMode);
+  };
+
+  const handleAISuggestions = async () => {
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const response = await axios.post('http://localhost:5000/api/document/ai/suggest', {
+        check_results: effectiveResults,
+        filename: memoizedFileName
+      });
+      if (response.data?.success) {
+        setAiText(response.data.suggestions || '');
+        setAiAvailable(true);
+      } else {
+        setAiError(response.data?.error || 'Не удалось получить рекомендации ИИ');
+      }
+    } catch (err) {
+      setAiError(err?.response?.data?.error || 'Ошибка запроса к ИИ');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   // Если нет данных - возвращаем null
@@ -989,7 +1068,7 @@ const ReportPage = () => {
     setReportError(null);
     
     try {
-      const response = await axios.post('/api/document/generate-report', {
+      const response = await axios.post('http://localhost:5000/api/document/generate-report', {
         check_results: memoizedReportData.check_results,
         filename: memoizedFileName
       });
@@ -1012,7 +1091,7 @@ const ReportPage = () => {
     if (!reportPath) return;
     
     // Формируем URL для скачивания
-    const downloadUrl = `/api/document/download-report?path=${encodeURIComponent(reportPath)}&filename=${encodeURIComponent(reportName || 'report.docx')}`;
+    const downloadUrl = `http://localhost:5000/api/document/download-report?path=${encodeURIComponent(reportPath)}&filename=${encodeURIComponent(reportName || 'report.docx')}`;
     
     // Открываем URL для скачивания
     window.open(downloadUrl, '_blank');
@@ -1083,12 +1162,38 @@ const ReportPage = () => {
               Анализ документа завершен
             </Typography>
             
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2, gap: 1, flexWrap: 'wrap' }}>
               <ArticleIcon sx={{ mr: 1, color: 'text.secondary' }} />
               <Typography variant="h6" align="center" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                 {memoizedFileName}
               </Typography>
+              {/* Индикатор текущего представления */}
+              {memoizedReportData?.corrected_check_results && (
+                <Chip 
+                  label={viewMode === 'post' ? 'После автокоррекции' : 'До исправления'}
+                  color={viewMode === 'post' ? 'success' : 'default'}
+                  size="small"
+                  icon={<AutoFixHighIcon />}
+                  sx={{ ml: 1 }}
+                />
+              )}
             </Box>
+            {/* Переключатель вида отчета (до/после) */}
+            {memoizedReportData?.corrected_check_results && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                <ToggleButtonGroup
+                  color="primary"
+                  value={viewMode}
+                  exclusive
+                  onChange={handleViewModeChange}
+                  size="small"
+                  sx={{ borderRadius: 2 }}
+                >
+                  <ToggleButton value="pre">До исправления</ToggleButton>
+                  <ToggleButton value="post">После автокоррекции</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            )}
             
             {/* Используем новый компонент статистики */}
             <DocumentStatistics 
@@ -1158,6 +1263,22 @@ const ReportPage = () => {
               
               <Button
                 variant="text"
+                size="large"
+                startIcon={aiLoading ? <CircularProgress size={16} /> : <InsightsIcon />}
+                onClick={handleAISuggestions}
+                disabled={aiLoading}
+                sx={{ 
+                  py: 1.5,
+                  px: 3,
+                  borderRadius: 3,
+                  fontWeight: 600
+                }}
+              >
+                {aiLoading ? 'ИИ анализ...' : aiAvailable ? 'Обновить ИИ рекомендации' : 'Получить ИИ рекомендации'}
+              </Button>
+
+              <Button
+                variant="text"
                 startIcon={<InsightsIcon />}
                 onClick={() => setShowInsights(!showInsights)}
                 sx={{ 
@@ -1180,9 +1301,36 @@ const ReportPage = () => {
             documentGrade={documentGrade}
           />
         )}
+
+        {/* ИИ рекомендации */}
+        {(aiText || aiError || aiAvailable) && (
+          <Paper 
+            elevation={0}
+            sx={{ 
+              p: 3,
+              mb: 4,
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+              background: alpha(theme.palette.background.paper, 0.8)
+            }}
+          >
+            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+              Рекомендации ИИ
+            </Typography>
+            {aiError ? (
+              <Alert severity="warning">{aiError}</Alert>
+            ) : aiText ? (
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                {aiText}
+              </Typography>
+            ) : (
+              <Alert severity="info">ИИ готов, нажмите «Получить ИИ рекомендации», чтобы загрузить свежий план.</Alert>
+            )}
+          </Paper>
+        )}
         
         {/* Сообщения об исправлении */}
-        {correctionSuccess && (
+        {(correctionSuccess || memoizedReportData?.correction_success) && (
           <Alert 
             severity="success" 
             sx={{ 
@@ -1195,7 +1343,7 @@ const ReportPage = () => {
               <Button 
                 color="inherit" 
                 size="small" 
-                onClick={() => downloadDocument(correctedFilePath, memoizedFileName)}
+                onClick={() => downloadDocument(correctedFilePath || memoizedReportData?.corrected_file_path, memoizedFileName)}
                 startIcon={<DownloadIcon />}
                 sx={{ borderRadius: 2 }}
               >
@@ -1204,7 +1352,7 @@ const ReportPage = () => {
             }
           >
             <AlertTitle sx={{ fontWeight: 700 }}>Документ успешно исправлен</AlertTitle>
-            Автоматически исправлены все возможные ошибки. Скачивание документа началось автоматически.
+            Автоматически исправлены все возможные ошибки. Если скачивание не началось, нажмите «Скачать еще раз».
           </Alert>
         )}
         

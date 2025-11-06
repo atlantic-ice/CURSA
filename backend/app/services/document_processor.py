@@ -235,7 +235,7 @@ class DocumentProcessor:
         file_path_str = str(file_path).lower()
         if not file_path_str.endswith('.docx'):
             # Пробуем сначала с добавлением расширения
-            corrected_file_path = file_path + '.docx'
+            corrected_file_path = str(file_path) + '.docx'
             if os.path.exists(corrected_file_path):
                 file_path = corrected_file_path
                 self.file_path = corrected_file_path
@@ -257,8 +257,9 @@ class DocumentProcessor:
         try:
             self.document = docx.Document(file_path)
         except Exception as e:
+            # Приводим тип исключения к ValueError для единообразия и соответствия тестам
             print(f"Ошибка при открытии DOCX файла {file_path}: {str(e)}")
-            raise
+            raise ValueError(f"Неверный формат файла или поврежденный DOCX: {file_path}") from e
     
     def __del__(self):
         """
@@ -920,3 +921,108 @@ class DocumentProcessor:
                 break
             title_page.append({'index': para.get('index'), 'text': para.get('text')})
         return title_page 
+
+    def generate_report_document(self, check_results: dict, original_filename: str = "document.docx") -> str:
+        """
+        Генерирует DOCX-отчет по результатам проверки.
+
+        Args:
+            check_results: словарь с ключами как минимум 'issues', 'total_issues_count', 'statistics',
+                           а также 'rules_results' (если есть) — см. NormControlChecker.check_document().
+            original_filename: исходное имя проверяемого файла для включения в отчет.
+
+        Returns:
+            str: относительный путь от корня backend до созданного файла (например, 'app/static/reports/report_...docx').
+        """
+        try:
+            # Каталог для отчетов внутри backend/app/static/reports
+            backend_root = Path(__file__).resolve().parents[2]  # .../backend
+            reports_dir = backend_root / 'app' / 'static' / 'reports'
+            reports_dir.mkdir(parents=True, exist_ok=True)
+
+            # Имя файла отчета
+            base_name = Path(original_filename).stem or 'document'
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            report_filename = f"report_{base_name}_{timestamp}.docx"
+            report_path = reports_dir / report_filename
+
+            # Создание документа
+            doc = Document()
+
+            # Заголовок
+            title = doc.add_paragraph()
+            run = title.add_run("Отчет о проверке документа")
+            run.bold = True
+            run.font.size = Pt(16)
+            title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+            # Информация о документе
+            doc.add_paragraph("")
+            meta = doc.add_paragraph()
+            meta.add_run("Исходный файл: ").bold = True
+            meta.add_run(original_filename)
+            meta2 = doc.add_paragraph()
+            meta2.add_run("Дата генерации: ").bold = True
+            meta2.add_run(datetime.now().strftime('%d.%m.%Y %H:%M:%S'))
+
+            # Резюме
+            doc.add_paragraph("")
+            doc.add_paragraph("Итоги проверки:").runs[0].bold = True
+            total_issues = int(check_results.get('total_issues_count') or check_results.get('statistics', {}).get('total_issues') or 0)
+            stats = check_results.get('statistics', {}) or {}
+            severity = stats.get('severity', {}) or {}
+            auto_fixable = stats.get('auto_fixable_count', 0)
+
+            summary = doc.add_paragraph()
+            summary.add_run(f"Всего несоответствий: {total_issues}\n")
+            summary.add_run(f"Критические: {severity.get('high', 0)}; ")
+            summary.add_run(f"Средние: {severity.get('medium', 0)}; ")
+            summary.add_run(f"Незначительные: {severity.get('low', 0)}\n")
+            summary.add_run(f"Автоматически исправимых: {auto_fixable}")
+
+            # Список проблем (группируем по типу/описанию для компактности)
+            issues = check_results.get('issues', []) or []
+            if issues:
+                doc.add_paragraph("")
+                doc.add_paragraph("Детализация проблем:").runs[0].bold = True
+
+                # Группировка одинаковых проблем по (type, description)
+                grouped = {}
+                for issue in issues:
+                    key = (issue.get('type', ''), issue.get('description', ''))
+                    if key not in grouped:
+                        grouped[key] = {
+                            'severity': issue.get('severity', 'low'),
+                            'auto_fixable': bool(issue.get('auto_fixable', False)),
+                            'locations': []
+                        }
+                    loc = issue.get('location')
+                    if loc:
+                        grouped[key]['locations'].append(loc)
+
+                # Выводим по группам
+                for (itype, desc), data in grouped.items():
+                    p = doc.add_paragraph()
+                    p.style = doc.styles['List Bullet'] if 'List Bullet' in doc.styles else None
+                    header = f"[{data['severity']}] {desc or itype}"
+                    if data['auto_fixable']:
+                        header += " (автоисправимо)"
+                    p.add_run(header).bold = False
+                    # Локации при наличии
+                    if data['locations']:
+                        loc_line = ", ".join(sorted(set(data['locations'])))
+                        doc.add_paragraph(f"Места: {loc_line}")
+            else:
+                doc.add_paragraph("")
+                ok = doc.add_paragraph("Несоответствия не обнаружены.")
+                ok.runs[0].bold = True
+
+            # Сохранение файла
+            doc.save(str(report_path))
+
+            # Возвращаем относительный путь от backend корня — так ожидает download-report
+            rel_path = str(report_path.relative_to(backend_root)).replace('\\', '/')
+            return rel_path
+        except Exception as e:
+            logger.error(f"Ошибка при генерации отчета: {e}")
+            raise
