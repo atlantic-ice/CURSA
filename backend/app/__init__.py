@@ -6,6 +6,21 @@ import logging
 from logging.handlers import RotatingFileHandler
 import sys
 
+
+def _collect_allowed_origins():
+    default_origins = {
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+    }
+    env_origins = os.getenv('FRONTEND_ORIGINS', '')
+    for origin in env_origins.split(','):
+        cleaned = origin.strip()
+        if cleaned:
+            default_origins.add(cleaned)
+    return sorted(default_origins)
+
 def create_app():
     # Load repository-level .env if present so env vars like PINTEREST_RSS_URL are available
     try:
@@ -22,14 +37,16 @@ def create_app():
     app = Flask(__name__)
     
     # Настройка CORS с правильными параметрами
-    CORS(app, 
-         origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5000'],
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-         allow_headers=['Content-Type', 'Authorization'],
-         supports_credentials=True)
+            cors_origins = _collect_allowed_origins()
+            CORS(app, 
+                origins=cors_origins,
+            methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            allow_headers=['Content-Type', 'Authorization'],
+            supports_credentials=True)
     
     # Настройка логгирования
     setup_logging(app)
+    app.logger.info('CORS origins: %s', cors_origins)
     
     # Директория для исправленных файлов
     corrections_dir = os.path.join(app.root_path, 'static', 'corrections')

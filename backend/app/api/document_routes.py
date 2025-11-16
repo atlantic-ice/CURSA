@@ -16,8 +16,7 @@ from lxml import etree
 from app.services.document_processor import DocumentProcessor
 from app.services.norm_control_checker import NormControlChecker
 from app.services.document_corrector import DocumentCorrector
-from app.services.ai_config import get_ai_status, save_api_key, clear_api_key
-from app.services.ai_client import is_configured as ai_is_configured, suggest_for_check_results, complete_prompt
+# ИИ функциональность удалена для упрощения приложения
 
 bp = Blueprint('document', __name__, url_prefix='/api/document')
 
@@ -110,89 +109,6 @@ def random_pinterest_meme():
         return jsonify({'error': 'Не удалось загрузить RSS Pinterest'}), 502
 
 
-@bp.route('/ai/status', methods=['GET'])
-def ai_status():
-    """Возвращает состояние настройки Gemini без раскрытия ключа."""
-    try:
-        status = get_ai_status()
-        return jsonify({'success': True, 'status': status}), 200
-    except Exception as e:
-        current_app.logger.error(f"Ошибка при получении статуса ИИ: {type(e).__name__}: {str(e)}")
-        return jsonify({'error': 'Не удалось получить статус ИИ'}), 500
-
-
-@bp.route('/ai/key', methods=['POST'])
-def ai_save_key():
-    """Сохраняет Gemini API ключ, переданный из интерфейса."""
-    payload = request.get_json(silent=True) or {}
-    api_key = (payload.get('api_key') or '').strip()
-
-    if not api_key:
-        return jsonify({'error': 'API ключ не может быть пустым'}), 400
-
-    try:
-        status = save_api_key(api_key)
-        current_app.logger.info("Gemini API ключ сохранен через веб-интерфейс")
-        return jsonify({'success': True, 'status': status}), 200
-    except ValueError as ve:
-        return jsonify({'error': str(ve)}), 400
-    except Exception as e:
-        current_app.logger.error(f"Ошибка при сохранении ключа ИИ: {type(e).__name__}: {str(e)}")
-        return jsonify({'error': 'Не удалось сохранить ключ ИИ'}), 500
-
-
-@bp.route('/ai/key', methods=['DELETE'])
-def ai_clear_key():
-    """Удаляет сохраненный Gemini API ключ."""
-    try:
-        status = clear_api_key()
-        current_app.logger.info("Gemini API ключ удален через веб-интерфейс")
-        return jsonify({'success': True, 'status': status}), 200
-    except Exception as e:
-        current_app.logger.error(f"Ошибка при удалении ключа ИИ: {type(e).__name__}: {str(e)}")
-        return jsonify({'error': 'Не удалось удалить ключ ИИ'}), 500
-
-
-@bp.route('/ai/suggest', methods=['POST'])
-def ai_suggest():
-    """Возвращает краткие рекомендации по устранению проблем на основе результатов проверки.
-
-    Ожидает JSON с ключом check_results и необязательным filename.
-    """
-    if not ai_is_configured():
-        return jsonify({'error': 'ИИ не настроен. Добавьте ключ Gemini в настройках.'}), 400
-
-    payload = request.get_json(silent=True) or {}
-    check_results = payload.get('check_results')
-    filename = payload.get('filename')
-    if not check_results:
-        return jsonify({'error': 'Не предоставлены результаты проверки (check_results).'}), 400
-
-    try:
-        text = suggest_for_check_results(check_results, filename)
-        return jsonify({'success': True, 'suggestions': text}), 200
-    except Exception as e:
-        current_app.logger.error(f"Ошибка AI suggest: {type(e).__name__}: {str(e)}")
-        return jsonify({'error': 'Не удалось получить рекомендации ИИ'}), 500
-
-
-@bp.route('/ai/complete', methods=['POST'])
-def ai_complete():
-    """Простой прокси для свободной генерации текста ИИ (для внутренних нужд UI)."""
-    if not ai_is_configured():
-        return jsonify({'error': 'ИИ не настроен. Добавьте ключ Gemini в настройках.'}), 400
-
-    payload = request.get_json(silent=True) or {}
-    prompt = (payload.get('prompt') or '').strip()
-    if not prompt:
-        return jsonify({'error': 'Требуется prompt'}), 400
-
-    try:
-        text = complete_prompt(prompt)
-        return jsonify({'success': True, 'text': text}), 200
-    except Exception as e:
-        current_app.logger.error(f"Ошибка AI complete: {type(e).__name__}: {str(e)}")
-        return jsonify({'error': 'Не удалось выполнить запрос к ИИ'}), 500
 
 @bp.route('/upload', methods=['POST'])
 def upload_document():
@@ -263,9 +179,6 @@ def upload_document():
             corrected_filename = None
             corrected_file_path = None
             corrected_check_results = None
-            ai_suggestions = {}
-            ai_error = None
-            ai_enabled = ai_is_configured()
             try:
                 current_app.logger.info("Шаг 6: Автоисправление документа для соответствия нормам")
                 corrector = DocumentCorrector()
@@ -322,18 +235,6 @@ def upload_document():
                     corrected_check_results = checker.check_document(corrected_data)
 
                 # Формируем подсказки ИИ при наличии ключа
-                if ai_enabled:
-                    try:
-                        ai_suggestions['before'] = suggest_for_check_results(check_results, filename)
-                    except Exception as ai_exc:
-                        current_app.logger.warning(f"AI suggest (до исправления) не удалось: {type(ai_exc).__name__}: {str(ai_exc)}")
-                        ai_error = 'Не удалось получить рекомендации ИИ для исходной версии'
-                    if corrected_check_results:
-                        try:
-                            ai_suggestions['after'] = suggest_for_check_results(corrected_check_results, corrected_filename or filename)
-                        except Exception as ai_exc:
-                            current_app.logger.warning(f"AI suggest (после исправления) не удалось: {type(ai_exc).__name__}: {str(ai_exc)}")
-                            ai_error = ai_error or 'Не удалось получить рекомендации ИИ для исправленной версии'
             except Exception as auto_fix_err:
                 current_app.logger.warning(f"Автоисправление не выполнено: {type(auto_fix_err).__name__}: {str(auto_fix_err)}")
                 corrected_filename = None
@@ -349,9 +250,9 @@ def upload_document():
                 'correction_success': correction_success,
                 'corrected_file_path': corrected_filename if correction_success else None,
                 'corrected_check_results': corrected_check_results,
-                'ai_enabled': ai_enabled,
-                'ai_suggestions': ai_suggestions if ai_suggestions else None,
-                'ai_error': ai_error
+                'ai_enabled': False,
+                'ai_suggestions': None,
+                'ai_error': None
             }), 200
             
         except Exception as inner_e:

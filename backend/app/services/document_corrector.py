@@ -2237,16 +2237,17 @@ class DocumentCorrector:
                 
             # Включаем автоматические переносы для параграфа
             try:
-                if paragraph._element.get_or_add_pPr():
+                paragraph_props = paragraph._element.get_or_add_pPr()
+                if paragraph_props is not None:
                     # Создаем элемент для автоматической расстановки переносов
                     hyphenation_element = OxmlElement('w:suppressAutoHyphens')
                     hyphenation_element.set(qn('w:val'), '0')  # 0 = включено (не подавлять)
-                    paragraph._element.get_or_add_pPr().append(hyphenation_element)
+                    paragraph_props.append(hyphenation_element)
                     
                     # Добавляем настройку автоматического разрыва слов для русского языка
                     lang_element = OxmlElement('w:lang')
                     lang_element.set(qn('w:val'), 'ru-RU')
-                    paragraph._element.get_or_add_pPr().append(lang_element)
+                    paragraph_props.append(lang_element)
             except Exception as e:
                 print(f"Предупреждение: Не удалось настроить переносы: {str(e)}")
         
