@@ -7,6 +7,8 @@ import '@fontsource/inter/700.css';
 import '@fontsource/inter/900.css';
 import './UploadPage.css';
 
+const API_BASE = process.env.REACT_APP_API_BASE || 'https://cursa.onrender.com';
+
 const UploadIcon = () => (
   <svg
     className="upload-page__icon"
@@ -44,7 +46,7 @@ export default function UploadPage() {
     formData.append('file', file);
 
     try {
-      await axios.post('/api/document/upload', formData, {
+      await axios.post(`${API_BASE}/api/document/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
       });
