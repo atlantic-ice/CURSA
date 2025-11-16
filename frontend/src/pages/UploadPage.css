@@ -1,0 +1,239 @@
+:root {
+  color-scheme: dark;
+}
+
+.upload-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #05070d;
+  color: #ffffff;
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.upload-page__content {
+  position: relative;
+  width: 100%;
+  max-width: 1120px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  z-index: 2;
+}
+
+.upload-header {
+  width: 100%;
+  text-align: center;
+  padding-top: 3rem;
+}
+
+.upload-title {
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.upload-subtitle,
+.upload-description,
+.upload-info {
+  color: rgba(160, 174, 192, 0.8);
+  font-weight: 400;
+  margin: 0.25rem auto;
+}
+
+.upload-description {
+  max-width: 38rem;
+  color: rgba(160, 174, 192, 0.6);
+}
+
+.upload-main {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: 3rem;
+}
+
+.upload-card {
+  width: 100%;
+  max-width: 720px;
+  padding: 2.5rem;
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  align-items: center;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-dropzone {
+  width: 100%;
+  padding: 3.5rem 2rem;
+  border-radius: 1rem;
+  border: 2px dashed rgba(68, 50, 103, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  transition: border-color 200ms ease;
+  cursor: pointer;
+}
+
+.upload-dropzone:hover {
+  border-color: rgba(108, 43, 238, 0.8);
+}
+
+.upload-dropzone--active {
+  border-color: rgba(108, 43, 238, 0.95);
+}
+
+.upload-dropzone--reject {
+  border-color: rgba(239, 68, 68, 0.9);
+}
+
+.upload-page__icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-page__icon {
+  width: 32px;
+  height: 32px;
+  color: #a0aec0;
+}
+
+.upload-step-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.upload-step-text {
+  color: rgba(160, 174, 192, 0.85);
+  margin: 0;
+}
+
+.upload-button {
+  min-width: 140px;
+  padding: 0.65rem 1.5rem;
+  border-radius: 0.75rem;
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  background: linear-gradient(120deg, #2f2248, #6c2bee);
+  color: #ffffff;
+  cursor: pointer;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.upload-button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.upload-button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.upload-section-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.upload-disabled-button {
+  min-width: 180px;
+  padding: 0.65rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-text-center {
+  text-align: center;
+  max-width: 560px;
+}
+
+.upload-status {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  color: rgba(160, 174, 192, 0.8);
+}
+
+.upload-status--success {
+  color: #4ade80;
+}
+
+.upload-status--error {
+  color: #f87171;
+}
+
+.gradient-blur {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.gradient-1 {
+  width: 32vw;
+  height: 32vw;
+  min-width: 320px;
+  min-height: 320px;
+  top: -10%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(138, 43, 226, 0.25) 0%, rgba(138, 43, 226, 0) 70%);
+}
+
+.gradient-2 {
+  width: 26vw;
+  height: 26vw;
+  min-width: 280px;
+  min-height: 280px;
+  bottom: 0;
+  right: 5%;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.25) 0%, rgba(79, 70, 229, 0) 70%);
+  filter: blur(120px);
+}
+
+@media (max-width: 768px) {
+  .upload-card {
+    padding: 2rem;
+  }
+
+  .upload-dropzone {
+    padding: 2.5rem 1.5rem;
+  }
+}

@@ -2705,3 +2705,39 @@
 [2025-11-03 18:26:43,853] INFO в document_routes: Шаг 7: Повторная проверка финального исправленного документа
 [2025-11-03 18:26:44,114] WARNING в document_routes: AI suggest (до исправления) не удалось: RuntimeError: google-generativeai is not installed. Install it from requirements.txt
 [2025-11-03 18:26:44,117] WARNING в document_routes: AI suggest (после исправления) не удалось: RuntimeError: google-generativeai is not installed. Install it from requirements.txt
+[2025-11-16 19:06:09,708] INFO в __init__: Логирование настроено
+[2025-11-16 19:06:09,710] INFO в __init__: Директория для исправленных файлов: C:\Users\neytq\CURSA\backend\app\static\corrections
+[2025-11-16 19:08:52,628] INFO в __init__: Логирование настроено
+[2025-11-16 19:08:52,629] INFO в __init__: Директория для исправленных файлов: C:\Users\neytq\CURSA\backend\app\static\corrections
+[2025-11-16 19:17:13,916] INFO в __init__: Логирование настроено
+[2025-11-16 19:17:13,916] INFO в __init__: Директория для исправленных файлов: C:\Users\neytq\CURSA\backend\app\static\corrections
+[2025-11-16 19:25:44,862] INFO в document_routes: Файл сохранен по пути C:\Users\neytq\AppData\Local\Temp\tmpcqe_70kd\docx.docx, размер: 26867 байт
+[2025-11-16 19:25:44,862] INFO в document_routes: Шаг 1: Создание DocumentProcessor
+[2025-11-16 19:25:44,876] INFO в document_routes: Шаг 2: Извлечение данных
+[2025-11-16 19:25:45,090] INFO в document_routes: Результат извлечения данных: <class 'dict'>
+[2025-11-16 19:25:45,090] INFO в document_routes: Ключи документа: dict_keys(['paragraphs', 'tables', 'headings', 'bibliography', 'styles', 'page_setup', 'images', 'page_numbers', 'document_properties', 'title_page'])
+[2025-11-16 19:25:45,090] INFO в document_routes: Шаг 3: Создание NormControlChecker
+[2025-11-16 19:25:45,091] INFO в document_routes: Шаг 4: Выполнение проверки
+[2025-11-16 19:25:45,098] INFO в document_routes: Шаг 5: Проверка завершена успешно
+[2025-11-16 19:25:45,098] INFO в document_routes: Шаг 6: Автоисправление документа для соответствия нормам
+[2025-11-16 19:25:45,527] INFO в document_routes: Автоисправление завершено: True, путь: C:\Users\neytq\CURSA\backend\app\static\corrections\docx_corrected_20251116_192545.docx
+[2025-11-16 19:25:45,535] INFO в document_routes: Итерация доп. автоисправления #2: C:\Users\neytq\CURSA\backend\app\static\corrections\docx_corrected_20251116_192545_v2.docx
+[2025-11-16 19:25:45,842] INFO в document_routes: Итерация доп. автоисправления #3: C:\Users\neytq\CURSA\backend\app\static\corrections\docx_corrected_20251116_192545_v3.docx
+[2025-11-16 19:25:46,213] INFO в document_routes: Шаг 7: Повторная проверка финального исправленного документа
+[2025-11-16 19:25:46,420] WARNING в document_routes: AI suggest (до исправления) не удалось: RuntimeError: google-generativeai is not installed. Install it from requirements.txt
+[2025-11-16 19:25:46,425] WARNING в document_routes: AI suggest (после исправления) не удалось: RuntimeError: google-generativeai is not installed. Install it from requirements.txt
+[2025-11-16 19:33:46,056] INFO в document_routes: Файл сохранен по пути C:\Users\neytq\AppData\Local\Temp\tmp5xcit3tp\docx_corrected_20251114_095518_v3.docx, размер: 21684 байт
+[2025-11-16 19:33:46,057] INFO в document_routes: Шаг 1: Создание DocumentProcessor
+[2025-11-16 19:33:46,070] INFO в document_routes: Шаг 2: Извлечение данных
+[2025-11-16 19:33:46,183] INFO в document_routes: Результат извлечения данных: <class 'dict'>
+[2025-11-16 19:33:46,183] INFO в document_routes: Ключи документа: dict_keys(['paragraphs', 'tables', 'headings', 'bibliography', 'styles', 'page_setup', 'images', 'page_numbers', 'document_properties', 'title_page'])
+[2025-11-16 19:33:46,183] INFO в document_routes: Шаг 3: Создание NormControlChecker
+[2025-11-16 19:33:46,183] INFO в document_routes: Шаг 4: Выполнение проверки
+[2025-11-16 19:33:46,186] INFO в document_routes: Шаг 5: Проверка завершена успешно
+[2025-11-16 19:33:46,187] INFO в document_routes: Шаг 6: Автоисправление документа для соответствия нормам
+[2025-11-16 19:33:46,469] INFO в document_routes: Автоисправление завершено: True, путь: C:\Users\neytq\CURSA\backend\app\static\corrections\docx_corrected_20251114_095518_v3_corrected_20251116_193346.docx
+[2025-11-16 19:33:46,477] INFO в document_routes: Итерация доп. автоисправления #2: C:\Users\neytq\CURSA\backend\app\static\corrections\docx_corrected_20251114_095518_v3_corrected_20251116_193346_v2.docx
+[2025-11-16 19:33:46,771] INFO в document_routes: Итерация доп. автоисправления #3: C:\Users\neytq\CURSA\backend\app\static\corrections\docx_corrected_20251114_095518_v3_corrected_20251116_193346_v3.docx
+[2025-11-16 19:33:47,077] INFO в document_routes: Шаг 7: Повторная проверка финального исправленного документа
+[2025-11-16 19:33:47,199] WARNING в document_routes: AI suggest (до исправления) не удалось: RuntimeError: google-generativeai is not installed. Install it from requirements.txt
+[2025-11-16 19:33:47,202] WARNING в document_routes: AI suggest (после исправления) не удалось: RuntimeError: google-generativeai is not installed. Install it from requirements.txt

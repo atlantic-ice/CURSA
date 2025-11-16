@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html class="dark" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CURSA - Нормоконтроль нового поколения</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+      body {
+        position: relative;
+        overflow: hidden;
+      }
+      .gradient-blur-1 {
+        position: absolute;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(
+          circle,
+          rgba(138, 43, 226, 0.2) 0%,
+          rgba(138, 43, 226, 0) 70%
+        );
+        top: -10%;
+        left: -15%;
+        filter: blur(100px);
+        z-index: 0;
+        pointer-events: none;
+      }
+      .gradient-blur-2 {
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(
+          circle,
+          rgba(79, 70, 229, 0.2) 0%,
+          rgba(79, 70, 229, 0) 70%
+        );
+        bottom: 5%;
+        right: 10%;
+        filter: blur(120px);
+        z-index: 0;
+        pointer-events: none;
+      }
+      .glass-card {
+        background-color: rgba(255, 255, 255, 0.05);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#6c2bee",
+              "background-light": "#f6f6f8",
+              "background-dark": "#05070d",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+</head>
+<body class="font-display bg-background-dark text-white">
+<div class="gradient-blur-1"></div>
+<div class="gradient-blur-2"></div>
+<div class="relative flex min-h-screen w-full flex-col items-center p-4 sm:p-6 md:p-8 z-10">
+<header class="w-full max-w-7xl pt-8 pb-12 md:pt-12 md:pb-20">
+<div class="flex flex-col items-center text-center">
+<h1 class="text-4xl sm:text-5xl font-black leading-tight tracking-tighter text-white">
+            CURSA
+          </h1>
+<p class="mt-2 text-base sm:text-lg font-normal leading-normal text-[#A0AEC0]">
+            Нормоконтроль нового поколения.
+          </p>
+<p class="mt-1 max-w-2xl text-sm sm:text-base font-normal leading-normal text-[#A0AEC0]/70">
+            Автоматическая проверка документов на соответствие стандартам ГОСТ.
+          </p>
+</div>
+</header>
+<main class="w-full max-w-7xl flex-grow flex justify-center items-center">
+<div class="flex flex-col items-center gap-8 p-8 rounded-xl glass-card max-w-2xl w-full">
+<div class="flex flex-col items-center text-center gap-6 w-full">
+<div class="flex flex-col items-center gap-6 rounded-xl border-2 border-dashed border-[#443267]/50 p-6 py-14 glass-card transition-colors duration-300 hover:border-primary/70 w-full">
+<div class="flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+<span class="material-symbols-outlined text-4xl text-[#A0AEC0]">upload_file</span>
+</div>
+<div class="flex max-w-md flex-col items-center gap-2 text-center">
+<p class="text-lg font-bold leading-tight tracking-[-0.015em] text-white">Шаг 1: Загрузите документ</p>
+<p class="text-sm font-normal leading-normal text-[#A0AEC0]">Перетащите файл .docx сюда или выберите на вашем устройстве</p>
+</div>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-[#2f2348] text-sm font-bold leading-normal tracking-[0.015em] text-white transition-colors duration-300 hover:bg-primary">
+<span class="truncate">Выбрать файл</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col items-center text-center gap-2 w-full">
+<h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-white">Что ожидать?</h2>
+<p class="text-base font-normal leading-normal text-[#A0AEC0]">
+              После загрузки и анализа документа здесь появится отчет об ошибках и возможность скачать исправленную версию файла.
+            </p>
+<button class="mt-4 flex min-w-[84px] cursor-not-allowed items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-white/10 text-white/50 text-sm font-bold leading-normal tracking-[0.015em] opacity-50">
+<span class="truncate">Скачать исправленный DOCX</span>
+</button>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>
