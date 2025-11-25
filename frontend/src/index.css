@@ -1,22 +1,7 @@
-/* Sidebar: use thin Roboto font */
-.MuiDrawer-root, .css-iuxpby, .MuiListItem-root, .MuiTypography-root, .sidebar-thin {
-  font-family: 'Roboto', 'Arial', sans-serif !important;
-  font-weight: 300 !important;
-  letter-spacing: 0.01em;
-}
-/* Load a modern, clean sans-serif — Inter (falls back to system fonts) */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --brand-font: 'Space Grotesk', 'Roboto', 'Arial', sans-serif;
-}
-
-
-
-:root {
-  --ui-font: 'Roboto', 'Arial', sans-serif;
-  --text-muted: rgba(255,255,255,0.6);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 * {
@@ -27,42 +12,42 @@
 
 body {
   margin: 0;
-  font-family: 'Roboto', 'Arial', sans-serif;
-  font-weight: 400;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #ffffff;
+  background-color: #000000; /* Pure Black */
+  color: #ffffff; /* White */
 }
 
-/* Logo branding */
-.logo-brand {
-  font-family: var(--brand-font) !important;
-  font-weight: 600 !important;
-  letter-spacing: -0.02em;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Headings: slightly tighter tracking and stronger weights for clarity */
-
-h1, h2, h3, h4 {
-  font-family: var(--ui-font);
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  margin: 0;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-h1 { font-size: 2rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.125rem; }
-
-p, span, li, a, button {
-  font-family: var(--ui-font);
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  transition: background 0.2s ease;
 }
 
-body {
-  margin: 0;
-  font-family: 'Roboto', 'Arial', sans-serif;
-  font-weight: 400;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #ffffff;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* Utility classes */
+.glass-panel {
+  background: rgba(18, 18, 18, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }

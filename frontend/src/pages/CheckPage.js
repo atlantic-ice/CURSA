@@ -128,7 +128,7 @@ const CheckPage = () => {
     formData.append('file', file);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/document/upload', formData, {
+      const response = await axios.post(`${API_BASE}/api/document/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -175,10 +175,10 @@ const CheckPage = () => {
     
     // Если путь выглядит как имя файла (без слешей), используем прямой доступ
     if (filePath.indexOf('/') === -1 && filePath.indexOf('\\') === -1) {
-      window.location.href = `http://localhost:5000/corrections/${encodeURIComponent(filePath)}`;
+      window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filePath)}`;
     } else {
       // Иначе используем стандартный endpoint
-      window.location.href = `http://localhost:5000/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(fileName)}`;
+      window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(fileName)}`;
     }
   };
 

@@ -7,6 +7,10 @@ import SortIcon from '@mui/icons-material/Sort';
 import LeftNav from '../components/LeftNav';
 import { CheckHistoryContext } from '../App';
 
+// База API: в dev используем прокси CRA (""), в prod — REACT_APP_API_BASE или прод-URL
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const API_BASE = isLocal ? '' : (process.env.REACT_APP_API_BASE || 'https://cursa.onrender.com');
+
 // Reports page in new Linear-like layout: left nav + white content
 const ReportsPage = () => {
   const { history } = useContext(CheckHistoryContext);
@@ -34,9 +38,9 @@ const ReportsPage = () => {
     const extension = '.docx';
     const safeName = originalName ? (originalName.endsWith('.docx') ? originalName : originalName + extension) : `document_${Date.now()}${extension}`;
     if (filePath.indexOf('/') === -1 && filePath.indexOf('\\') === -1) {
-      window.location.href = `http://localhost:5000/corrections/${encodeURIComponent(filePath)}`;
+      window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filePath)}`;
     } else {
-      window.location.href = `http://localhost:5000/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(safeName)}`;
+      window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(safeName)}`;
     }
   };
 

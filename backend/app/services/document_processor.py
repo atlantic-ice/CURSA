@@ -34,12 +34,12 @@ class DocumentProcessor:
     Обеспечивает анализ структуры и форматирования документа.
     """
     
-    def __init__(self):
-        """Инициализация обработчика документов"""
-        self.allowed_extensions = ['.docx']
-        self.max_file_size = 10 * 1024 * 1024  # 10 MB
+    # Константы класса
+    ALLOWED_EXTENSIONS = ['.docx']
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
     
-    def is_valid_file(self, file):
+    @staticmethod
+    def is_valid_file(file):
         """
         Проверяет, является ли файл допустимым для обработки.
         
@@ -50,18 +50,19 @@ class DocumentProcessor:
             bool: True, если файл допустим, иначе False
         """
         # Проверка расширения файла
-        if not file.filename.lower().endswith(tuple(self.allowed_extensions)):
+        if not file.filename.lower().endswith(tuple(DocumentProcessor.ALLOWED_EXTENSIONS)):
             logger.warning(f"Недопустимое расширение файла: {file.filename}")
             return False
         
         # Проверка размера файла
-        if hasattr(file, 'size') and file.size > self.max_file_size:
+        if hasattr(file, 'size') and file.size > DocumentProcessor.MAX_FILE_SIZE:
             logger.warning(f"Файл слишком большой: {file.size} байт")
             return False
         
         return True
     
-    def process_document(self, file):
+    @staticmethod
+    def process_document(file):
         """
         Обрабатывает документ DOCX и извлекает его структуру и форматирование.
         
@@ -71,7 +72,7 @@ class DocumentProcessor:
         Returns:
             dict: Результат обработки документа, содержащий информацию о структуре и форматировании
         """
-        if not self.is_valid_file(file):
+        if not DocumentProcessor.is_valid_file(file):
             return {"status": "error", "message": "Неверный формат или размер файла"}
         
         try:
@@ -104,7 +105,8 @@ class DocumentProcessor:
             logger.error(f"Ошибка при обработке документа: {str(e)}")
             return {"status": "error", "message": f"Ошибка при обработке документа: {str(e)}"}
     
-    def extract_document_structure(self, doc_path):
+    @staticmethod
+    def extract_document_structure(doc_path):
         """
         Извлекает структуру документа.
         
@@ -153,7 +155,8 @@ class DocumentProcessor:
             logger.error(f"Ошибка при извлечении структуры документа: {str(e)}")
             return None
     
-    def extract_document_formatting(self, doc_path):
+    @staticmethod
+    def extract_document_formatting(doc_path):
         """
         Извлекает информацию о форматировании документа.
         

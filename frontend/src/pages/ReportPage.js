@@ -5,102 +5,87 @@ import {
   Typography,
   Container,
   Paper,
-  Divider,
+  Grid,
+  Button,
+  Chip,
+  IconButton,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  Chip,
-  Button,
-  Alert,
-  AlertTitle,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Grid,
-  Card,
-  CardContent,
-  Stack,
-  Fade,
-  Tabs,
-  Tab,
-  Avatar,
-  LinearProgress,
-  Tooltip,
-  Badge,
-  CardActions,
-  IconButton,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
+  Collapse,
+  Divider,
   useTheme,
   alpha,
-  CircularProgress
+  CircularProgress,
+  LinearProgress,
+  Stack,
+  Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
+  Avatar
 } from '@mui/material';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import InfoIcon from '@mui/icons-material/Info';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import DownloadIcon from '@mui/icons-material/Download';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import ArticleIcon from '@mui/icons-material/Article';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import TextFormatIcon from '@mui/icons-material/TextFormat';
-import BorderStyleIcon from '@mui/icons-material/BorderStyle';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import FormatLineSpacingIcon from '@mui/icons-material/FormatLineSpacing';
-import ImageIcon from '@mui/icons-material/Image';
-import TableChartIcon from '@mui/icons-material/TableChart';
-import TitleIcon from '@mui/icons-material/Title';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import ListAltIcon from '@mui/icons-material/ListAlt';
-import DescriptionIcon from '@mui/icons-material/Description';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import CategoryIcon from '@mui/icons-material/Category';
-import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import SecurityIcon from '@mui/icons-material/Security';
-import SpeedIcon from '@mui/icons-material/Speed';
-import BuildIcon from '@mui/icons-material/Build';
-import InsightsIcon from '@mui/icons-material/Insights';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import ScienceIcon from '@mui/icons-material/Science';
-import StarIcon from '@mui/icons-material/Star';
-import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import DataUsageIcon from '@mui/icons-material/DataUsage';
-import VerifiedIcon from '@mui/icons-material/Verified';
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area
+} from 'recharts';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
-// Функция для определения общей оценки документа
+// Icons
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DownloadIcon from '@mui/icons-material/Download';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import WarningIcon from '@mui/icons-material/Warning';
+import InfoIcon from '@mui/icons-material/Info';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import ArticleIcon from '@mui/icons-material/Article';
+import InsightsIcon from '@mui/icons-material/Insights';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import TextFormatIcon from '@mui/icons-material/TextFormat';
+import BorderStyleIcon from '@mui/icons-material/BorderStyle';
+import FormatLineSpacingIcon from '@mui/icons-material/FormatLineSpacing';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import TitleIcon from '@mui/icons-material/Title';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import ImageIcon from '@mui/icons-material/Image';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import PrintIcon from '@mui/icons-material/Print';
+import BugReportIcon from '@mui/icons-material/BugReport';
+import ShieldIcon from '@mui/icons-material/Shield';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import SchoolIcon from '@mui/icons-material/School';
+import BuildIcon from '@mui/icons-material/Build';
+
+// База API: в dev используем прокси CRA (""), в prod — REACT_APP_API_BASE или прод-URL
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const API_BASE = isLocal ? '' : (process.env.REACT_APP_API_BASE || 'https://cursa.onrender.com');
+
+// --- Helper Functions ---
+
 function getDocumentGrade(totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount) {
-  // 5 — Нет критических и средних, ≤ 3 незначительных
   if (highSeverityCount === 0 && mediumSeverityCount === 0 && lowSeverityCount <= 3) {
-    return { label: 'Отлично, несоответствий нет', color: 'success', score: 5 };
+    return { label: 'Отлично', color: 'success', score: 5, description: 'Документ соответствует стандартам' };
   }
-  // 4 — Нет критических, ≤ 3 средних, ≤ 10 незначительных
   if (highSeverityCount === 0 && mediumSeverityCount <= 3 && lowSeverityCount <= 10) {
-    return { label: 'Хорошо, незначительные недочёты', color: 'success', score: 4 };
+    return { label: 'Хорошо', color: 'success', score: 4, description: 'Незначительные отклонения' };
   }
-  // 3 — Нет критических, ≤ 10 средних
   if (highSeverityCount === 0 && mediumSeverityCount <= 10) {
-    return { label: 'Удовлетворительно, есть недочёты', color: 'warning', score: 3 };
+    return { label: 'Удовлетворительно', color: 'warning', score: 3, description: 'Требуются правки' };
   }
-  // 2 — ≤ 5 критических
   if (highSeverityCount <= 5) {
-    return { label: 'Неудовлетворительно, требуется доработка', color: 'error', score: 2 };
+    return { label: 'Неудовлетворительно', color: 'error', score: 2, description: 'Множество нарушений' };
   }
-  // 1 — > 5 критических
-  return { label: 'Плохо, требуется серьёзная доработка', color: 'error', score: 1 };
+  return { label: 'Плохо', color: 'error', score: 1, description: 'Критическое количество ошибок' };
 }
 
-// Функция для группировки одинаковых несоответствий
 function groupIssues(issues) {
   const map = {};
   issues.forEach(issue => {
@@ -115,1598 +100,1661 @@ function groupIssues(issues) {
   return Object.values(map);
 }
 
-// Для оптимизации производительности - константа конфигурации
-const ENABLE_ANIMATIONS = false; // Отключаем анимации для повышения производительности
+const getSeverityColor = (severity) => {
+  switch (severity) {
+    case 'high': return '#f43f5e'; // Rose 500
+    case 'medium': return '#f59e0b'; // Amber 500
+    case 'low': return '#3b82f6'; // Blue 500
+    default: return '#94a3b8'; // Slate 400
+  }
+};
 
-// Компонент статистики документа с современным дизайном
-const DocumentStatistics = ({ totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount, totalAutoFixableCount, documentGrade }) => {
-  const theme = useTheme();
+const getSeverityLabel = (severity) => {
+  switch (severity) {
+    case 'high': return 'Критическая';
+    case 'medium': return 'Средняя';
+    case 'low': return 'Низкая';
+    default: return 'Инфо';
+  }
+};
+
+// Руководства по ручным исправлениям
+const MANUAL_FIX_GUIDES = {
+  // Структурные проблемы
+  structure_missing_section: {
+    title: 'Добавление обязательных разделов',
+    icon: <ArticleIcon />,
+    steps: [
+      'Откройте документ в Microsoft Word',
+      'Перейдите в место, где должен быть раздел (например, после Содержания для Введения)',
+      'Напишите заголовок раздела (например, "ВВЕДЕНИЕ")',
+      'Выделите заголовок и примените стиль "Заголовок 1"',
+      'Добавьте содержание раздела под заголовком'
+    ],
+    videoPlaceholder: '/videos/add_section.mp4',
+    tips: ['Введение обычно идёт после Содержания', 'Заключение — перед Списком литературы']
+  },
+  structure_title_page: {
+    title: 'Оформление титульного листа',
+    icon: <TitleIcon />,
+    steps: [
+      'Создайте новую страницу в начале документа (Ctrl+Enter)',
+      'Добавьте название учебного заведения (по центру, 14 пт)',
+      'Добавьте название факультета и кафедры',
+      'Укажите тип работы (Курсовая работа) и тему',
+      'Добавьте информацию об авторе и руководителе',
+      'Укажите город и год внизу страницы'
+    ],
+    videoPlaceholder: '/videos/title_page.mp4',
+    tips: ['Титульный лист не нумеруется', 'Используйте шрифт Times New Roman 14 пт']
+  },
+  structure_table_of_contents: {
+    title: 'Создание содержания',
+    icon: <ListAltIcon />,
+    steps: [
+      'Убедитесь, что все заголовки оформлены стилями "Заголовок 1", "Заголовок 2" и т.д.',
+      'Установите курсор после титульного листа',
+      'Перейдите: Ссылки → Оглавление → Автособираемое оглавление',
+      'Для обновления: правый клик на содержании → Обновить поле'
+    ],
+    videoPlaceholder: '/videos/table_of_contents.mp4',
+    tips: ['Используйте стили заголовков для автоматического создания', 'Обновляйте содержание перед сдачей работы']
+  },
+  // Проблемы форматирования
+  font: {
+    title: 'Исправление шрифта',
+    icon: <TextFormatIcon />,
+    steps: [
+      'Выделите весь текст (Ctrl+A)',
+      'Перейдите: Главная → Шрифт',
+      'Выберите шрифт "Times New Roman"',
+      'Установите размер 14 пт',
+      'Нажмите OK'
+    ],
+    videoPlaceholder: '/videos/fix_font.mp4',
+    tips: ['Для таблиц допускается размер 12 пт', 'Подписи к рисункам — 12 пт']
+  },
+  margins: {
+    title: 'Настройка полей страницы',
+    icon: <BorderStyleIcon />,
+    steps: [
+      'Перейдите: Макет → Поля → Настраиваемые поля',
+      'Установите значения: Левое — 3 см, Правое — 1,5 см',
+      'Верхнее — 2 см, Нижнее — 2 см',
+      'Нажмите OK'
+    ],
+    videoPlaceholder: '/videos/fix_margins.mp4',
+    tips: ['Левое поле больше для подшивки', 'Все поля должны быть одинаковыми во всём документе']
+  },
+  line_spacing: {
+    title: 'Настройка межстрочного интервала',
+    icon: <FormatLineSpacingIcon />,
+    steps: [
+      'Выделите весь текст (Ctrl+A)',
+      'Перейдите: Главная → Абзац',
+      'В разделе "Интервал" выберите "Междустрочный: Полуторный"',
+      'Установите "Перед: 0 пт" и "После: 0 пт"',
+      'Нажмите OK'
+    ],
+    videoPlaceholder: '/videos/fix_line_spacing.mp4',
+    tips: ['Полуторный интервал = 1.5', 'Не путайте с двойным интервалом']
+  },
+  paragraph_indent: {
+    title: 'Настройка абзацного отступа',
+    icon: <FormatListBulletedIcon />,
+    steps: [
+      'Выделите текст основной части',
+      'Перейдите: Главная → Абзац',
+      'В разделе "Отступ" найдите "Первая строка"',
+      'Выберите "Отступ" и установите 1,25 см',
+      'Нажмите OK'
+    ],
+    videoPlaceholder: '/videos/fix_indent.mp4',
+    tips: ['Отступ только для первой строки абзаца', 'Заголовки обычно без отступа']
+  },
+  // Проблемы со списком литературы
+  bibliography: {
+    title: 'Оформление списка литературы',
+    icon: <MenuBookIcon />,
+    steps: [
+      'Создайте раздел "СПИСОК ЛИТЕРАТУРЫ" (Заголовок 1)',
+      'Пронумеруйте источники арабскими цифрами',
+      'Для книги: Фамилия, И.О. Название / И.О. Фамилия. – Город: Издательство, Год. – Кол-во с.',
+      'Для интернет-источника: добавьте [Электронный ресурс] и URL с датой обращения',
+      'Расположите источники в алфавитном порядке'
+    ],
+    videoPlaceholder: '/videos/fix_bibliography.mp4',
+    tips: ['Сначала русскоязычные источники', 'Используйте тире (–), а не дефис (-)']
+  },
+  // Проблемы с рисунками и таблицами
+  figure: {
+    title: 'Оформление рисунков',
+    icon: <ImageIcon />,
+    steps: [
+      'Вставьте рисунок: Вставка → Рисунки',
+      'Выровняйте по центру',
+      'Под рисунком добавьте подпись: "Рисунок 1 – Название рисунка"',
+      'Подпись: 12 пт, по центру',
+      'В тексте должна быть ссылка на рисунок'
+    ],
+    videoPlaceholder: '/videos/fix_figure.mp4',
+    tips: ['Нумерация сквозная по всему документу', 'Ссылка в тексте: "(рисунок 1)" или "на рисунке 1"']
+  },
+  table: {
+    title: 'Оформление таблиц',
+    icon: <TableChartIcon />,
+    steps: [
+      'Над таблицей добавьте заголовок: "Таблица 1 – Название таблицы"',
+      'Заголовок: 14 пт, по левому краю с абзацным отступом',
+      'Текст в таблице: 12 пт, выравнивание по ситуации',
+      'Заголовки столбцов: жирным, по центру',
+      'В тексте должна быть ссылка на таблицу'
+    ],
+    videoPlaceholder: '/videos/fix_table.mp4',
+    tips: ['Таблица не должна выходить за поля', 'При переносе: "Продолжение таблицы 1"']
+  },
+  // Нумерация страниц
+  page_numbers: {
+    title: 'Настройка нумерации страниц',
+    icon: <ListAltIcon />,
+    steps: [
+      'Перейдите: Вставка → Номер страницы → Внизу страницы → По центру',
+      'Дважды кликните на колонтитул для редактирования',
+      'На титульном листе: уберите галочку "Особый колонтитул для первой страницы"',
+      'Установите начало нумерации с нужной страницы',
+      'Закройте колонтитул (Esc или двойной клик вне него)'
+    ],
+    videoPlaceholder: '/videos/fix_page_numbers.mp4',
+    tips: ['Титульный лист не нумеруется', 'Содержание обычно на странице 2']
+  },
+  // Заголовки
+  headings: {
+    title: 'Оформление заголовков',
+    icon: <TitleIcon />,
+    steps: [
+      'Выделите текст заголовка',
+      'Примените стиль: Главная → Стили → Заголовок 1/2/3',
+      'Заголовок 1: ПРОПИСНЫЕ, жирный, по центру',
+      'Заголовок 2: Обычный регистр, жирный, с отступом',
+      'Не ставьте точку в конце заголовка'
+    ],
+    videoPlaceholder: '/videos/fix_headings.mp4',
+    tips: ['Заголовки нумеруются арабскими цифрами', 'Между номером и текстом — пробел']
+  }
+};
+
+// Получить подходящее руководство по типу ошибки
+const getGuideForIssueType = (issueType) => {
+  // Прямое совпадение
+  if (MANUAL_FIX_GUIDES[issueType]) {
+    return MANUAL_FIX_GUIDES[issueType];
+  }
   
-  // Данные для диаграммы
-  const chartData = [
-    { label: 'Критические', value: highSeverityCount, color: 'error', icon: <ErrorOutlineIcon /> },
-    { label: 'Средние', value: mediumSeverityCount, color: 'warning', icon: <WarningAmberIcon /> },
-    { label: 'Незначительные', value: lowSeverityCount, color: 'info', icon: <InfoIcon /> }
-  ].filter(item => item.value > 0);
+  // Поиск по частичному совпадению
+  const typePrefix = issueType.split('_')[0];
+  if (MANUAL_FIX_GUIDES[typePrefix]) {
+    return MANUAL_FIX_GUIDES[typePrefix];
+  }
+  
+  // Специальные случаи
+  if (issueType.includes('font')) return MANUAL_FIX_GUIDES.font;
+  if (issueType.includes('margin')) return MANUAL_FIX_GUIDES.margins;
+  if (issueType.includes('spacing') || issueType.includes('interval')) return MANUAL_FIX_GUIDES.line_spacing;
+  if (issueType.includes('indent')) return MANUAL_FIX_GUIDES.paragraph_indent;
+  if (issueType.includes('heading') || issueType.includes('title')) return MANUAL_FIX_GUIDES.headings;
+  if (issueType.includes('table')) return MANUAL_FIX_GUIDES.table;
+  if (issueType.includes('figure') || issueType.includes('image') || issueType.includes('рисун')) return MANUAL_FIX_GUIDES.figure;
+  if (issueType.includes('bibliography') || issueType.includes('литератур') || issueType.includes('источник')) return MANUAL_FIX_GUIDES.bibliography;
+  if (issueType.includes('page') || issueType.includes('number') || issueType.includes('нумерац')) return MANUAL_FIX_GUIDES.page_numbers;
+  if (issueType.includes('structure') || issueType.includes('section') || issueType.includes('раздел')) return MANUAL_FIX_GUIDES.structure_missing_section;
+  
+  return null;
+};
+
+// --- Components ---
+
+const CustomTooltip = ({ active, payload, label }) => {
+  const theme = useTheme();
+  if (active && payload && payload.length) {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          p: 1.5,
+          bgcolor: alpha(theme.palette.background.paper, 0.8),
+          backdropFilter: 'blur(10px)',
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          borderRadius: 2,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+        }}
+      >
+        <Typography variant="caption" fontWeight={700} sx={{ mb: 0.5, display: 'block', color: 'text.secondary' }}>
+          {label || payload[0].name}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: payload[0].payload.color || payload[0].color }} />
+          <Typography variant="body2" fontWeight={700}>
+            {payload[0].value}
+          </Typography>
+        </Box>
+      </Paper>
+    );
+  }
+  return null;
+};
+
+const TypewriterText = ({ text }) => {
+  const [displayedText, setDisplayedText] = useState('');
+
+  useEffect(() => {
+    setDisplayedText('');
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i < text.length) {
+        setDisplayedText((prev) => prev + text.charAt(i));
+        i++;
+      } else {
+        clearInterval(timer);
+      }
+    }, 20); // Speed of typing
+    return () => clearInterval(timer);
+  }, [text]);
 
   return (
-    <Box sx={{ mb: 4 }}>
-      <Grid container spacing={4}>
-        {/* Левая панель - детальная статистика */}
-        <Grid item xs={12} lg={8}>
-          <Paper 
-            elevation={0}
-            sx={{ 
-              p: 3,
-              borderRadius: 3,
-              background: theme => `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
-              border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            {/* Фоновый декоративный элемент */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: -50,
-                right: -50,
-                width: 150,
-                height: 150,
-                borderRadius: '50%',
-                background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.05)}, ${alpha(theme.palette.secondary.main, 0.03)})`,
-                zIndex: 0
-              }}
-            />
-            
-            <Box sx={{ position: 'relative', zIndex: 1 }}>
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-                <AssessmentIcon sx={{ mr: 1, color: 'primary.main' }} />
-                Детальная статистика
-              </Typography>
-              
-              {/* Основные метрики */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6} sm={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.background.paper, 0.7), borderRadius: 2 }}>
-                    <Typography variant="h4" fontWeight={800} color="text.primary">
-                      {totalIssues}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                      Всего проблем
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.success.main, 0.1), borderRadius: 2 }}>
-                    <Typography variant="h4" fontWeight={800} color="success.main">
-                      {totalAutoFixableCount}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                      Исправляемых
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.info.main, 0.1), borderRadius: 2 }}>
-                    <Typography variant="h4" fontWeight={800} color="info.main">
-                      {totalIssues > 0 ? Math.round(totalAutoFixableCount / totalIssues * 100) : 0}%
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                      Автоисправление
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.warning.main, 0.1), borderRadius: 2 }}>
-                    <Typography variant="h4" fontWeight={800} color="warning.main">
-                      {totalIssues - totalAutoFixableCount}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                      Ручных
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-
-              {/* Прогресс-бар распределения ошибок */}
-              {totalIssues > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
-                    Распределение по серьезности
-                  </Typography>
-                  <Box sx={{ 
-                    position: 'relative',
-                    height: 12, 
-                    borderRadius: 6, 
-                    bgcolor: alpha(theme.palette.grey[300], 0.3),
-                    overflow: 'hidden',
-                    mb: 2
-                  }}>
-                    {highSeverityCount > 0 && (
-                      <Box sx={{ 
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        height: '100%',
-                        width: `${(highSeverityCount / totalIssues) * 100}%`,
-                        bgcolor: 'error.main',
-                        borderRadius: '6px 0 0 6px'
-                      }} />
-                    )}
-                    {mediumSeverityCount > 0 && (
-                      <Box sx={{ 
-                        position: 'absolute',
-                        left: `${(highSeverityCount / totalIssues) * 100}%`,
-                        top: 0,
-                        height: '100%',
-                        width: `${(mediumSeverityCount / totalIssues) * 100}%`,
-                        bgcolor: 'warning.main'
-                      }} />
-                    )}
-                    {lowSeverityCount > 0 && (
-                      <Box sx={{ 
-                        position: 'absolute',
-                        left: `${((highSeverityCount + mediumSeverityCount) / totalIssues) * 100}%`,
-                        top: 0,
-                        height: '100%',
-                        width: `${(lowSeverityCount / totalIssues) * 100}%`,
-                        bgcolor: 'info.main',
-                        borderRadius: '0 6px 6px 0'
-                      }} />
-                    )}
-                  </Box>
-                  
-                  {/* Легенда */}
-                  <Stack direction="row" spacing={2} flexWrap="wrap">
-                    {chartData.map((item) => (
-                      <Box key={item.label} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box 
-                          sx={{ 
-                            width: 12, 
-                            height: 12, 
-                            borderRadius: '50%', 
-                            bgcolor: `${item.color}.main`,
-                            mr: 1 
-                          }} 
-                        />
-                        <Typography variant="body2" color="text.secondary">
-                          {item.label}: {item.value}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
-        
-        {/* Правая панель - общая оценка */}
-        <Grid item xs={12} lg={4}>
-          <Paper 
-            elevation={0}
-            sx={{ 
-              p: 3,
-              borderRadius: 3,
-              height: '100%',
-              background: theme => {
-                const baseColor = documentGrade.color === 'success' ? theme.palette.success.main :
-                                documentGrade.color === 'warning' ? theme.palette.warning.main :
-                                theme.palette.error.main;
-                return `linear-gradient(135deg, ${alpha(baseColor, 0.08)} 0%, ${alpha(baseColor, 0.03)} 100%)`;
-              },
-              border: `2px solid ${alpha(theme.palette[documentGrade.color].main, 0.2)}`,
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              textAlign: 'center'
-            }}
-          >
-            {/* Фоновые декоративные элементы */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: -30,
-                left: -30,
-                width: 100,
-                height: 100,
-                borderRadius: '50%',
-                background: `linear-gradient(45deg, ${alpha(theme.palette[documentGrade.color].main, 0.1)}, transparent)`,
-                zIndex: 0
-              }}
-            />
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: -20,
-                right: -20,
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                background: `linear-gradient(45deg, transparent, ${alpha(theme.palette[documentGrade.color].main, 0.08)})`,
-                zIndex: 0
-              }}
-            />
-            
-            <Box sx={{ position: 'relative', zIndex: 1 }}>
-              {/* Индикатор оценки */}
-              <Box 
-                sx={{
-                  width: 120,
-                  height: 120,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: `linear-gradient(135deg, ${theme.palette[documentGrade.color].main}, ${theme.palette[documentGrade.color].dark})`,
-                  boxShadow: `0 8px 32px ${alpha(theme.palette[documentGrade.color].main, 0.4)}`,
-                  mb: 3,
-                  position: 'relative'
-                }}
-              >
-                <Typography 
-                  variant="h2" 
-                  component="div"
-                  sx={{ 
-                    fontWeight: 900, 
-                    color: 'white',
-                    textShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                  }}
-                >
-                  {documentGrade.score}
-                </Typography>
-                
-                {/* Звездочки для высоких оценок */}
-                {documentGrade.score >= 4 && (
-                  <Box sx={{ position: 'absolute', top: -10, right: -10 }}>
-                    <StarIcon sx={{ color: '#FFD700', fontSize: 24 }} />
-                  </Box>
-                )}
-              </Box>
-              
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 1, color: `${documentGrade.color}.dark` }}>
-                Общая оценка
-              </Typography>
-              
-              <Typography 
-                variant="h5" 
-                fontWeight={600}
-                sx={{ 
-                  mb: 2,
-                  color: `${documentGrade.color}.main`,
-                  lineHeight: 1.2
-                }}
-              >
-                {documentGrade.label}
-              </Typography>
-              
-              <Box sx={{ 
-                p: 2, 
-                bgcolor: alpha(theme.palette.background.paper, 0.7), 
-                borderRadius: 2,
-                border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-              }}>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {totalIssues === 0 
-                    ? 'Документ полностью соответствует требованиям!' 
-                    : `Обнаружено ${totalIssues} ${totalIssues === 1 ? 'несоответствие' : totalIssues > 1 && totalIssues < 5 ? 'несоответствия' : 'несоответствий'}`}
-                </Typography>
-              </Box>
-              
-              {/* Дополнительные индикаторы */}
-              <Stack direction="row" spacing={1} sx={{ mt: 2, justifyContent: 'center' }}>
-                {documentGrade.score === 5 && <VerifiedIcon sx={{ color: 'success.main' }} />}
-                {documentGrade.score >= 4 && <ThumbUpIcon sx={{ color: 'success.main' }} />}
-                {totalAutoFixableCount > 0 && <BuildIcon sx={{ color: 'info.main' }} />}
-              </Stack>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary', lineHeight: 1.6 }}>
+      {displayedText}
+    </Typography>
   );
 };
+
+const AnimatedNumber = ({ value }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  
+  useEffect(() => {
+    const controls = { value: 0 };
+    const updateValue = (latest) => setDisplayValue(Math.round(latest));
+    
+    let start = 0;
+    const end = parseInt(value, 10);
+    if (isNaN(end)) return;
+
+    const duration = 1500;
+    const startTime = performance.now();
+
+    const animate = (currentTime) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease out quart
+      const ease = 1 - Math.pow(1 - progress, 4);
+      
+      const current = Math.floor(start + (end - start) * ease);
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+    
+  }, [value]);
+
+  return <span>{displayValue}</span>;
+};
+
+const StatCard = ({ title, value, subtitle, icon, color, delay, isScore }) => {
+  const theme = useTheme();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay }}
+      style={{ height: '100%', width: '100%' }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          height: '100%',
+          borderRadius: 2,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.8)} 0%, ${alpha(theme.palette.background.paper, 0.4)} 100%)`,
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          backdropFilter: 'blur(20px)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: `0 12px 24px -10px ${alpha(color || theme.palette.primary.main, 0.3)}`,
+            borderColor: alpha(color || theme.palette.primary.main, 0.4),
+            '& .icon-bg': {
+              transform: 'scale(1.2) rotate(10deg)',
+              opacity: 0.2
+            }
+          }
+        }}
+      >
+        {/* Background Icon Decoration */}
+        <Box 
+          className="icon-bg"
+          sx={{ 
+            position: 'absolute', 
+            right: -20, 
+            bottom: -20, 
+            opacity: 0.1, 
+            color: color || 'text.primary',
+            transition: 'all 0.5s ease',
+            zIndex: 0
+          }}
+        >
+          {React.cloneElement(icon, { sx: { fontSize: 120 } })}
+        </Box>
+
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+              {title}
+            </Typography>
+            <Box sx={{ 
+              p: 1, 
+              borderRadius: '12px', 
+              bgcolor: alpha(color || theme.palette.text.primary, 0.1),
+              color: color || 'text.primary',
+              display: 'flex'
+            }}>
+              {React.cloneElement(icon, { fontSize: 'small' })}
+            </Box>
+          </Box>
+          
+          <Typography variant="h3" fontWeight={800} sx={{ color: color || 'text.primary', mb: 0.5, letterSpacing: '-0.02em' }}>
+            {isScore ? value : <AnimatedNumber value={value} />}
+          </Typography>
+          
+          {subtitle && (
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
+      </Paper>
+    </motion.div>
+  );
+};
+
+const IssueItem = ({ issue, index }) => {
+  const [expanded, setExpanded] = useState(false);
+  const theme = useTheme();
+  const severityColor = getSeverityColor(issue.severity);
+
+  const severityGradient = {
+    high: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+    medium: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    low: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+  };
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        mb: 1.5,
+        display: 'block',
+        width: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
+        borderRadius: 3,
+        background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.7)} 0%, ${alpha(theme.palette.background.paper, 0.4)} 100%)`,
+        border: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative',
+        backdropFilter: 'blur(10px)',
+        '&:hover': {
+          background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.background.paper, 0.7)} 100%)`,
+          boxShadow: `0 8px 32px ${alpha(severityColor, 0.2)}, 0 0 0 1px ${alpha(severityColor, 0.1)}`,
+          transform: 'translateY(-2px)',
+          '& .severity-bar': {
+            height: 56,
+            boxShadow: `0 0 16px ${alpha(severityColor, 0.6)}`
+          },
+          '& .issue-icon': {
+            transform: 'scale(1.1)',
+            boxShadow: `0 4px 12px ${alpha(severityColor, 0.3)}`
+          }
+        }
+      }}
+    >
+      <Box 
+        onClick={() => setExpanded(!expanded)}
+        sx={{ 
+          p: 2.5, 
+          display: 'flex', 
+          alignItems: 'center', 
+          cursor: 'pointer',
+          gap: 2,
+          userSelect: 'none'
+        }}
+      >
+        {/* Severity Indicator - Animated Vertical Bar */}
+        <Box 
+          className="severity-bar"
+          sx={{ 
+            width: 4, 
+            height: 44, 
+            borderRadius: 4, 
+            background: severityGradient[issue.severity] || severityColor,
+            boxShadow: `0 0 12px ${alpha(severityColor, 0.4)}`,
+            transition: 'all 0.3s ease',
+            flexShrink: 0
+          }} 
+        />
+
+        {/* Icon with gradient background */}
+        <Box 
+          className="issue-icon"
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: 44,
+            height: 44,
+            borderRadius: '14px',
+            background: `linear-gradient(135deg, ${alpha(severityColor, 0.15)} 0%, ${alpha(severityColor, 0.05)} 100%)`,
+            color: severityColor,
+            transition: 'all 0.3s ease',
+            flexShrink: 0,
+            border: `1px solid ${alpha(severityColor, 0.1)}`
+          }}
+        >
+          {issue.severity === 'high' && <ErrorIcon />}
+          {issue.severity === 'medium' && <WarningIcon />}
+          {issue.severity === 'low' && <InfoIcon />}
+        </Box>
+        
+        {/* Content */}
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
+            <Typography 
+              variant="subtitle2" 
+              fontWeight={700} 
+              sx={{ 
+                fontSize: '0.95rem',
+                lineHeight: 1.3,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
+            >
+              {issue.description}
+            </Typography>
+          </Box>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+            {/* Severity Badge */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 0.5,
+              px: 1,
+              py: 0.25,
+              borderRadius: 1.5,
+              bgcolor: alpha(severityColor, 0.1),
+              border: `1px solid ${alpha(severityColor, 0.15)}`
+            }}>
+              <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: severityColor }} />
+              <Typography variant="caption" fontWeight={600} sx={{ color: severityColor, fontSize: '0.7rem' }}>
+                {getSeverityLabel(issue.severity)}
+              </Typography>
+            </Box>
+
+            {/* Count Badge */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 0.5,
+              px: 1,
+              py: 0.25,
+              borderRadius: 1.5,
+              bgcolor: alpha(theme.palette.text.primary, 0.05),
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+            }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: '0.7rem' }}>
+                {issue.count} {issue.count === 1 ? 'место' : issue.count < 5 ? 'места' : 'мест'}
+              </Typography>
+            </Box>
+
+            {/* Auto-fix Badge */}
+            {issue.auto_fixable && (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 0.5,
+                px: 1,
+                py: 0.25,
+                borderRadius: 1.5,
+                bgcolor: alpha(theme.palette.success.main, 0.1),
+                border: `1px solid ${alpha(theme.palette.success.main, 0.15)}`
+              }}>
+                <AutoFixHighIcon sx={{ fontSize: 12, color: theme.palette.success.main }} />
+                <Typography variant="caption" fontWeight={600} sx={{ color: theme.palette.success.main, fontSize: '0.7rem' }}>
+                  Авто
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Box>
+
+        {/* Expand Icon with animation */}
+        <IconButton 
+          size="small" 
+          sx={{ 
+            color: 'text.secondary',
+            bgcolor: alpha(theme.palette.text.primary, 0.03),
+            transition: 'all 0.2s ease',
+            '&:hover': { 
+              bgcolor: alpha(theme.palette.text.primary, 0.08),
+              transform: 'scale(1.1)'
+            }
+          }}
+        >
+          <Box sx={{ 
+            display: 'flex',
+            transition: 'transform 0.3s ease',
+            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)'
+          }}>
+            <ExpandMoreIcon fontSize="small" />
+          </Box>
+        </IconButton>
+      </Box>
+
+      <Collapse in={expanded} timeout={300}>
+        <Box sx={{ 
+          px: 2.5, 
+          pb: 2.5, 
+          pt: 0,
+          ml: '60px',
+          borderTop: `1px solid ${alpha(theme.palette.divider, 0.06)}`
+        }}>
+          <Box sx={{ pt: 2 }}>
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              fontWeight={700} 
+              sx={{ 
+                mb: 1.5, 
+                display: 'flex', 
+                alignItems: 'center',
+                gap: 0.75,
+                textTransform: 'uppercase', 
+                fontSize: '0.65rem', 
+                letterSpacing: 1,
+                opacity: 0.7
+              }}
+            >
+              <ListAltIcon sx={{ fontSize: 14 }} />
+              Расположение в документе
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+              {issue.locations.slice(0, 20).map((loc, idx) => (
+                <Chip 
+                  key={idx} 
+                  label={loc} 
+                  size="small" 
+                  sx={{ 
+                    bgcolor: alpha(theme.palette.background.default, 0.6),
+                    color: 'text.primary',
+                    fontSize: '0.72rem',
+                    fontWeight: 500,
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                    height: 26,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: alpha(severityColor, 0.1),
+                      borderColor: alpha(severityColor, 0.2)
+                    }
+                  }} 
+                />
+              ))}
+              {issue.locations.length > 20 && (
+                <Chip 
+                  label={`+${issue.locations.length - 20}`} 
+                  size="small" 
+                  sx={{ 
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.main,
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+                    height: 26
+                  }} 
+                />
+              )}
+            </Box>
+          </Box>
+        </Box>
+      </Collapse>
+    </Paper>
+  );
+};
+
+// Компонент пошагового руководства по ручному исправлению
+const ManualFixGuide = ({ guide, isOpen, onToggle }) => {
+  const theme = useTheme();
+  const [activeStep, setActiveStep] = useState(0);
+  
+  if (!guide) return null;
+  
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        mb: 2,
+        borderRadius: 3,
+        background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.05)} 0%, ${alpha(theme.palette.background.paper, 0.6)} 100%)`,
+        border: `1px solid ${alpha(theme.palette.info.main, 0.15)}`,
+        overflow: 'hidden',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      {/* Header */}
+      <Box
+        onClick={onToggle}
+        sx={{
+          p: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          cursor: 'pointer',
+          '&:hover': {
+            bgcolor: alpha(theme.palette.info.main, 0.05)
+          }
+        }}
+      >
+        <Box
+          sx={{
+            p: 1,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.info.main, 0.1),
+            color: theme.palette.info.main,
+            display: 'flex'
+          }}
+        >
+          <SchoolIcon />
+        </Box>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="subtitle2" fontWeight={700}>
+            {guide.title}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Пошаговая инструкция • {guide.steps.length} шагов
+          </Typography>
+        </Box>
+        <IconButton size="small">
+          {isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </IconButton>
+      </Box>
+
+      <Collapse in={isOpen}>
+        <Box sx={{ px: 2, pb: 2 }}>
+          {/* Video Section */}
+          <Box
+            sx={{
+              mb: 2,
+              borderRadius: 2,
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            {guide.youtubeId ? (
+              // YouTube embed
+              <Box sx={{ position: 'relative', paddingTop: '56.25%' }}>
+                <iframe
+                  src={`https://www.youtube.com/embed/${guide.youtubeId}`}
+                  title={guide.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: 8
+                  }}
+                />
+              </Box>
+            ) : guide.videoPlaceholder && guide.videoPlaceholder.endsWith('.mp4') ? (
+              // Local MP4 video
+              <video
+                src={guide.videoPlaceholder}
+                controls
+                style={{
+                  width: '100%',
+                  borderRadius: 8,
+                  backgroundColor: alpha(theme.palette.background.default, 0.6)
+                }}
+                poster={guide.videoPoster || undefined}
+              >
+                Ваш браузер не поддерживает видео
+              </video>
+            ) : (
+              // Placeholder when no video
+              <Box
+                sx={{
+                  bgcolor: alpha(theme.palette.background.default, 0.6),
+                  border: `2px dashed ${alpha(theme.palette.info.main, 0.2)}`,
+                  borderRadius: 2,
+                  p: 3,
+                  textAlign: 'center',
+                  minHeight: 180,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <PlayCircleOutlineIcon 
+                  sx={{ 
+                    fontSize: 64, 
+                    color: alpha(theme.palette.info.main, 0.3),
+                    mb: 1
+                  }} 
+                />
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                  Видео-инструкция скоро появится
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7, mt: 0.5 }}>
+                  Пока следуйте пошаговой инструкции ниже
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Steps */}
+          <Box sx={{ mb: 2 }}>
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              fontWeight={700}
+              sx={{ 
+                display: 'block', 
+                mb: 1.5, 
+                textTransform: 'uppercase', 
+                letterSpacing: 1,
+                fontSize: '0.65rem'
+              }}
+            >
+              Пошаговая инструкция
+            </Typography>
+            
+            {guide.steps.map((step, index) => (
+              <Box
+                key={index}
+                onClick={() => setActiveStep(index)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 1.5,
+                  p: 1.5,
+                  mb: 1,
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  bgcolor: activeStep === index 
+                    ? alpha(theme.palette.info.main, 0.1) 
+                    : 'transparent',
+                  border: `1px solid ${activeStep === index 
+                    ? alpha(theme.palette.info.main, 0.2) 
+                    : 'transparent'}`,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.info.main, 0.05)
+                  }
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    bgcolor: activeStep === index 
+                      ? theme.palette.info.main 
+                      : alpha(theme.palette.text.primary, 0.1),
+                    color: activeStep === index 
+                      ? 'white' 
+                      : 'text.secondary',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {index + 1}
+                </Box>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    lineHeight: 1.5,
+                    fontWeight: activeStep === index ? 600 : 400,
+                    color: activeStep === index ? 'text.primary' : 'text.secondary'
+                  }}
+                >
+                  {step}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+
+          {/* Tips */}
+          {guide.tips && guide.tips.length > 0 && (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: alpha(theme.palette.warning.main, 0.05),
+                border: `1px solid ${alpha(theme.palette.warning.main, 0.1)}`
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <InfoIcon sx={{ fontSize: 16, color: theme.palette.warning.main }} />
+                <Typography variant="caption" fontWeight={700} color="warning.main">
+                  Полезные советы
+                </Typography>
+              </Box>
+              {guide.tips.map((tip, index) => (
+                <Typography 
+                  key={index} 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5, pl: 3 }}
+                >
+                  • {tip}
+                </Typography>
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Collapse>
+    </Paper>
+  );
+};
+
+// Панель руководств по ручным исправлениям
+const ManualFixGuidesPanel = ({ issues }) => {
+  const theme = useTheme();
+  const [expandedGuide, setExpandedGuide] = useState(null);
+  
+  // Получаем уникальные руководства для неавтоисправляемых ошибок
+  const manualIssueTypes = useMemo(() => {
+    const types = new Set();
+    issues
+      .filter(issue => !issue.auto_fixable)
+      .forEach(issue => types.add(issue.type));
+    return Array.from(types);
+  }, [issues]);
+  
+  const availableGuides = useMemo(() => {
+    const guides = [];
+    const addedTitles = new Set();
+    
+    manualIssueTypes.forEach(type => {
+      const guide = getGuideForIssueType(type);
+      if (guide && !addedTitles.has(guide.title)) {
+        guides.push({ type, ...guide });
+        addedTitles.add(guide.title);
+      }
+    });
+    
+    return guides;
+  }, [manualIssueTypes]);
+  
+  if (availableGuides.length === 0) {
+    return null;
+  }
+  
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        mb: 2,
+        borderRadius: 3,
+        background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.6)} 0%, ${alpha(theme.palette.background.paper, 0.3)} 100%)`,
+        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        overflow: 'hidden',
+        backdropFilter: 'blur(10px)'
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          p: 2,
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          bgcolor: alpha(theme.palette.background.paper, 0.6),
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5
+        }}
+      >
+        <Box
+          sx={{
+            p: 0.8,
+            borderRadius: 1.5,
+            bgcolor: alpha(theme.palette.warning.main, 0.1),
+            color: theme.palette.warning.main
+          }}
+        >
+          <BuildIcon fontSize="small" />
+        </Box>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={700}>
+            Руководства по ручным исправлениям
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {availableGuides.length} инструкци{availableGuides.length === 1 ? 'я' : availableGuides.length < 5 ? 'и' : 'й'} для ошибок, требующих ручного исправления
+          </Typography>
+        </Box>
+      </Box>
+      
+      {/* Guides List */}
+      <Box sx={{ p: 2 }}>
+        {availableGuides.map((guide, index) => (
+          <ManualFixGuide
+            key={guide.type}
+            guide={guide}
+            isOpen={expandedGuide === index}
+            onToggle={() => setExpandedGuide(expandedGuide === index ? null : index)}
+          />
+        ))}
+      </Box>
+    </Paper>
+  );
+};
+
 
 const ReportPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
+  
   const { reportData, fileName } = location.state || {};
+  
   const [loading, setLoading] = useState(false);
   const [correctionSuccess, setCorrectionSuccess] = useState(false);
-  const [correctionError, setCorrectionError] = useState('');
   const [correctedFilePath, setCorrectedFilePath] = useState('');
-  const [reportLoading, setReportLoading] = useState(false);
-  const [reportSuccess, setReportSuccess] = useState(false);
-  const [reportError, setReportError] = useState(null);
-  const [reportFilePath, setReportFilePath] = useState(null);
-  const [tabValue, setTabValue] = useState(0); // Состояние для табов
-  const [showInsights, setShowInsights] = useState(false); // Для показа аналитики
-  const [autoDownloaded, setAutoDownloaded] = useState(false);
   const [viewMode, setViewMode] = useState('pre'); // 'pre' | 'post'
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState('');
   const [aiText, setAiText] = useState('');
-  const [aiAvailable, setAiAvailable] = useState(false);
-  
-  
-  // Контекст для истории проверок
-  // const { addToHistory } = useContext(CheckHistoryContext); // removed - context not available
-  const addToHistory = () => {}; // no-op stub
+  const [showAi, setShowAi] = useState(false);
+  const [filterSeverity, setFilterSeverity] = useState('all'); // 'all' | 'high' | 'medium' | 'low'
 
-  // Мемоизируем входные данные
-  const memoizedReportData = useMemo(() => reportData || {}, [reportData]);
-  const memoizedFileName = useMemo(() => fileName || '', [fileName]);
-
-  // Используем ИИ подсказки из backend, если они пришли вместе с отчетом
+  // Инициализация исправленного файла из reportData (если был автоисправлен при загрузке)
+  // + автоматическое скачивание исправленного документа
   useEffect(() => {
-    const aiBlock = memoizedReportData?.ai_suggestions || {};
-    const backendError = memoizedReportData?.ai_error || '';
-    const initial = viewMode === 'post' ? aiBlock?.after : aiBlock?.before;
-    if (initial) {
-      setAiText(initial);
-      setAiAvailable(true);
-    } else if (aiBlock?.before || aiBlock?.after) {
-      setAiAvailable(true);
-    }
-    if (backendError) {
-      setAiError(backendError);
-    }
-  }, [memoizedReportData, viewMode]);
-
-  // Мемоизируем issues и статистику
-  // Предпочитаем результаты после автокоррекции, если они есть и лучше
-  const effectiveResults = useMemo(() => {
-    const corrected = memoizedReportData.corrected_check_results;
-    const original = memoizedReportData.check_results;
-
-    if (viewMode === 'post' && corrected) return corrected;
-    if (viewMode === 'pre') return original || {};
-    return original || {};
-  }, [memoizedReportData, viewMode]);
-
-  const issues = useMemo(() => 
-    effectiveResults?.issues || [], 
-    [effectiveResults]
-  );
-  const totalIssues = useMemo(() => 
-    effectiveResults?.total_issues_count || 0, 
-    [effectiveResults]
-  );
-
-  // Группировка проблем по типу и серьезности
-  const groupedIssues = useMemo(() => 
-    issues.reduce((groups, issue) => {
-      const category = issue.type.split('_')[0];
-      if (!groups[category]) {
-        groups[category] = [];
+    if (reportData?.correction_success && reportData?.corrected_file_path) {
+      setCorrectedFilePath(reportData.corrected_file_path);
+      setCorrectionSuccess(true);
+      // Переключаем на просмотр результатов после исправления
+      if (reportData.corrected_check_results) {
+        setViewMode('post');
       }
-      groups[category].push(issue);
-      return groups;
-    }, {}), 
-    [issues]
-  );
-
-  // Группировка уникальных проблем
-  const groupedIssuesList = useMemo(() => 
-    groupIssues(issues), 
-    [issues]
-  );
-  const totalGroupedIssues = useMemo(() => 
-    groupedIssuesList.length, 
-    [groupedIssuesList]
-  );
-
-  // Статистика по серьезности
-  const statistics = useMemo(() => 
-    effectiveResults?.statistics || {}, 
-    [effectiveResults]
-  );
-  const highSeverityCount = useMemo(() => 
-    statistics.severity?.high || 0, 
-    [statistics]
-  );
-  const mediumSeverityCount = useMemo(() => 
-    statistics.severity?.medium || 0, 
-    [statistics]
-  );
-  const lowSeverityCount = useMemo(() => 
-    statistics.severity?.low || 0, 
-    [statistics]
-  );
-  const totalAutoFixableCount = useMemo(() => 
-    statistics.auto_fixable_count || 0, 
-    [statistics]
-  );
-
-  // Перенаправление, если нет данных
-  useEffect(() => {
-    if (!memoizedReportData) {
-      navigate('/check');
+      
+      // Автоматически скачиваем исправленный документ через скрытую ссылку
+      const autoDownload = () => {
+        let fName = reportData.corrected_file_path.split(/[/\\]/).pop();
+        if (!fName.toLowerCase().endsWith('.docx')) fName += '.docx';
+        const link = document.createElement('a');
+        link.href = `${API_BASE}/corrections/${encodeURIComponent(fName)}`;
+        link.download = fName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+      // Небольшая задержка чтобы страница успела отрендериться
+      const timer = setTimeout(autoDownload, 1000);
+      return () => clearTimeout(timer);
     }
-  }, [memoizedReportData, navigate]);
+  }, [reportData]);
 
-  // Устанавливаем режим просмотра по умолчанию: если есть результаты после исправления — показываем их
+  // Redirect if no data
   useEffect(() => {
-    if (memoizedReportData?.corrected_check_results) {
-      setViewMode('post');
-    } else {
-      setViewMode('pre');
-    }
-  }, [memoizedReportData]);
+    if (!reportData) navigate('/');
+  }, [reportData, navigate]);
 
-  // Сохраняем результат в истории при первичной загрузке страницы
-  useEffect(() => {
-    if (memoizedReportData && memoizedFileName) {
-      addToHistory({
-        id: Date.now().toString(),
-        fileName: memoizedFileName,
-        reportData: memoizedReportData,
-        timestamp: Date.now(),
-        correctedFilePath: correctedFilePath || memoizedReportData.corrected_file_path || null
-      });
-    }
-  }, [memoizedReportData, memoizedFileName, addToHistory, correctedFilePath]);
+  // Data processing
+  const effectiveResults = useMemo(() => {
+    if (!reportData) return {};
+    return viewMode === 'post' && reportData.corrected_check_results 
+      ? reportData.corrected_check_results 
+      : reportData.check_results || {};
+  }, [reportData, viewMode]);
 
-  // Автоскачивание исправленного документа, если он уже есть после загрузки
-  useEffect(() => {
-    const serverCorrected = memoizedReportData?.corrected_file_path;
-    const success = memoizedReportData?.correction_success;
-    if (!autoDownloaded && success && serverCorrected) {
-      setAutoDownloaded(true);
-      downloadDocument(serverCorrected, memoizedFileName);
-    }
-  }, [memoizedReportData, memoizedFileName, autoDownloaded]);
+  const issues = useMemo(() => effectiveResults?.issues || [], [effectiveResults]);
+  
+  const filteredIssues = useMemo(() => {
+    if (filterSeverity === 'all') return issues;
+    return issues.filter(i => i.severity === filterSeverity);
+  }, [issues, filterSeverity]);
 
-  // Прокрутка вверх при загрузке страницы
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  const groupedIssuesList = useMemo(() => groupIssues(filteredIssues), [filteredIssues]);
+  const statistics = useMemo(() => effectiveResults?.statistics || {}, [effectiveResults]);
+  
+  const totalIssues = effectiveResults?.total_issues_count || 0;
+  const highSeverityCount = statistics.severity?.high || 0;
+  const mediumSeverityCount = statistics.severity?.medium || 0;
+  const lowSeverityCount = statistics.severity?.low || 0;
+  const autoFixableCount = statistics.auto_fixable_count || 0;
 
-  // Определяем общую оценку документа
-  const documentGrade = useMemo(() => 
-    getDocumentGrade(totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount), 
+  const grade = useMemo(() => 
+    getDocumentGrade(totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount),
     [totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount]
   );
 
-  // Обработчик изменения таба
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
+  // Charts Data
+  const severityData = [
+    { name: 'Критические', value: highSeverityCount, color: '#f43f5e' },
+    { name: 'Средние', value: mediumSeverityCount, color: '#f59e0b' },
+    { name: 'Низкие', value: lowSeverityCount, color: '#3b82f6' },
+  ].filter(d => d.value > 0);
 
-  const handleViewModeChange = (event, newMode) => {
-    if (newMode !== null) setViewMode(newMode);
-  };
+  // Group by category for BarChart
+  const categoryData = useMemo(() => {
+    const cats = {};
+    issues.forEach(i => {
+      const cat = i.type.split('_')[0];
+      cats[cat] = (cats[cat] || 0) + 1;
+    });
+    return Object.entries(cats).map(([name, value]) => ({ name, value }));
+  }, [issues]);
 
-  const handleAISuggestions = async () => {
-    setAiLoading(true);
-    setAiError('');
-    try {
-      const response = await axios.post('http://localhost:5000/api/document/ai/suggest', {
-        check_results: effectiveResults,
-        filename: memoizedFileName
-      });
-      if (response.data?.success) {
-        setAiText(response.data.suggestions || '');
-        setAiAvailable(true);
-      } else {
-        setAiError(response.data?.error || 'Не удалось получить рекомендации ИИ');
-      }
-    } catch (err) {
-      setAiError(err?.response?.data?.error || 'Ошибка запроса к ИИ');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  // Если нет данных - возвращаем null
-  if (!memoizedReportData) {
-    return null;
-  }
-
-  // Определяем иконку для категории
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'font':
-        return <TextFormatIcon />;
-      case 'margins':
-        return <BorderStyleIcon />;
-      case 'line':
-        return <FormatLineSpacingIcon />;
-      case 'paragraphs':
-        return <FormatListBulletedIcon />;
-      case 'heading':
-        return <TitleIcon />;
-      case 'bibliography':
-        return <MenuBookIcon />;
-      case 'image':
-        return <ImageIcon />;
-      case 'table':
-        return <TableChartIcon />;
-      case 'structure':
-      case 'missing':
-      case 'section':
-        return <ListAltIcon />;
-      default:
-        return <ArticleIcon />;
-    }
-  };
-
-  // Определяем иконку в зависимости от серьезности проблемы
-  const getSeverityIcon = (severity) => {
-    switch (severity) {
-      case 'high':
-        return <ErrorOutlineIcon color="error" />;
-      case 'medium':
-        return <WarningAmberIcon color="warning" />;
-      case 'low':
-        return <InfoIcon color="info" />;
-      default:
-        return <InfoIcon />;
-    }
-  };
-
-  // Текст для чипа серьезности
-  const getSeverityText = (severity) => {
-    switch (severity) {
-      case 'high':
-        return 'Высокая';
-      case 'medium':
-        return 'Средняя';
-      case 'low':
-        return 'Низкая';
-      default:
-        return 'Не указана';
-    }
-  };
-
-  // Цвет для чипа серьезности
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'high':
-        return 'error';
-      case 'medium':
-        return 'warning';
-      case 'low':
-        return 'info';
-      default:
-        return 'default';
-    }
-  };
-
-  // Получаем локализованное название категории
-  const getCategoryName = (category) => {
-    switch (category) {
-      case 'font': return 'Шрифты';
-      case 'margins': return 'Поля документа';
-      case 'line': return 'Межстрочный интервал';
-      case 'paragraphs': return 'Форматирование параграфов';
-      case 'heading': return 'Заголовки';
-      case 'bibliography': return 'Список литературы';
-      case 'image': return 'Изображения';
-      case 'table': return 'Таблицы';
-      case 'first': return 'Отступы абзацев';
-      case 'structure': return 'Структура документа';
-      case 'missing': return 'Отсутствующие элементы';
-      case 'section': return 'Разделы документа';
-      case 'page': return 'Страницы';
-      default: return 'Другое';
-    }
-  };
-
-  // Функция для склонения слова "проблема"
-  function pluralizeProblem(count) {
-    if (count % 10 === 1 && count % 100 !== 11) return 'проблема';
-    if ([2,3,4].includes(count % 10) && ![12,13,14].includes(count % 100)) return 'проблемы';
-    return 'проблем';
-  }
-
-  // Обработка исправления ошибок
+  // Handlers
   const handleCorrection = async () => {
     setLoading(true);
-    setCorrectionError('');
-    setCorrectionSuccess(false);
-
     try {
-      const response = await axios.post('http://localhost:5000/api/document/correct', {
-        file_path: memoizedReportData.temp_path,
+      const response = await axios.post(`${API_BASE}/api/document/correct`, {
+        file_path: reportData.temp_path,
         errors: issues.filter(issue => issue.auto_fixable),
-        original_filename: memoizedFileName
+        original_filename: fileName
       });
 
       if (response.data.success) {
         setCorrectedFilePath(response.data.corrected_file_path);
         setCorrectionSuccess(true);
-        
-        // Обновить запись в истории, добавив путь исправленного файла
-        addToHistory({
-          id: Date.now().toString(),
-          fileName: memoizedFileName,
-          reportData: {
-            ...memoizedReportData,
-            corrected_file_path: response.data.corrected_file_path
-          },
-          timestamp: Date.now(),
-          correctedFilePath: response.data.corrected_file_path
-        });
-        
-        // Автоматически скачиваем документ после успешного исправления
-        downloadDocument(response.data.corrected_file_path, memoizedFileName);
-      } else {
-        setCorrectionError('Произошла ошибка при исправлении документа');
       }
     } catch (error) {
-      console.error('Ошибка при исправлении документа:', error);
-      setCorrectionError(
-        error.response?.data?.error || 
-        'Произошла ошибка при исправлении документа. Пожалуйста, попробуйте еще раз.'
-      );
+      console.error('Correction error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Функция для скачивания документа
-  const downloadDocument = (filePath, originalName) => {
-    if (!filePath) return;
-    
-    const extension = '.docx';
-    const fileName = originalName ? 
-      (originalName.endsWith('.docx') ? originalName : originalName + extension) : 
-      `corrected_document_${Date.now()}${extension}`;
-    
-    // Если путь выглядит как имя файла (без слешей), используем прямой доступ
-    if (filePath.indexOf('/') === -1 && filePath.indexOf('\\') === -1) {
-      window.location.href = `http://localhost:5000/corrections/${encodeURIComponent(filePath)}`;
-    } else {
-      // Иначе используем стандартный endpoint
-      window.location.href = `http://localhost:5000/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(fileName)}`;
-    }
-  };
-  // Улучшенный компонент карточки категории с современным дизайном
-  const CategoryCard = ({ category, issues, count, icon, index }) => {
-    const highSeverity = issues.filter(issue => 
-      issue.type.startsWith(category) && issue.severity === 'high'
-    ).length;
-    const mediumSeverity = issues.filter(issue => 
-      issue.type.startsWith(category) && issue.severity === 'medium'
-    ).length;
-    const lowSeverity = issues.filter(issue => 
-      issue.type.startsWith(category) && issue.severity === 'low'
-    ).length;
-    const severity = highSeverity > 0 ? 'error' : mediumSeverity > 0 ? 'warning' : 'info';
-    const autoFixableCount = issues.filter(issue => 
-      issue.type.startsWith(category) && issue.auto_fixable
-    ).length;
-
-    return (
-      <Card sx={{ 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column',
-        borderRadius: 4,
-        border: '1px solid',
-        borderColor: alpha(theme.palette[severity].main, 0.2),
-        background: `linear-gradient(135deg, ${alpha(theme.palette[severity].main, 0.02)} 0%, ${alpha(theme.palette.background.paper, 1)} 100%)`,
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: `0 12px 40px ${alpha(theme.palette[severity].main, 0.15)}`,
-          borderColor: `${severity}.main`
-        }
-      }}>
-        {/* Декоративная полоса сверху */}
-        <Box 
-          sx={{ 
-            height: 4, 
-            background: `linear-gradient(90deg, ${theme.palette[severity].main}, ${theme.palette[severity].light})` 
-          }} 
-        />
-        
-        <CardContent sx={{ flexGrow: 1, p: 3 }}>
-          {/* Заголовок категории */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <Box
-              sx={{
-                width: 56,
-                height: 56,
-                borderRadius: 3,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: `linear-gradient(135deg, ${theme.palette[severity].main}, ${theme.palette[severity].dark})`,
-                color: 'white',
-                mr: 2,
-                boxShadow: `0 4px 16px ${alpha(theme.palette[severity].main, 0.3)}`
-              }}
-            >
-              {React.cloneElement(icon, { fontSize: 'large' })}
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" component="div" fontWeight={700} sx={{ mb: 0.5 }}>
-                {getCategoryName(category)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                {count} {pluralizeProblem(count)}
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Статистика по серьезности */}
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ 
-              height: 8, 
-              borderRadius: 4, 
-              bgcolor: alpha(theme.palette.grey[300], 0.2), 
-              position: 'relative',
-              overflow: 'hidden',
-              mb: 2
-            }}>
-              {highSeverity > 0 && (
-                <Box sx={{ 
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  height: '100%',
-                  width: `${(highSeverity / count) * 100}%`,
-                  background: `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light})`,
-                  borderRadius: '4px 0 0 4px'
-                }} />
-              )}
-              {mediumSeverity > 0 && (
-                <Box sx={{ 
-                  position: 'absolute',
-                  left: `${(highSeverity / count) * 100}%`,
-                  top: 0,
-                  height: '100%',
-                  width: `${(mediumSeverity / count) * 100}%`,
-                  background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.warning.light})`
-                }} />
-              )}
-              {lowSeverity > 0 && (
-                <Box sx={{ 
-                  position: 'absolute',
-                  left: `${((highSeverity + mediumSeverity) / count) * 100}%`,
-                  top: 0,
-                  height: '100%',
-                  width: `${(lowSeverity / count) * 100}%`,
-                  background: `linear-gradient(90deg, ${theme.palette.info.main}, ${theme.palette.info.light})`,
-                  borderRadius: '0 4px 4px 0'
-                }} />
-              )}
-            </Box>
-            
-            {/* Чипы с количеством */}
-            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
-              {highSeverity > 0 && (
-                <Chip 
-                  label={`${highSeverity} крит.`} 
-                  size="small" 
-                  sx={{ 
-                    bgcolor: alpha(theme.palette.error.main, 0.1),
-                    color: 'error.dark',
-                    fontWeight: 600,
-                    border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`
-                  }}
-                />
-              )}
-              {mediumSeverity > 0 && (
-                <Chip 
-                  label={`${mediumSeverity} сред.`} 
-                  size="small" 
-                  sx={{ 
-                    bgcolor: alpha(theme.palette.warning.main, 0.1),
-                    color: 'warning.dark',
-                    fontWeight: 600,
-                    border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`
-                  }}
-                />
-              )}
-              {lowSeverity > 0 && (
-                <Chip 
-                  label={`${lowSeverity} низ.`} 
-                  size="small" 
-                  sx={{ 
-                    bgcolor: alpha(theme.palette.info.main, 0.1),
-                    color: 'info.dark',
-                    fontWeight: 600,
-                    border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
-                  }}
-                />
-              )}
-            </Stack>
-          </Box>
-          
-          {/* Индикатор автоисправления */}
-          {autoFixableCount > 0 && (
-            <Box sx={{ 
-              p: 2, 
-              bgcolor: alpha(theme.palette.success.main, 0.08), 
-              borderRadius: 2,
-              border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <AutoFixHighIcon sx={{ color: 'success.main', mr: 1, fontSize: 20 }} />
-              <Typography variant="body2" color="success.dark" fontWeight={600}>
-                {autoFixableCount} автоисправимых
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-    );
+  const handleDownload = (path) => {
+    if (!path) return;
+    let fName = path.split(/[/\\]/).pop();
+    if (!fName.toLowerCase().endsWith('.docx')) fName += '.docx';
+    window.location.href = `${API_BASE}/corrections/${encodeURIComponent(fName)}`;
   };
 
-  // Компонент аналитических инсайтов
-  const AnalyticsInsights = ({ issues, totalIssues, documentGrade }) => {
-    const insights = useMemo(() => {
-      const tips = [];
-      
-      // Анализ по типам ошибок
-      if (issues.filter(i => i.type.startsWith('font')).length > 0) {
-        tips.push({
-          icon: <TextFormatIcon />,
-          title: 'Форматирование шрифта',
-          description: 'Обратите внимание на единообразие шрифтов в документе',
-          severity: 'info'
-        });
-      }
-      
-      if (issues.filter(i => i.type.startsWith('margins')).length > 0) {
-        tips.push({
-          icon: <BorderStyleIcon />,
-          title: 'Поля страницы',
-          description: 'Проверьте соответствие полей требованиям ГОСТ',
-          severity: 'warning'
-        });
-      }
-      
-      // Анализ автоисправимости
-      const autoFixablePercent = Math.round((totalAutoFixableCount / totalIssues) * 100);
-      if (autoFixablePercent > 70) {
-        tips.push({
-          icon: <BuildIcon />,
-          title: 'Высокий потенциал автоисправления',
-          description: `${autoFixablePercent}% ошибок можно исправить автоматически`,
-          severity: 'success'
-        });
-      }
-      
-      // Рекомендации по оценке
-      if (documentGrade.score >= 4) {
-        tips.push({
-          icon: <WorkspacePremiumIcon />,
-          title: 'Отличное качество',
-          description: 'Документ соответствует высоким стандартам оформления',
-          severity: 'success'
-        });
-      } else if (documentGrade.score === 3) {
-        tips.push({
-          icon: <TipsAndUpdatesIcon />,
-          title: 'Есть потенциал для улучшения',
-          description: 'Исправление найденных ошибок повысит качество документа',
-          severity: 'warning'
-        });
-      }
-      
-      return tips;
-    }, [issues, totalIssues, documentGrade]);
-
-    return (
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3,
-          borderRadius: 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.02)} 0%, ${alpha(theme.palette.primary.main, 0.01)} 100%)`,
-          border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-          mb: 4
-        }}
-      >
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-          <InsightsIcon sx={{ mr: 1, color: 'info.main' }} />
-          Аналитические рекомендации
-        </Typography>
-        
-        <Grid container spacing={2}>
-          {insights.map((insight, index) => (
-            <Grid item xs={12} md={6} key={index}>
-              <Card 
-                elevation={0}
-                sx={{ 
-                  p: 2,
-                  height: '100%',
-                  border: `1px solid ${alpha(theme.palette[insight.severity].main, 0.2)}`,
-                  bgcolor: alpha(theme.palette[insight.severity].main, 0.05),
-                  borderRadius: 2
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: `${insight.severity}.main`,
-                      color: 'white',
-                      mr: 2,
-                      flexShrink: 0
-                    }}
-                  >
-                    {insight.icon}
-                  </Box>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                      {insight.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {insight.description}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
-    );
+  const handleDownloadReport = () => {
+    if (!reportData?.report_path) return;
+    window.location.href = `${API_BASE}/api/document/download-report?path=${encodeURIComponent(reportData.report_path)}`;
   };
-  const handleGenerateReport = async () => {
-    if (reportLoading) return;
-    
-    setReportLoading(true);
-    setReportError(null);
-    
+
+  const handleAiAnalysis = async () => {
+    setAiLoading(true);
+    setShowAi(true);
     try {
-      const response = await axios.post('http://localhost:5000/api/document/generate-report', {
-        check_results: memoizedReportData.check_results,
-        filename: memoizedFileName
+      const response = await axios.post(`${API_BASE}/api/document/ai/suggest`, {
+        check_results: effectiveResults,
+        filename: fileName
       });
-      
-      if (response.data && response.data.success) {
-        setReportSuccess(true);
-        setReportFilePath(response.data.report_file_path);
-      } else {
-        setReportError('Не удалось сгенерировать отчет');
+      if (response.data?.success) {
+        setAiText(response.data.suggestions);
       }
-    } catch (error) {
-      console.error('Ошибка при генерации отчета:', error);
-      setReportError(error.response?.data?.error || 'Ошибка при генерации отчета');
+    } catch (e) {
+      setAiText('Не удалось получить ответ от ИИ.');
     } finally {
-      setReportLoading(false);
+      setAiLoading(false);
     }
   };
 
-  const downloadReport = (reportPath, reportName) => {
-    if (!reportPath) return;
-    
-    // Формируем URL для скачивания
-    const downloadUrl = `http://localhost:5000/api/document/download-report?path=${encodeURIComponent(reportPath)}&filename=${encodeURIComponent(reportName || 'report.docx')}`;
-    
-    // Открываем URL для скачивания
-    window.open(downloadUrl, '_blank');
+  const handlePrint = () => {
+    window.print();
   };
+
+  if (!reportData) return null;
+
   return (
     <Box sx={{ 
-      minHeight: '100vh',
-      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.background.default, 1)} 50%, ${alpha(theme.palette.secondary.main, 0.01)} 100%)`,
-      pb: 6
+      height: '100vh', 
+      bgcolor: 'background.default',
+      color: 'text.primary',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      '@media print': {
+        height: 'auto',
+        overflow: 'visible',
+        bgcolor: 'white',
+        color: 'black'
+      }
     }}>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Hero секция с заголовком */}
-        <Paper 
-          elevation={0}
-          sx={{ 
-            p: { xs: 3, md: 5 },
-            mb: 4,
-            borderRadius: 4,
-            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Декоративные элементы фона */}
-          <Box
-            sx={{
-              position: 'absolute',
-              top: -100,
-              right: -100,
-              width: 300,
-              height: 300,
-              borderRadius: '50%',
-              background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 70%)`,
-              zIndex: 0
-            }}
-          />
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: -80,
-              left: -80,
-              width: 200,
-              height: 200,
-              borderRadius: '50%',
-              background: `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.06)} 0%, transparent 70%)`,
-              zIndex: 0
-            }}
-          />
-          
-          <Box sx={{ position: 'relative', zIndex: 1 }}>
-            <Typography
-              variant="h3"
-              component="h1"
-              align="center"
-              gutterBottom
-              sx={{
-                fontWeight: 900,
-                mb: 2,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                textShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                fontSize: { xs: '2rem', md: '3rem' }
-              }}
-            >
-              Анализ документа завершен
-            </Typography>
+      <style>
+        {`
+          @media print {
+            @page { size: A4; margin: 1.5cm; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body, html, #root { 
+              background-color: white !important; 
+              color: black !important; 
+              height: auto !important; 
+              overflow: visible !important; 
+            }
+            .MuiPaper-root { 
+              background-color: white !important; 
+              color: black !important; 
+              border: 1px solid #ccc !important; 
+              box-shadow: none !important; 
+              break-inside: avoid;
+            }
+            .MuiTypography-root { color: black !important; }
+            .MuiChip-root { border: 1px solid #999 !important; color: black !important; }
+            .recharts-wrapper { filter: grayscale(100%) contrast(120%); }
             
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2, gap: 1, flexWrap: 'wrap' }}>
-              <ArticleIcon sx={{ mr: 1, color: 'text.secondary' }} />
-              <Typography variant="h6" align="center" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                {memoizedFileName}
-              </Typography>
-              {/* Индикатор текущего представления */}
-              {memoizedReportData?.corrected_check_results && (
-                <Chip 
-                  label={viewMode === 'post' ? 'После автокоррекции' : 'До исправления'}
-                  color={viewMode === 'post' ? 'success' : 'default'}
-                  size="small"
-                  icon={<AutoFixHighIcon />}
-                  sx={{ ml: 1 }}
-                />
-              )}
+            /* Force full width for issues list */
+            .issues-grid-item { 
+              width: 100% !important; 
+              max-width: 100% !important; 
+              flex-basis: 100% !important; 
+            }
+            
+            /* Expand scrollable areas */
+            .scroll-container {
+              overflow: visible !important;
+              height: auto !important;
+              max-height: none !important;
+            }
+
+            /* Hide decorative backgrounds */
+            .icon-bg { display: none !important; }
+            
+            /* Force stat cards to be in a 2x2 grid for print */
+            .stat-card-grid > .MuiGrid-item {
+              flex-basis: 50% !important;
+              max-width: 50% !important;
+            }
+          }
+        `}
+      </style>
+
+      {/* Print Header */}
+      <Box className="print-only" sx={{ display: 'none', mb: 4, borderBottom: '2px solid black', pb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 2 }}>
+          <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: '-0.03em' }}>CURSA REPORT</Typography>
+          <Typography variant="h6" fontWeight={600} color="text.secondary">v2.0</Typography>
+        </Box>
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">ДОКУМЕНТ</Typography>
+            <Typography variant="body1" fontWeight={600}>{fileName}</Typography>
+          </Grid>
+          <Grid item xs={6} sx={{ textAlign: 'right' }}>
+            <Typography variant="body2" color="text.secondary">ДАТА ПРОВЕРКИ</Typography>
+            <Typography variant="body1" fontWeight={600}>{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">РЕЗУЛЬТАТ</Typography>
+            <Typography variant="body1" fontWeight={600}>{grade.label} ({grade.score}/5)</Typography>
+          </Grid>
+          <Grid item xs={6} sx={{ textAlign: 'right' }}>
+            <Typography variant="body2" color="text.secondary">ВСЕГО ПРОБЛЕМ</Typography>
+            <Typography variant="body1" fontWeight={600}>{totalIssues}</Typography>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {/* Header */}
+      <Box className="no-print" sx={{ pt: 3, px: 0, zIndex: 10 }}>
+        <Container maxWidth="xl">
+          <Paper 
+            elevation={0}
+            sx={{ 
+              p: 2, 
+              borderRadius: 2,
+              bgcolor: alpha(theme.palette.background.paper, 0.6),
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <IconButton onClick={() => navigate('/')} size="small" sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 2 }}>
+                <ArrowBackIcon fontSize="small" />
+              </IconButton>
+              <Box>
+                <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                  Отчет о проверке
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                  <InsertDriveFileIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+                  <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                    {fileName}
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
-            {/* Переключатель вида отчета (до/после) */}
-            {memoizedReportData?.corrected_check_results && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              {/* Переключатель До/После исправления */}
+              {correctionSuccess && reportData?.corrected_check_results && (
                 <ToggleButtonGroup
-                  color="primary"
                   value={viewMode}
                   exclusive
-                  onChange={handleViewModeChange}
+                  onChange={(e, newMode) => newMode && setViewMode(newMode)}
                   size="small"
-                  sx={{ borderRadius: 2 }}
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      borderColor: alpha(theme.palette.divider, 0.2),
+                      '&.Mui-selected': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        color: 'primary.main',
+                        borderColor: alpha(theme.palette.primary.main, 0.3),
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.primary.main, 0.15),
+                        }
+                      }
+                    }
+                  }}
                 >
-                  <ToggleButton value="pre">До исправления</ToggleButton>
-                  <ToggleButton value="post">После автокоррекции</ToggleButton>
+                  <ToggleButton value="pre">
+                    До исправления
+                  </ToggleButton>
+                  <ToggleButton value="post">
+                    После исправления
+                  </ToggleButton>
                 </ToggleButtonGroup>
-              </Box>
-            )}
-            
-            {/* Используем новый компонент статистики */}
-            <DocumentStatistics 
-              totalIssues={totalIssues}
-              highSeverityCount={highSeverityCount}
-              mediumSeverityCount={mediumSeverityCount}
-              lowSeverityCount={lowSeverityCount}
-              totalAutoFixableCount={totalAutoFixableCount}
-              documentGrade={documentGrade}
-            />
-            
-            {/* Кнопки действий */}
-            <Box sx={{ 
-              mt: 4, 
-              display: 'flex', 
-              flexDirection: { xs: 'column', sm: 'row' },
-              justifyContent: 'center',
-              gap: 2,
-              alignItems: 'center'
-            }}>
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AutoFixHighIcon />}
-                onClick={handleCorrection}
-                disabled={loading || correctionSuccess || totalIssues === 0}
+              )}
+              {/* Иконка печати */}
+              <IconButton
+                onClick={handlePrint}
+                size="small"
                 sx={{ 
-                  py: 1.5,
-                  px: 4,
-                  borderRadius: 3,
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                  boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`,
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.4)}`
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, 
+                  borderRadius: 2,
+                  color: 'text.secondary',
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) }
                 }}
               >
-                {loading ? 'Исправление...' : 'Автоматическое исправление'}
-              </Button>
-              
-              <Button
-                variant="outlined"
-                size="large"
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/check')}
-                disabled={loading}
-                sx={{ 
-                  py: 1.5,
-                  px: 4,
-                  borderRadius: 3,
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                  borderWidth: 2,
-                  '&:hover': {
-                    borderWidth: 2,
-                    transform: 'translateY(-2px)'
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-              >
-                Проверить другой документ
-              </Button>
-              
-              <Button
-                variant="text"
-                size="large"
-                startIcon={aiLoading ? <CircularProgress size={16} /> : <InsightsIcon />}
-                onClick={handleAISuggestions}
-                disabled={aiLoading}
-                sx={{ 
-                  py: 1.5,
-                  px: 3,
-                  borderRadius: 3,
-                  fontWeight: 600
-                }}
-              >
-                {aiLoading ? 'ИИ анализ...' : aiAvailable ? 'Обновить ИИ рекомендации' : 'Получить ИИ рекомендации'}
-              </Button>
+                <PrintIcon fontSize="small" />
+              </IconButton>
+            </Stack>
+          </Paper>
+        </Container>
+      </Box>
 
-              <Button
-                variant="text"
-                startIcon={<InsightsIcon />}
-                onClick={() => setShowInsights(!showInsights)}
-                sx={{ 
-                  py: 1.5,
-                  px: 3,
-                  borderRadius: 3,
-                  fontWeight: 600
-                }}
+      {/* Main Content Area */}
+      <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', '@media print': { overflow: 'visible' } }}>
+        <Container maxWidth="xl" sx={{ height: '100%', display: 'flex', flexDirection: 'column', py: 3, '@media print': { height: 'auto', display: 'block' } }}>
+          
+          {/* Top Stats Row - Compact */}
+          <Box 
+            className="stat-card-grid" 
+            sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+              gap: 2, 
+              mb: 3,
+              '@media print': {
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 2
+              }
+            }}
+          >
+            <Box sx={{ minHeight: 140 }}>
+              <StatCard 
+                title="Оценка" 
+                value={`${grade.score}/5`} 
+                subtitle={grade.label}
+                icon={<VerifiedIcon />}
+                color={theme.palette[grade.color].main}
+                delay={0.1}
+                isScore={true}
+              />
+            </Box>
+            
+            <Box sx={{ minHeight: 140 }}>
+              <StatCard 
+                title="Проблем" 
+                value={totalIssues} 
+                subtitle={`${autoFixableCount} авто-исправимых`}
+                icon={<BugReportIcon />}
+                color={theme.palette.error.main}
+                delay={0.2}
+              />
+            </Box>
+
+            <Box sx={{ minHeight: 140 }}>
+              <StatCard 
+                title="Объем" 
+                value={reportData?.structure?.pages_count || "N/A"} 
+                subtitle={`${reportData?.structure?.paragraphs_count || 0} параграфов`}
+                icon={<MenuBookIcon />}
+                color={theme.palette.info.main}
+                delay={0.3}
+              />
+            </Box>
+
+            <Box sx={{ minHeight: 140 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                style={{ height: '100%', width: '100%' }}
               >
-                {showInsights ? 'Скрыть' : 'Показать'} аналитику
-              </Button>
+                <Paper sx={{ 
+                  p: 2, 
+                  height: '100%', 
+                  width: '100%',
+                  borderRadius: 2, 
+                  bgcolor: alpha(theme.palette.background.paper, 0.4), 
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', mb: 1.5, display: 'block', letterSpacing: 1 }}>
+                      Серьезность
+                    </Typography>
+                    <Stack spacing={1}>
+                      {severityData.map((d) => (
+                        <Box key={d.name} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: d.color, boxShadow: `0 0 8px ${d.color}` }} />
+                          <Typography variant="caption" sx={{ flexGrow: 1, fontWeight: 500 }}>{d.name}</Typography>
+                          <Typography variant="caption" fontWeight={700} sx={{ bgcolor: alpha(d.color, 0.1), px: 1, borderRadius: 1, color: d.color }}>{d.value}</Typography>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+                  <Box sx={{ width: 120, height: 120, flexShrink: 0, position: 'relative' }}>
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie 
+                          data={severityData} 
+                          innerRadius={35} 
+                          outerRadius={45} 
+                          paddingAngle={5} 
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {severityData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                        </Pie>
+                        <RechartsTooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      top: '50%', 
+                      left: '50%', 
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      pointerEvents: 'none'
+                    }}>
+                      <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1 }}>{totalIssues}</Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+              </motion.div>
+            </Box>
+
+            <Box sx={{ minHeight: 140 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <Paper sx={{ 
+                  p: 2, 
+                  height: '100%', 
+                  width: '100%',
+                  borderRadius: 2, 
+                  bgcolor: alpha(theme.palette.background.paper, 0.4), 
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', mb: 1, display: 'block', letterSpacing: 1 }}>
+                    Категории
+                  </Typography>
+                  <Box sx={{ height: 80, width: '100%' }}>
+                    <ResponsiveContainer>
+                      <BarChart data={categoryData}>
+                        <Bar dataKey="value" fill={theme.palette.primary.main} radius={[4, 4, 4, 4]} barSize={20}>
+                          {categoryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={alpha(theme.palette.primary.main, 0.6 + (index * 0.1))} />
+                          ))}
+                        </Bar>
+                        <RechartsTooltip cursor={{ fill: 'transparent' }} content={<CustomTooltip />} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </Paper>
+              </motion.div>
             </Box>
           </Box>
-        </Paper>        
-        {/* Аналитические инсайты */}
-        {showInsights && (
-          <AnalyticsInsights 
-            issues={issues}
-            totalIssues={totalIssues}
-            documentGrade={documentGrade}
-          />
-        )}
 
-        {/* ИИ рекомендации */}
-        {(aiText || aiError || aiAvailable) && (
-          <Paper 
-            elevation={0}
-            sx={{ 
-              p: 3,
-              mb: 4,
-              borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-              background: alpha(theme.palette.background.paper, 0.8)
-            }}
-          >
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-              Рекомендации ИИ
-            </Typography>
-            {aiError ? (
-              <Alert severity="warning">{aiError}</Alert>
-            ) : aiText ? (
-              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                {aiText}
-              </Typography>
-            ) : (
-              <Alert severity="info">ИИ готов, нажмите «Получить ИИ рекомендации», чтобы загрузить свежий план.</Alert>
-            )}
-          </Paper>
-        )}
-        
-        {/* Сообщения об исправлении */}
-        {(correctionSuccess || memoizedReportData?.correction_success) && (
-          <Alert 
-            severity="success" 
-            sx={{ 
-              mb: 3, 
-              borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
-              bgcolor: alpha(theme.palette.success.main, 0.08)
-            }}
-            action={
-              <Button 
-                color="inherit" 
-                size="small" 
-                onClick={() => downloadDocument(correctedFilePath || memoizedReportData?.corrected_file_path, memoizedFileName)}
-                startIcon={<DownloadIcon />}
-                sx={{ borderRadius: 2 }}
-              >
-                Скачать еще раз
-              </Button>
-            }
-          >
-            <AlertTitle sx={{ fontWeight: 700 }}>Документ успешно исправлен</AlertTitle>
-            Автоматически исправлены все возможные ошибки. Если скачивание не началось, нажмите «Скачать еще раз».
-          </Alert>
-        )}
-        
-        {correctionError && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 3, 
-              borderRadius: 3,
-              border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
-              bgcolor: alpha(theme.palette.error.main, 0.08)
-            }}
-          >
-            <AlertTitle sx={{ fontWeight: 700 }}>Ошибка при исправлении</AlertTitle>
-            {correctionError}
-          </Alert>
-        )}
-        
-        {/* Если документ идеален */}
-        {totalIssues === 0 && (
-          <Paper
-            elevation={0}
-            sx={{
-              p: 5,
-              mb: 4,
-              borderRadius: 4,
-              textAlign: 'center',
-              background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.light, 0.05)} 100%)`,
-              border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`
-            }}
-          >
-            <Box sx={{ mb: 3 }}>
-              <CheckCircleOutlineIcon sx={{ fontSize: 100, color: 'success.main', mb: 2 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-                {[...Array(5)].map((_, i) => (
-                  <StarIcon key={i} sx={{ color: '#FFD700', fontSize: 32 }} />
-                ))}
-              </Box>
-            </Box>
-            <Typography variant="h4" gutterBottom fontWeight={700} color="success.dark">
-              Превосходно!
-            </Typography>
-            <Typography variant="h6" sx={{ mb: 3, color: 'text.secondary' }}>
-              Ваш документ полностью соответствует требованиям нормоконтроля
-            </Typography>
-            <Button
-              variant="contained"
-              color="success"
-              size="large"
-              startIcon={<VerifiedIcon />}
-              sx={{ borderRadius: 3, py: 1.5, px: 4 }}
-            >
-              Документ готов к сдаче
-            </Button>
-          </Paper>
-        )}
-        
-        {/* Список найденных проблем с современными табами */}
-        {totalIssues > 0 && (
-          <Paper 
-            elevation={0}
-            sx={{ 
-              borderRadius: 4,
-              overflow: 'hidden',
-              border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-              mb: 4,
-              background: alpha(theme.palette.background.paper, 0.8)
-            }}
-          >
-            <Box sx={{ 
-              p: 3,
-              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.background.paper, 1)} 100%)`,
-              borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`
-            }}>
-              <Typography variant="h5" fontWeight={700} sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-                <ScienceIcon sx={{ mr: 1, color: 'primary.main' }} />
-                Детализация проблем
-              </Typography>
-              
-              <Tabs 
-                value={tabValue} 
-                onChange={handleTabChange} 
-                sx={{ 
-                  '& .MuiTabs-indicator': {
-                    height: 4,
-                    borderRadius: '2px 2px 0 0',
-                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
-                  },
-                  '& .MuiTab-root': {
-                    borderRadius: '12px 12px 0 0',
-                    mr: 1,
-                    transition: 'all 0.3s',
-                    '&:hover': {
-                      bgcolor: alpha(theme.palette.primary.main, 0.04)
-                    }
-                  }
-                }}
-              >
-                <Tab 
-                  icon={<CategoryIcon />} 
-                  label="По категориям" 
-                  iconPosition="start"
+          {/* Split View Content */}
+          <Grid container spacing={3} sx={{ flexGrow: 1, overflow: 'hidden', '@media print': { display: 'block', overflow: 'visible' } }}>
+            {/* Left: Issues List */}
+            <Grid item xs={12} md={8} className="issues-grid-item" sx={{ height: '100%', minWidth: 0, '@media print': { height: 'auto', display: 'block' } }}>
+              <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', width: '100%' }}>
+                {/* Header with filters */}
+                <Paper 
+                  elevation={0}
+                  className="no-print"
                   sx={{ 
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    minHeight: 56,
-                    fontSize: '1rem'
-                  }} 
-                />
-                <Tab 
-                  icon={<FormatListNumberedIcon />} 
-                  label="Полный список" 
-                  iconPosition="start"
-                  sx={{ 
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    minHeight: 56,
-                    fontSize: '1rem'
-                  }} 
-                />
-              </Tabs>
-            </Box>
-            
-            {/* Контент для таба "Категории" */}
-            {tabValue === 0 && (
-              <Box sx={{ p: 4 }}>
-                <Grid container spacing={3}>
-                  {Object.entries(groupedIssues).map(([category, categoryIssues], idx) => (
-                    <Grid item xs={12} md={6} lg={4} key={category}>
-                      <CategoryCard 
-                        category={category} 
-                        issues={issues}
-                        count={categoryIssues.length}
-                        icon={getCategoryIcon(category)}
-                        index={idx}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
-            
-            {/* Контент для таба "Все проблемы" */}
-            {tabValue === 1 && (
-              <List disablePadding sx={{ maxHeight: 700, overflow: 'auto' }}>
-                {Object.entries(groupedIssues).map(([category, categoryIssues], categoryIndex) => {
-                  const grouped = groupIssues(categoryIssues);
-                  const maxSeverity = grouped.some(i => i.severity === 'high')
-                    ? 'error'
-                    : grouped.some(i => i.severity === 'medium')
-                    ? 'warning'
-                    : 'info';
-                  const severityLabel = maxSeverity === 'error' ? 'Критические' : maxSeverity === 'warning' ? 'Средние' : 'Незначительные';
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    mb: 2,
+                    p: 2,
+                    borderRadius: 3,
+                    background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.6)} 0%, ${alpha(theme.palette.background.paper, 0.3)} 100%)`,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+                    backdropFilter: 'blur(10px)'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box sx={{
+                      p: 1,
+                      borderRadius: 2,
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      color: theme.palette.primary.main,
+                      display: 'flex'
+                    }}>
+                      <FormatListBulletedIcon fontSize="small" />
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                        Детализация
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                        {groupedIssuesList.length} {groupedIssuesList.length === 1 ? 'проблема' : groupedIssuesList.length < 5 ? 'проблемы' : 'проблем'} найдено
+                      </Typography>
+                    </Box>
+                  </Box>
                   
-                  return (
-                    <Accordion 
-                      defaultExpanded={categoryIndex === 0} 
-                      sx={{
-                        borderLeft: `6px solid ${theme.palette[maxSeverity].main}`,
-                        boxShadow: 'none',
-                        mb: 1,
-                        borderRadius: 0,
-                        '&:before': { display: 'none' },
-                        '&:not(:last-child)': {
-                          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`
-                        },
-                        bgcolor: alpha(theme.palette[maxSeverity].main, 0.02)                      }} 
-                      key={category}
-                    >
-                      <AccordionSummary
-                        expandIcon={<ExpandMoreIcon />}
+                  <Box sx={{ display: 'flex', gap: 0.75 }}>
+                    {[
+                      { value: 'all', label: 'Все', color: theme.palette.text.primary },
+                      { value: 'high', label: 'Крит.', color: '#f43f5e' },
+                      { value: 'medium', label: 'Сред.', color: '#f59e0b' },
+                      { value: 'low', label: 'Низк.', color: '#3b82f6' }
+                    ].map((filter) => (
+                      <Button
+                        key={filter.value}
+                        size="small"
+                        onClick={() => setFilterSeverity(filter.value)}
                         sx={{
-                          minHeight: 72,
-                          '&:hover': { 
-                            bgcolor: alpha(theme.palette[maxSeverity].main, 0.06),
-                            transform: 'translateY(-1px)',
-                            boxShadow: `0 2px 8px ${alpha(theme.palette[maxSeverity].main, 0.15)}`
-                          },
-                          transition: 'all 0.2s ease-in-out',
-                          borderRadius: '8px 8px 0 0'
+                          minWidth: 'auto',
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontSize: '0.8rem',
+                          fontWeight: filterSeverity === filter.value ? 700 : 500,
+                          color: filterSeverity === filter.value ? filter.color : 'text.secondary',
+                          bgcolor: filterSeverity === filter.value 
+                            ? alpha(filter.color, 0.1) 
+                            : 'transparent',
+                          border: `1px solid ${filterSeverity === filter.value 
+                            ? alpha(filter.color, 0.2) 
+                            : 'transparent'}`,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: alpha(filter.color, 0.08),
+                            borderColor: alpha(filter.color, 0.15)
+                          }
                         }}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                          <Box
-                            sx={{
-                              width: 48,
-                              height: 48,
-                              borderRadius: 3,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              background: `linear-gradient(135deg, ${theme.palette[maxSeverity].main}, ${theme.palette[maxSeverity].dark})`,
-                              color: 'white',
-                              mr: 3,
-                              boxShadow: `0 4px 12px ${alpha(theme.palette[maxSeverity].main, 0.3)}`
-                            }}
-                          >
-                            {getCategoryIcon(category)}
-                          </Box>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', mb: 0.5 }}>
-                              {getCategoryName(category)}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {grouped.length} {pluralizeProblem(grouped.length)}
-                            </Typography>
-                          </Box>
-                          <Chip
-                            label={severityLabel}
-                            color={maxSeverity}
-                            sx={{ fontWeight: 600, mr: 2 }}
+                        {filter.value !== 'all' && (
+                          <Box 
+                            sx={{ 
+                              width: 6, 
+                              height: 6, 
+                              borderRadius: '50%', 
+                              bgcolor: filter.color,
+                              mr: 0.75,
+                              boxShadow: filterSeverity === filter.value ? `0 0 6px ${filter.color}` : 'none'
+                            }} 
                           />
+                        )}
+                        {filter.label}
+                      </Button>
+                    ))}
+                  </Box>
+                </Paper>
+                
+                <Box className="scroll-container" sx={{ 
+                  flexGrow: 1, 
+                  overflowY: 'scroll', 
+                  overflowX: 'visible',
+                  pr: 2,
+                  pl: 1,
+                  mr: -1,
+                  pb: 2,
+                  width: 'calc(100% + 8px)',
+                  boxSizing: 'border-box',
+                  '&::-webkit-scrollbar': { width: 6 },
+                  '&::-webkit-scrollbar-track': { background: 'transparent' },
+                  '&::-webkit-scrollbar-thumb': { background: alpha(theme.palette.text.secondary, 0.2), borderRadius: 3 },
+                  '@media print': { overflow: 'visible', height: 'auto', pr: 0, pl: 0, mr: 0, width: '100%' }
+                }}>
+                  <Box sx={{ 
+                    display: 'grid',
+                    gridTemplateColumns: '1fr',
+                    gap: 0,
+                    width: '100%',
+                    py: 0.5
+                  }}>
+                    {groupedIssuesList.length === 0 ? (
+                      <Paper 
+                        elevation={0}
+                        sx={{ 
+                          p: 6, 
+                          textAlign: 'center', 
+                          borderRadius: 4, 
+                          background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.05)} 0%, ${alpha(theme.palette.background.paper, 0.4)} 100%)`,
+                          border: `2px dashed ${alpha(theme.palette.success.main, 0.2)}`,
+                          width: '100%',
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      >
+                        <Box sx={{ 
+                          display: 'inline-flex',
+                          p: 2,
+                          borderRadius: '50%',
+                          bgcolor: alpha(theme.palette.success.main, 0.1),
+                          mb: 2
+                        }}>
+                          <CheckCircleIcon sx={{ fontSize: 48, color: 'success.main' }} />
                         </Box>
-                      </AccordionSummary>
-                      <AccordionDetails sx={{ p: 0 }}>
-                        <List disablePadding>
-                          {grouped.map((issue, index) => (                            <ListItem
-                              key={`${category}-${index}`}
-                              divider={index < grouped.length - 1}
-                              sx={{
-                                py: 3,
-                                px: 4,
-                                alignItems: 'flex-start',
-                                '&:hover': { 
-                                  bgcolor: alpha(theme.palette.primary.main, 0.03),
-                                  transform: 'translateY(-1px)',
-                                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`
-                                },
-                                transition: 'all 0.2s ease-in-out',
-                                borderRadius: 1
-                              }}
-                            >
-                              <ListItemIcon sx={{ mt: 0.5 }}>
-                                {getSeverityIcon(issue.severity)}
-                              </ListItemIcon>
-                              <ListItemText
-                                primary={
-                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
-                                    <Typography component="span" variant="body1" fontWeight={600}>
-                                      {issue.description}
-                                    </Typography>
-                                    {issue.count > 1 && (
-                                      <Badge 
-                                        badgeContent={issue.count} 
-                                        color="primary"
-                                        sx={{ ml: 1 }}
-                                      />
-                                    )}
-                                    <Chip
-                                      label={getSeverityText(issue.severity)}
-                                      color={getSeverityColor(issue.severity)}
-                                      size="small"
-                                      sx={{ fontWeight: 600 }}
-                                    />
-                                    {issue.auto_fixable && (
-                                      <Chip
-                                        label="Автоисправимая"
-                                        size="small"
-                                        color="success"
-                                        icon={<AutoFixHighIcon fontSize="small" />}
-                                        sx={{ fontWeight: 600 }}
-                                      />
-                                    )}
-                                  </Box>
-                                }
-                                secondary={
-                                  <Typography variant="body2" color="text.secondary">
-                                    {issue.locations && issue.locations.length > 1
-                                      ? `Расположение: ${issue.locations.join(', ')}`
-                                      : `Расположение: ${issue.location}`}
-                                  </Typography>
-                                }
-                              />
-                            </ListItem>
-                          ))}
-                        </List>
-                      </AccordionDetails>
-                    </Accordion>
-                  );
-                })}
-              </List>
-            )}
-          </Paper>        )}
+                        <Typography variant="h6" fontWeight={800} gutterBottom sx={{ letterSpacing: '-0.02em' }}>
+                          {filterSeverity === 'all' ? 'Отлично! Проблем нет' : 'Нет проблем данного типа'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, mx: 'auto' }}>
+                          {filterSeverity === 'all' 
+                            ? 'Документ полностью соответствует стандартам оформления.' 
+                            : 'Попробуйте выбрать другой фильтр для просмотра всех найденных проблем.'}
+                        </Typography>
+                      </Paper>
+                    ) : (
+                      groupedIssuesList.map((issue, idx) => (
+                        <IssueItem key={`${issue.type}-${issue.description}`} issue={issue} />
+                      ))
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+            </Grid>
 
-        {/* Панель действий с отчетами */}
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-            borderRadius: 3,
-            border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-            background: alpha(theme.palette.background.paper, 0.6),
-            mt: 4
-          }}
-        >
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-            <DescriptionIcon sx={{ mr: 1, color: 'secondary.main' }} />
-            Экспорт отчетов
-          </Typography>
-          
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
-            <Button
-              variant="outlined"
-              startIcon={reportLoading ? <CircularProgress size={16} /> : <DescriptionIcon />}
-              onClick={handleGenerateReport}
-              disabled={reportLoading || totalIssues === 0}
-              sx={{ 
-                borderRadius: 3,
-                py: 1.2,
-                px: 3,
-                fontWeight: 600,
-                borderWidth: 2,
-                '&:hover': { borderWidth: 2 }
-              }}
-            >
-              {reportLoading ? 'Генерация...' : 'Создать DOCX отчет'}
-            </Button>
-            
-            {reportSuccess && (
-              <Button
-                variant="contained"
-                color="secondary"
-                startIcon={<FileDownloadIcon />}
-                onClick={() => downloadReport(reportFilePath, `отчет_${memoizedFileName}`)}
-                sx={{ 
-                  borderRadius: 3,
-                  py: 1.2,
-                  px: 3,
-                  fontWeight: 600,
-                  background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
-                  boxShadow: `0 4px 16px ${alpha(theme.palette.secondary.main, 0.3)}`
-                }}
-              >
-                Скачать отчет
-              </Button>
-            )}
-          </Stack>
+            {/* Right: AI & Actions */}
+            <Grid item xs={12} md={4} className="no-print" sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Success Card */}
+              <AnimatePresence>
+                {correctionSuccess && (
+                  <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+                    <Paper sx={{ 
+                      p: 3, 
+                      borderRadius: 2, 
+                      bgcolor: alpha(theme.palette.success.main, 0.1), 
+                      border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      <Box sx={{ position: 'relative', zIndex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{ p: 1, borderRadius: '50%', bgcolor: theme.palette.success.main, color: 'white' }}>
+                            <CheckCircleIcon fontSize="small" />
+                          </Box>
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight={800}>Готово!</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>Исправленный файл скачивается автоматически</Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-          {reportError && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mt: 2, 
-                borderRadius: 2,
-                border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
-                bgcolor: alpha(theme.palette.error.main, 0.08)
-              }}
-            >
-              <AlertTitle sx={{ fontWeight: 700 }}>Ошибка при генерации отчета</AlertTitle>
-              {reportError}
-            </Alert>
-          )}
-        </Paper>
-      </Container>
+              {/* Manual Fix Guides Panel - показываем если есть неавтоисправляемые ошибки */}
+              {issues.filter(i => !i.auto_fixable).length > 0 && (
+                <ManualFixGuidesPanel issues={issues} />
+              )}
+            </Grid>
+          </Grid>
+
+        </Container>
+      </Box>
     </Box>
   );
 };

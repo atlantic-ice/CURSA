@@ -7,6 +7,8 @@ import logging
 import tempfile
 from pathlib import Path
 from docx import Document
+from docx.shared import Pt, Cm
+from docx.enum.text import WD_LINE_SPACING
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ class CorrectionService:
     
     def __init__(self):
         """Инициализация сервиса исправления документов"""
-        # Настройки требований к форматированию
+        # Настройки требований к форматированию по ГОСТ
         self.requirements = {
             "font": "Times New Roman",
             "font_size": 14,
@@ -218,7 +220,7 @@ class CorrectionService:
         for paragraph in doc.paragraphs:
             for run in paragraph.runs:
                 run.font.name = required_font
-                run.font.size = required_size
+                run.font.size = Pt(required_size)
     
     def _fix_document_margins(self, doc):
         """
@@ -230,10 +232,10 @@ class CorrectionService:
         required_margins = self.requirements["margins"]
         
         for section in doc.sections:
-            section.left_margin = required_margins["left"]
-            section.right_margin = required_margins["right"]
-            section.top_margin = required_margins["top"]
-            section.bottom_margin = required_margins["bottom"]
+            section.left_margin = Cm(required_margins["left"])
+            section.right_margin = Cm(required_margins["right"])
+            section.top_margin = Cm(required_margins["top"])
+            section.bottom_margin = Cm(required_margins["bottom"])
     
     def _fix_document_line_spacing(self, doc):
         """
@@ -247,6 +249,7 @@ class CorrectionService:
         for paragraph in doc.paragraphs:
             if hasattr(paragraph, 'paragraph_format'):
                 paragraph.paragraph_format.line_spacing = required_spacing
+                paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
     
     def _fix_document_headers(self, doc):
         """
@@ -258,4 +261,6 @@ class CorrectionService:
         for paragraph in doc.paragraphs:
             if paragraph.style and paragraph.style.name.startswith('Heading'):
                 for run in paragraph.runs:
-                    run.font.bold = True 
+                    run.font.bold = True
+                    run.font.name = self.requirements["font"]
+                    run.font.size = Pt(self.requirements["font_size"]) 

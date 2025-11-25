@@ -37,12 +37,12 @@ def create_app():
     app = Flask(__name__)
     
     # Настройка CORS с правильными параметрами
-            cors_origins = _collect_allowed_origins()
-            CORS(app, 
-                origins=cors_origins,
-            methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allow_headers=['Content-Type', 'Authorization'],
-            supports_credentials=True)
+    cors_origins = _collect_allowed_origins()
+    CORS(app, 
+        origins=cors_origins,
+        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allow_headers=['Content-Type', 'Authorization'],
+        supports_credentials=True)
     
     # Настройка логгирования
     setup_logging(app)

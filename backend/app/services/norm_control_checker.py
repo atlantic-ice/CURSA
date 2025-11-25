@@ -2334,7 +2334,8 @@ class NormControlChecker:
                     'type': 'ordinal_abbr_no_suffix',
                     'severity': 'medium',
                     'location': f"Параграф {para_idx + 1}",
-                    'description': f"Сокращение без правильного окончания: '{matched_text}'. Правильно: '{num}-{suffix} {abbr}'.",                    'auto_fixable': True,
+                    'description': f"Сокращение без правильного окончания: '{matched_text}'. Правильно: '{num}-{suffix} {abbr}'.",
+                    'auto_fixable': True,
                     'text': matched_text,
                     'replacement': matched_text.replace(f"{num} {abbr}", f"{num}-{suffix} {abbr}")
                 })
