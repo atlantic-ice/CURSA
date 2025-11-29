@@ -4,6 +4,10 @@ import json
 from docx.shared import Pt, Cm
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from collections import defaultdict
+from pathlib import Path
+
+# Директория с профилями
+PROFILES_DIR = Path(__file__).parent.parent.parent / 'profiles'
 
 # === NORM_RULES: 30 нормоконтрольных правил ===
 NORM_RULES = [
@@ -52,9 +56,52 @@ class NormControlChecker:
         {'type': 'supervisor', 'keywords': ['руководитель'], 'case': 'title', 'min_lines_after': 4},
         {'type': 'city_year', 'keywords': ['город', 'благовещенск'], 'case': 'title', 'min_lines_after': 0},
     ]
-    def __init__(self):
-        # Стандартные правила для курсовых работ
-        self.standard_rules = {
+    
+    def __init__(self, profile_id=None, profile_data=None):
+        """
+        Инициализация проверяющего с возможностью указания профиля
+        
+        Args:
+            profile_id: ID профиля для загрузки из файла
+            profile_data: Данные профиля напрямую (имеет приоритет над profile_id)
+        """
+        # Загружаем базовые стандартные правила
+        self.standard_rules = self._get_default_rules()
+        
+        # Применяем профиль, если указан
+        self.profile = None
+        self.profile_name = "Базовый ГОСТ"
+        
+        if profile_data:
+            self._apply_profile(profile_data)
+        elif profile_id:
+            self._load_and_apply_profile(profile_id)
+        
+        # Улучшенные паттерны для проверки литературы
+        self.bibliography_patterns = {
+            'one_author': r'^[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.\s.*\s[–—-]\s.*,\s\d{4}\.\s[–—-]\s\d+\sс\.?$',
+            '2_3_authors': r'^[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.,\s[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\..*\s[–—-]\s.*,\s\d{4}\.\s[–—-]\s\d+\sс\.?$',
+            '4_authors': r'^[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.,\s[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.,\s[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.,\s[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\..*$',
+            '5_plus_authors': r'^.*\[и\sдр\.\].*$',
+            'web_resource': r'^.*\s?\[Электронный\sресурс\]\s?.*URL:\s.+\s\(дата\sобращения:?\s\d{2}\.\d{2}\.\d{4}\)\.?$',
+            'law': r'^.*(закон|постановление|указ|кодекс).*от\s\d{2}\.\d{2}\.\d{4}.*№.*$',
+            'gost': r'^ГОСТ\s.*[–—-]\s\d{4}.*$'
+        }
+        
+        # Типовые сообщения об ошибках
+        self.bibliography_error_messages = {
+            'one_author': "Неправильное оформление источника с одним автором. Должно быть: 'Фамилия, И.О. Название – Город, Год. – Количество страниц с.'",
+            '2_3_authors': "Неправильное оформление источника с 2-3 авторами. Должно быть: 'Фамилия, И.О., Фамилия, И.О. Название – Город, Год. – Количество страниц с.'",
+            '4_authors': "Неправильное оформление источника с 4 авторами. Должно содержать четыре автора, разделенных запятыми.",
+            '5_plus_authors': "Неправильное оформление источника с 5 и более авторами. Должно содержать '[и др.]'.",
+            'web_resource': "Неправильное оформление интернет-ресурса. Должно содержать '[Электронный ресурс]', 'URL:' и '(дата обращения: ДД.ММ.ГГГГ)'.",
+            'law': "Неправильное оформление законодательного акта. Должно содержать тип документа, дату и номер.",
+            'gost': "Неправильное оформление ГОСТа. Должно быть: 'ГОСТ Номер–Год...'."
+        }
+    
+    def _get_default_rules(self):
+        """Возвращает базовые правила ГОСТ по умолчанию"""
+        return {
             'font': {
                 'name': 'Times New Roman',
                 'size': 14.0,  # pt
@@ -80,7 +127,6 @@ class NormControlChecker:
                     'alignment': WD_PARAGRAPH_ALIGNMENT.LEFT
                 }
             },
-            # Добавляем обязательные разделы для курсовой работы
             'required_sections': [
                 'введение', 
                 'заключение', 
@@ -88,29 +134,107 @@ class NormControlChecker:
                 'содержание',
                 'цель',
                 'задачи'
-            ]
+            ],
+            'bibliography': {
+                'min_sources': 15,
+                'max_age_years': 5
+            }
         }
+    
+    def _load_and_apply_profile(self, profile_id):
+        """Загружает профиль из файла и применяет его"""
+        try:
+            profile_path = PROFILES_DIR / f"{profile_id}.json"
+            
+            if not profile_path.exists():
+                # Пробуем default_gost как fallback
+                profile_path = PROFILES_DIR / "default_gost.json"
+            
+            if profile_path.exists():
+                with open(profile_path, 'r', encoding='utf-8') as f:
+                    profile_data = json.load(f)
+                self._apply_profile(profile_data)
+        except Exception as e:
+            # Если не удалось загрузить, используем базовые правила
+            print(f"Ошибка загрузки профиля {profile_id}: {e}")
+    
+    def _apply_profile(self, profile_data):
+        """Применяет правила из профиля к standard_rules"""
+        if not profile_data:
+            return
+            
+        self.profile = profile_data
+        self.profile_name = profile_data.get('name', 'Пользовательский профиль')
         
-        # Улучшенные паттерны для проверки литературы
-        self.bibliography_patterns = {
-            'one_author': r'^[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.\s.*\s[–—-]\s.*,\s\d{4}\.\s[–—-]\s\d+\sс\.?$',
-            '2_3_authors': r'^[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.,\s[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\..*\s[–—-]\s.*,\s\d{4}\.\s[–—-]\s\d+\sс\.?$',
-            '4_authors': r'^[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.,\s[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.,\s[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\.,\s[А-Я][а-я]+,\s[А-Я]\.\s?[А-Я]\..*$',
-            '5_plus_authors': r'^.*\[и\sдр\.\].*$',
-            'web_resource': r'^.*\s?\[Электронный\sресурс\]\s?.*URL:\s.+\s\(дата\sобращения:?\s\d{2}\.\d{2}\.\d{4}\)\.?$',
-            'law': r'^.*(закон|постановление|указ|кодекс).*от\s\d{2}\.\d{2}\.\d{4}.*№.*$',
-            'gost': r'^ГОСТ\s.*[–—-]\s\d{4}.*$'
-        }
+        rules = profile_data.get('rules', {})
         
-        # Типовые сообщения об ошибках
-        self.bibliography_error_messages = {
-            'one_author': "Неправильное оформление источника с одним автором. Должно быть: 'Фамилия, И.О. Название – Город, Год. – Количество страниц с.'",
-            '2_3_authors': "Неправильное оформление источника с 2-3 авторами. Должно быть: 'Фамилия, И.О., Фамилия, И.О. Название – Город, Год. – Количество страниц с.'",
-            '4_authors': "Неправильное оформление источника с 4 авторами. Должно содержать четыре автора, разделенных запятыми.",
-            '5_plus_authors': "Неправильное оформление источника с 5 и более авторами. Должно содержать '[и др.]'.",
-            'web_resource': "Неправильное оформление интернет-ресурса. Должно содержать '[Электронный ресурс]', 'URL:' и '(дата обращения: ДД.ММ.ГГГГ)'.",
-            'law': "Неправильное оформление законодательного акта. Должно содержать тип документа, дату и номер.",
-            'gost': "Неправильное оформление ГОСТа. Должно быть: 'ГОСТ Номер–Год...'."
+        # Применяем правила шрифта
+        if 'font' in rules:
+            font_rules = rules['font']
+            if 'name' in font_rules:
+                self.standard_rules['font']['name'] = font_rules['name']
+            if 'size' in font_rules:
+                self.standard_rules['font']['size'] = float(font_rules['size'])
+        
+        # Применяем правила полей
+        if 'margins' in rules:
+            margins = rules['margins']
+            for side in ['left', 'right', 'top', 'bottom']:
+                if side in margins:
+                    self.standard_rules['margins'][side] = float(margins[side])
+        
+        # Применяем межстрочный интервал
+        if 'line_spacing' in rules:
+            self.standard_rules['line_spacing'] = float(rules['line_spacing'])
+        
+        # Применяем отступ первой строки
+        if 'first_line_indent' in rules:
+            self.standard_rules['first_line_indent'] = Cm(float(rules['first_line_indent']))
+        
+        # Применяем правила заголовков
+        if 'headings' in rules:
+            for level in ['h1', 'h2', 'h3']:
+                if level in rules['headings']:
+                    if level not in self.standard_rules['headings']:
+                        self.standard_rules['headings'][level] = {}
+                    
+                    h_rules = rules['headings'][level]
+                    if 'font_size' in h_rules:
+                        self.standard_rules['headings'][level]['font_size'] = float(h_rules['font_size'])
+                    if 'bold' in h_rules:
+                        self.standard_rules['headings'][level]['bold'] = h_rules['bold']
+                    if 'alignment' in h_rules:
+                        align_map = {
+                            'CENTER': WD_PARAGRAPH_ALIGNMENT.CENTER,
+                            'LEFT': WD_PARAGRAPH_ALIGNMENT.LEFT,
+                            'RIGHT': WD_PARAGRAPH_ALIGNMENT.RIGHT,
+                            'JUSTIFY': WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                        }
+                        self.standard_rules['headings'][level]['alignment'] = align_map.get(
+                            h_rules['alignment'], WD_PARAGRAPH_ALIGNMENT.LEFT
+                        )
+        
+        # Применяем обязательные разделы
+        if 'required_sections' in rules:
+            self.standard_rules['required_sections'] = rules['required_sections']
+        
+        # Применяем правила библиографии
+        if 'bibliography' in rules:
+            if 'bibliography' not in self.standard_rules:
+                self.standard_rules['bibliography'] = {}
+            bib = rules['bibliography']
+            if 'min_sources' in bib:
+                self.standard_rules['bibliography']['min_sources'] = int(bib['min_sources'])
+            if 'max_age_years' in bib:
+                self.standard_rules['bibliography']['max_age_years'] = int(bib['max_age_years'])
+    
+    def get_profile_info(self):
+        """Возвращает информацию о текущем профиле"""
+        return {
+            'name': self.profile_name,
+            'profile_id': self.profile.get('id') if self.profile else None,
+            'category': self.profile.get('category') if self.profile else 'gost',
+            'rules': self.standard_rules
         }
     
     def check_document(self, document_data):
@@ -153,7 +277,8 @@ class NormControlChecker:
         response = {
             'rules_results': results,
             'total_issues_count': len(all_issues),
-            'issues': all_issues
+            'issues': all_issues,
+            'profile': self.get_profile_info()
         }
           # Подготовим статистику по категориям и серьезности проблем
         response['statistics'] = self._calculate_statistics(results)

@@ -23,6 +23,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { ColorModeContext } from '../App';
+import StarLogo from './StarLogo';
 
 const Header = () => {
   const theme = useTheme();
@@ -141,14 +142,10 @@ const Header = () => {
               gap: 1.5,
             }}
           >
-            <Box
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(59,130,246,0.6), rgba(59,130,246,0.2))',
-                border: '1px solid rgba(59,130,246,0.3)',
-              }}
+            <StarLogo 
+              size={28} 
+              color={theme.palette.mode === 'dark' ? '#fff' : theme.palette.primary.main}
+              glowColor={theme.palette.primary.main}
             />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '0.1em' }}>

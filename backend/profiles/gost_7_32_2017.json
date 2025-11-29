@@ -1,0 +1,164 @@
+{
+    "name": "Стандарт ГОСТ 7.32-2017",
+    "description": "ГОСТ 7.32-2017 — Отчёт о научно-исследовательской работе. Структура и правила оформления.",
+    "version": "7.32-2017",
+    "is_system": true,
+    "category": "gost",
+    "rules": {
+        "font": {
+            "name": "Times New Roman",
+            "size": 14.0,
+            "color": "000000",
+            "allowed_fonts": ["Times New Roman", "Arial", "Calibri"]
+        },
+        "margins": {
+            "left": 3.0,
+            "right": 1.5,
+            "top": 2.0,
+            "bottom": 2.0,
+            "header": 1.25,
+            "footer": 1.25
+        },
+        "line_spacing": 1.5,
+        "first_line_indent": 1.25,
+        "paragraph_alignment": "JUSTIFY",
+        "page_numbering": {
+            "position": "bottom_center",
+            "start_from": 1,
+            "skip_title": true,
+            "font_size": 12
+        },
+        "headings": {
+            "h1": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "CENTER",
+                "all_caps": true,
+                "space_before": 0,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true,
+                "page_break_before": true
+            },
+            "h2": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "JUSTIFY",
+                "all_caps": false,
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h3": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "JUSTIFY",
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 0,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            }
+        },
+        "tables": {
+            "font_size": 12.0,
+            "min_font_size": 10.0,
+            "alignment": "LEFT",
+            "line_spacing": 1.0,
+            "space_before": 12,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "borders": true,
+            "caption_position": "top",
+            "caption_format": "Таблица {number} – {title}"
+        },
+        "figures": {
+            "caption_position": "bottom",
+            "caption_format": "Рисунок {number} – {title}",
+            "alignment": "CENTER",
+            "space_before": 12,
+            "space_after": 12
+        },
+        "captions": {
+            "font_size": 12.0,
+            "alignment": "CENTER",
+            "space_before": 6,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "line_spacing": 1.0,
+            "separator": " – "
+        },
+        "lists": {
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "alignment": "JUSTIFY",
+            "first_line_indent": 0,
+            "left_indent": 1.25,
+            "bullet_types": ["–", "а)", "1)"],
+            "numbered_format": "arabic"
+        },
+        "footnotes": {
+            "font_size": 10.0,
+            "line_spacing": 1.0,
+            "alignment": "JUSTIFY"
+        },
+        "formulas": {
+            "alignment": "CENTER",
+            "numbering": "right",
+            "numbering_format": "({number})",
+            "space_before": 6,
+            "space_after": 6
+        },
+        "code_listings": {
+            "font_name": "Courier New",
+            "font_size": 12.0,
+            "line_spacing": 1.0,
+            "caption_format": "Листинг {number} – {title}"
+        },
+        "required_sections": [
+            "титульный лист",
+            "содержание",
+            "введение",
+            "основная часть",
+            "заключение",
+            "список использованных источников"
+        ],
+        "optional_sections": [
+            "реферат",
+            "определения",
+            "обозначения и сокращения",
+            "приложения"
+        ]
+    },
+    "bibliography": {
+        "style": "gost_r_7_0_5_2008",
+        "min_sources": 10,
+        "sorting": "appearance",
+        "patterns": {
+            "one_author": "^[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]?\\.?\\s.*\\s[–—-]\\s.*,\\s\\d{4}\\..*$",
+            "2_3_authors": "^[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]?\\.?,\\s[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]?\\.?.*$",
+            "collective": "^.*\\[и\\sдр\\.\\].*$",
+            "web_resource": "^.*\\[Электронный\\sресурс\\].*URL:.*\\(дата\\sобращения.*\\).*$",
+            "gost": "^ГОСТ\\s[\\d\\.]+[–—-]\\d{4}.*$",
+            "law": "^(Федеральный закон|Постановление|Указ|Распоряжение).*от\\s\\d{2}\\.\\d{2}\\.\\d{4}.*№.*$"
+        },
+        "messages": {
+            "one_author": "Формат: Фамилия, И.О. Название / И.О. Фамилия. – Город: Издательство, Год. – Страниц с.",
+            "web_resource": "Формат: Название [Электронный ресурс]. URL: адрес (дата обращения: ДД.ММ.ГГГГ).",
+            "gost": "Формат: ГОСТ Номер–Год. Название. – Город: Издательство, Год."
+        }
+    },
+    "validation": {
+        "check_font": true,
+        "check_margins": true,
+        "check_spacing": true,
+        "check_headings": true,
+        "check_tables": true,
+        "check_figures": true,
+        "check_bibliography": true,
+        "check_structure": true,
+        "check_page_numbers": true
+    }
+}

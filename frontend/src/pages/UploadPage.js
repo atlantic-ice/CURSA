@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
+import {
   Box, 
   Typography, 
   Button, 
@@ -36,7 +36,10 @@ import HistoryIcon from '@mui/icons-material/History';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import SchoolIcon from '@mui/icons-material/School';
 import toast, { Toaster } from 'react-hot-toast';
+import StarLogo, { StarLogoPulsing } from '../components/StarLogo';
 
 // В дев-среде используем прокси CRA (пустая база), иначе — REACT_APP_API_BASE или прод-URL
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -166,7 +169,7 @@ export default function UploadPage() {
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      bgcolor: 'background.default',
+      bgcolor: '#000',
       color: 'text.primary',
       display: 'flex',
       flexDirection: 'column',
@@ -183,59 +186,27 @@ export default function UploadPage() {
         }}
       />
 
-      {/* Professional Background Effects */}
-      <Box sx={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-        {/* Main Gradient Orb */}
-        <Box sx={{
-          position: 'absolute',
-          top: '-20%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '80%',
-          height: '80%',
-          background: `radial-gradient(circle at center, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 60%)`,
-          filter: 'blur(100px)',
-          opacity: 0.8,
-        }} />
-        
-        {/* Secondary Orb */}
-        <Box sx={{
-          position: 'absolute',
-          bottom: '-10%',
-          right: '-10%',
-          width: '40%',
-          height: '40%',
-          background: `radial-gradient(circle at center, ${alpha(theme.palette.secondary.main, 0.05)} 0%, transparent 60%)`,
-          filter: 'blur(80px)',
-          opacity: 0.6,
-        }} />
-
-        {/* Grid Pattern */}
-        <Box sx={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `linear-gradient(${alpha(theme.palette.divider, 0.03)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(theme.palette.divider, 0.03)} 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
-          maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)',
-        }} />
-      </Box>
-
       <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
         <Stack spacing={6} alignItems="center">
           {/* Header */}
           <Box sx={{ textAlign: 'center', mb: 2 }}>
             <motion.div initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}>
-              <Typography variant="h1" sx={{ 
-                fontSize: { xs: '3rem', md: '5rem' }, 
-                fontWeight: 900, 
-                letterSpacing: '-0.03em',
-                color: 'text.primary',
-                lineHeight: 0.9,
-                mb: 2,
-                textShadow: `0 0 40px ${alpha(theme.palette.primary.main, 0.3)}`
-              }}>
-                CURSA
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mb: 2 }}>
+                <StarLogoPulsing 
+                  size={56} 
+                  color={theme.palette.primary.main}
+                  glowColor={theme.palette.primary.main}
+                />
+                <Typography variant="h1" sx={{ 
+                  fontSize: { xs: '3rem', md: '5rem' }, 
+                  fontWeight: 900, 
+                  letterSpacing: '-0.03em',
+                  color: 'text.primary',
+                  lineHeight: 0.9,
+                }}>
+                  CURSA
+                </Typography>
+              </Box>
             </motion.div>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.3 }}>
               <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400, maxWidth: 600, mx: 'auto', lineHeight: 1.6, fontSize: '1.1rem' }}>
@@ -262,7 +233,6 @@ export default function UploadPage() {
                 backdropFilter: 'blur(24px)',
                 border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                 overflow: 'hidden',
-                boxShadow: `0 24px 48px -12px ${alpha('#000', 0.5)}`,
                 position: 'relative'
               }}
             >
@@ -298,11 +268,58 @@ export default function UploadPage() {
                         '& .MuiSelect-select': { py: 0.5, textAlign: 'right', pr: '24px !important' },
                         '& .MuiSvgIcon-root': { right: 0 }
                       }}
+                      renderValue={(value) => {
+                        const profile = profiles.find(p => p.id === value);
+                        if (!profile) return 'Выберите стандарт';
+                        return (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
+                            {profile.category === 'gost' && <VerifiedIcon fontSize="small" color="success" />}
+                            {profile.category === 'university' && <SchoolIcon fontSize="small" color="info" />}
+                            {profile.name}
+                          </Box>
+                        );
+                      }}
                     >
                       <MenuItem value="" disabled>Выберите стандарт</MenuItem>
-                      {profiles.map(p => (
-                        <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+                      
+                      {/* GOST profiles */}
+                      {profiles.filter(p => p.category === 'gost').length > 0 && (
+                        <MenuItem disabled sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'success.main', opacity: '1 !important' }}>
+                          СТАНДАРТЫ ГОСТ
+                        </MenuItem>
+                      )}
+                      {profiles.filter(p => p.category === 'gost').map(p => (
+                        <MenuItem key={p.id} value={p.id} sx={{ display: 'flex', gap: 1 }}>
+                          <VerifiedIcon fontSize="small" color="success" />
+                          {p.name}
+                        </MenuItem>
                       ))}
+                      
+                      {/* University profiles */}
+                      {profiles.filter(p => p.category === 'university').length > 0 && (
+                        <MenuItem disabled sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'info.main', opacity: '1 !important', mt: 1 }}>
+                          ТРЕБОВАНИЯ ВУЗОВ
+                        </MenuItem>
+                      )}
+                      {profiles.filter(p => p.category === 'university').map(p => (
+                        <MenuItem key={p.id} value={p.id} sx={{ display: 'flex', gap: 1 }}>
+                          <SchoolIcon fontSize="small" color="info" />
+                          {p.name}
+                        </MenuItem>
+                      ))}
+                      
+                      {/* Custom profiles */}
+                      {profiles.filter(p => p.category === 'custom').length > 0 && (
+                        <MenuItem disabled sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.secondary', opacity: '1 !important', mt: 1 }}>
+                          ПОЛЬЗОВАТЕЛЬСКИЕ
+                        </MenuItem>
+                      )}
+                      {profiles.filter(p => p.category === 'custom').map(p => (
+                        <MenuItem key={p.id} value={p.id}>
+                          {p.name}
+                        </MenuItem>
+                      ))}
+                      
                       {profiles.length === 0 && <MenuItem value="default">ГОСТ 7.32-2017 (Базовый)</MenuItem>}
                     </Select>
                   </FormControl>
@@ -424,9 +441,7 @@ export default function UploadPage() {
                       fontWeight: 700,
                       textTransform: 'none',
                       background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                      boxShadow: `0 8px 20px -4px ${alpha(theme.palette.primary.main, 0.5)}`,
                       '&:hover': {
-                        boxShadow: `0 12px 24px -4px ${alpha(theme.palette.primary.main, 0.6)}`,
                         transform: 'translateY(-2px)'
                       },
                       transition: 'all 0.3s ease'

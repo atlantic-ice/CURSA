@@ -1,11 +1,18 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "CURSA",
+  "name": "CURSA - Проверка нормоконтроля",
+  "description": "Интеллектуальная система проверки курсовых работ на соответствие ГОСТ",
   "icons": [
     {
       "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
+    },
+    {
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
     },
     {
       "src": "logo192.png",
@@ -20,6 +27,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#3b82f6",
+  "background_color": "#0f172a"
 }

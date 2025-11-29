@@ -167,7 +167,13 @@ def upload_document():
             current_app.logger.info(f"Ключи документа: {document_data.keys()}")
             
             current_app.logger.info("Шаг 3: Создание NormControlChecker")
-            checker = NormControlChecker()
+            
+            # Получаем ID профиля из запроса
+            profile_id = request.form.get('profile_id')
+            current_app.logger.info(f"Используемый профиль: {profile_id or 'default_gost'}")
+            
+            # Создаем checker с указанным профилем
+            checker = NormControlChecker(profile_id=profile_id)
             
             current_app.logger.info("Шаг 4: Выполнение проверки")
             check_results = checker.check_document(document_data)
@@ -217,12 +223,8 @@ def upload_document():
                 correction_success = os.path.exists(corrected_file_path)
                 current_app.logger.info(f"Автоисправление завершено: {correction_success}, путь: {corrected_file_path}")
 
-                # Повторная проверка уже финального исправленного документа
-                if correction_success and corrected_file_path and os.path.exists(corrected_file_path):
-                    current_app.logger.info("Шаг 7: Повторная проверка финального исправленного документа")
-                    corrected_processor = DocumentProcessor(corrected_file_path)
-                    corrected_data = corrected_processor.extract_data()
-                    corrected_check_results = checker.check_document(corrected_data)
+                # Повторная проверка отключена по запросу
+                corrected_check_results = None
 
             except Exception as auto_fix_err:
                 current_app.logger.warning(f"Автоисправление не выполнено: {type(auto_fix_err).__name__}: {str(auto_fix_err)}")
@@ -249,10 +251,7 @@ def upload_document():
                 'correction_success': correction_success,
                 'corrected_file_path': corrected_filename if correction_success else None,
                 'corrected_check_results': corrected_check_results,
-                'report_path': report_path,
-                'ai_enabled': False,
-                'ai_suggestions': None,
-                'ai_error': None
+                'report_path': report_path
             }), 200
             
         except Exception as inner_e:
@@ -846,52 +845,3 @@ def download_report():
         current_app.logger.error(f"Ошибка при скачивании отчета: {type(e).__name__}: {str(e)}")
         traceback.print_exc(file=sys.stdout)
         return jsonify({'error': f'Ошибка при скачивании отчета: {str(e)}'}), 500
-
-
-@bp.route('/ai/suggest', methods=['POST'])
-def ai_suggest():
-    """
-    Генерация рекомендаций на основе результатов проверки (имитация AI)
-    """
-    data = request.json
-    check_results = data.get('check_results', {})
-    filename = data.get('filename', 'документ')
-    
-    suggestions = []
-    suggestions.append(f"Анализ документа '{filename}' завершен.\n")
-    
-    total_issues = check_results.get('total_issues_count', 0)
-    
-    if total_issues == 0:
-        suggestions.append("Документ выглядит отлично! Ошибок нормоконтроля не обнаружено.")
-        suggestions.append("Рекомендация: Убедитесь, что содержание соответствует теме работы.")
-    else:
-        suggestions.append(f"Обнаружено {total_issues} несоответствий стандартам.")
-        
-        # Analyze specific issues
-        issues = check_results.get('issues', [])
-        
-        # Group by type
-        issue_types = {}
-        for issue in issues:
-            t = issue.get('type', 'unknown')
-            issue_types[t] = issue_types.get(t, 0) + 1
-            
-        if any('font' in k for k in issue_types.keys()):
-            suggestions.append("- Наблюдаются проблемы со шрифтами. Рекомендуется выделить весь текст (Ctrl+A) и установить единый шрифт (обычно Times New Roman 14пт).")
-            
-        if any('margin' in k for k in issue_types.keys()):
-            suggestions.append("- Поля документа не соответствуют стандарту. Проверьте настройки страницы в макете.")
-            
-        if any('heading' in k for k in issue_types.keys()):
-            suggestions.append("- Структура заголовков нарушена. Используйте стили заголовков для автоматического формирования оглавления.")
-            
-        suggestions.append("\nОбщие рекомендации:")
-        suggestions.append("1. Используйте автоматическую расстановку переносов.")
-        suggestions.append("2. Проверьте список литературы на актуальность источников (не старше 5 лет).")
-        suggestions.append("3. Убедитесь, что все рисунки и таблицы имеют подписи и ссылки в тексте.")
-
-    return jsonify({
-        'success': True,
-        'suggestions': "\n".join(suggestions)
-    })

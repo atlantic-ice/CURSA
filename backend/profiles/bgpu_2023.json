@@ -1,0 +1,105 @@
+{
+    "name": "БГПУ (СТО 7.3-2.5.02-2023)",
+    "description": "Стандарт оформления выпускных квалификационных и курсовых работ ФГБОУ ВО «БГПУ»",
+    "category": "university",
+    "university": {
+        "short_name": "БГПУ",
+        "full_name": "ФГБОУ ВО «БГПУ»"
+    },
+    "version": "2023",
+    "rules": {
+        "font": {
+            "name": "Times New Roman",
+            "size": 14.0,
+            "color": "000000"
+        },
+        "margins": {
+            "left": 3.0,
+            "right": 1.5,
+            "top": 2.0,
+            "bottom": 2.0
+        },
+        "line_spacing": 1.5,
+        "first_line_indent": 1.25,
+        "paragraph_alignment": "JUSTIFY",
+        "headings": {
+            "h1": {
+                "font_size": 14.0,
+                "bold": false,
+                "alignment": "CENTER",
+                "all_caps": true,
+                "space_before": 0,
+                "space_after": 28,
+                "line_spacing": 1.0,
+                "keep_with_next": true
+            },
+            "h2": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 28,
+                "space_after": 28,
+                "line_spacing": 1.0,
+                "keep_with_next": true
+            },
+            "h3": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 28,
+                "space_after": 28,
+                "line_spacing": 1.0,
+                "keep_with_next": true
+            }
+        },
+        "tables": {
+            "font_size": 14.0,
+            "alignment": "LEFT",
+            "line_spacing": 1.0,
+            "space_before": 0,
+            "space_after": 0,
+            "first_line_indent": 0,
+            "borders": true
+        },
+        "captions": {
+            "font_size": 14.0,
+            "alignment": "CENTER",
+            "space_before": 12,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "line_spacing": 1.0,
+            "separator": " – "
+        },
+        "lists": {
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "alignment": "JUSTIFY",
+            "first_line_indent": 1.25,
+            "left_indent": 0
+        },
+        "footnotes": {
+            "font_size": 12.0,
+            "line_spacing": 1.0,
+            "alignment": "JUSTIFY"
+        },
+        "required_sections": [
+            "введение",
+            "заключение",
+            "список использованных источников"
+        ],
+        "bibliography": {
+            "style": "gost_2018",
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "hanging_indent": 1.25,
+            "sort_order": "alphabetical",
+            "numbering": true,
+            "min_sources": 15,
+            "max_age_years": 5,
+            "require_foreign": false,
+            "foreign_min_percent": 0
+        }
+    }
+}

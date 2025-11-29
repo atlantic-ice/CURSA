@@ -124,8 +124,8 @@ class DocumentCorrector:
                 out_path = os.path.join(temp_dir, f"corrected_{file_name}")
                 self.temp_files.append(out_path)
             
-            # Если список ошибок не предоставлен, исправляем все, что можем
-            if errors is None:
+            # Если список ошибок не предоставлен или пустой, исправляем все, что можем
+            if errors is None or len(errors) == 0:
                 # Применяем базовые стили перед точечными корректировками, чтобы документ выглядел системно
                 self._apply_core_styles(document)
                 self._correct_all(document)
@@ -1007,6 +1007,65 @@ class DocumentCorrector:
                         paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY                        # Включаем автоматические переносы для улучшения выравнивания
                         self._enable_hyphenation(paragraph)
 
+    def _insert_into_pPr(self, pPr, element):
+        """
+        Вставляет элемент в pPr в правильном порядке согласно ECMA-376
+        """
+        pPr_order = {
+            'pStyle': 1,
+            'keepNext': 2,
+            'keepLines': 3,
+            'pageBreakBefore': 4,
+            'framePr': 5,
+            'widowControl': 6,
+            'numPr': 7,
+            'suppressLineNumbers': 8,
+            'pBdr': 9,
+            'shd': 10,
+            'tabs': 11,
+            'suppressAutoHyphens': 12,
+            'kinsoku': 13,
+            'wordWrap': 14,
+            'overflowPunct': 15,
+            'topLinePunct': 16,
+            'autoSpaceDE': 17,
+            'autoSpaceDN': 18,
+            'bidi': 19,
+            'adjustRightInd': 20,
+            'snapToGrid': 21,
+            'spacing': 22,
+            'ind': 23,
+            'contextualSpacing': 24,
+            'mirrorIndents': 25,
+            'suppressOverlap': 26,
+            'jc': 27,
+            'textDirection': 28,
+            'textAlignment': 29,
+            'textboxTightWrap': 30,
+            'outlineLvl': 31,
+            'divId': 32,
+            'cnfStyle': 33,
+            'rPr': 34,
+            'sectPr': 35,
+            'pPrChange': 36
+        }
+        
+        tag_name = element.tag.split('}')[-1]
+        target_idx = pPr_order.get(tag_name, 999)
+        
+        inserted = False
+        for i, child in enumerate(pPr):
+            child_tag = child.tag.split('}')[-1]
+            child_idx = pPr_order.get(child_tag, 999)
+            
+            if child_idx > target_idx:
+                pPr.insert(i, element)
+                inserted = True
+                break
+        
+        if not inserted:
+            pPr.append(element)
+
     def _enable_hyphenation(self, paragraph):
         """
         Включает автоматические переносы для параграфа
@@ -1015,14 +1074,16 @@ class DocumentCorrector:
             pPr = paragraph._element.get_or_add_pPr()
             if pPr is not None:
                 # Добавляем свойство автоматического переноса слов
-                hyphenation_element = OxmlElement('w:autoSpaceDE')
-                hyphenation_element.set(qn('w:val'), '1')
-                pPr.append(hyphenation_element)
+                if pPr.find(qn('w:autoSpaceDE')) is None:
+                    hyphenation_element = OxmlElement('w:autoSpaceDE')
+                    hyphenation_element.set(qn('w:val'), '1')
+                    self._insert_into_pPr(pPr, hyphenation_element)
                 
                 # Добавляем свойство выравнивания последней строки
-                last_line_element = OxmlElement('w:contextualSpacing')
-                last_line_element.set(qn('w:val'), '1')
-                pPr.append(last_line_element)
+                if pPr.find(qn('w:contextualSpacing')) is None:
+                    last_line_element = OxmlElement('w:contextualSpacing')
+                    last_line_element.set(qn('w:val'), '1')
+                    self._insert_into_pPr(pPr, last_line_element)
         except Exception as e:
             print(f"Предупреждение: Не удалось включить переносы слов: {str(e)}")
     
@@ -1144,48 +1205,64 @@ class DocumentCorrector:
             header_paragraph.paragraph_format.space_after = Pt(0)
             header_paragraph.paragraph_format.line_spacing = 1.0
             
-            # Добавляем номер страницы через поле
-            run = header_paragraph.add_run()
-            self._add_page_number(run)
-            
-            # Устанавливаем шрифт для номера страницы
-            run.font.name = self.rules['font']['name']  # Times New Roman
-            run.font.size = Pt(12)  # 12pt
-            run.font.bold = False
-            
-            # Добавляем пустой run после номера страницы для корректного отображения
-            header_paragraph.add_run()
+            # Добавляем номер страницы напрямую в параграф (без создания пустых runs)
+            self._add_page_number_to_paragraph(header_paragraph)
         
         # Отключаем нумерацию на первых страницах
         self._suppress_initial_page_numbers(document)
     
-    def _add_page_number(self, run):
+    def _add_page_number_to_paragraph(self, paragraph):
         """
-        Добавляет номер страницы через поле
+        Добавляет номер страницы через поле напрямую в параграф
+        Использует правильную структуру OOXML: каждый элемент в отдельном run
         """
-        # Создаем элементы для номера страницы
+        p_element = paragraph._element
+        
+        # Run 1: BEGIN field character с форматированием
+        r1 = OxmlElement('w:r')
+        # Добавляем rPr с форматированием шрифта
+        rPr = OxmlElement('w:rPr')
+        rFonts = OxmlElement('w:rFonts')
+        rFonts.set(qn('w:ascii'), 'Times New Roman')
+        rFonts.set(qn('w:hAnsi'), 'Times New Roman')
+        rPr.append(rFonts)
+        sz = OxmlElement('w:sz')
+        sz.set(qn('w:val'), '24')  # 12pt = 24 half-points
+        rPr.append(sz)
+        r1.append(rPr)
         fldChar1 = OxmlElement('w:fldChar')
         fldChar1.set(qn('w:fldCharType'), 'begin')
-
+        r1.append(fldChar1)
+        p_element.append(r1)
+        
+        # Run 2: Field instruction text
+        r2 = OxmlElement('w:r')
         instrText = OxmlElement('w:instrText')
         instrText.set(qn('xml:space'), 'preserve')
-        instrText.text = " PAGE \\* MERGEFORMAT "  # Добавляем MERGEFORMAT для лучшей совместимости
-
+        instrText.text = " PAGE "
+        r2.append(instrText)
+        p_element.append(r2)
+        
+        # Run 3: SEPARATE field character
+        r3 = OxmlElement('w:r')
         fldChar2 = OxmlElement('w:fldChar')
         fldChar2.set(qn('w:fldCharType'), 'separate')
-
-        fldChar3 = OxmlElement('w:t')
-        fldChar3.text = "1"  # Placeholder для номера страницы
-
-        fldChar4 = OxmlElement('w:fldChar')
-        fldChar4.set(qn('w:fldCharType'), 'end')
-
-        # Добавляем созданные элементы в параграф
-        run._element.append(fldChar1)
-        run._element.append(instrText)
-        run._element.append(fldChar2)
-        run._element.append(fldChar3)
-        run._element.append(fldChar4)
+        r3.append(fldChar2)
+        p_element.append(r3)
+        
+        # Run 4: Placeholder text (will be replaced by actual page number when printed)
+        r4 = OxmlElement('w:r')
+        t = OxmlElement('w:t')
+        t.text = "1"
+        r4.append(t)
+        p_element.append(r4)
+        
+        # Run 5: END field character
+        r5 = OxmlElement('w:r')
+        fldChar3 = OxmlElement('w:fldChar')
+        fldChar3.set(qn('w:fldCharType'), 'end')
+        r5.append(fldChar3)
+        p_element.append(r5)
     
     def _suppress_initial_page_numbers(self, document):
         """
@@ -1199,23 +1276,63 @@ class DocumentCorrector:
                 # Получаем XML-элемент секции
                 section_props = first_section._sectPr
                 
-                # Создаем новый элемент titlePg
-                title_pg = OxmlElement('w:titlePg')
-                
-                # Проверяем, существует ли уже элемент
-                if section_props.find(qn('w:titlePg')) is None:
-                    section_props.append(title_pg)
-                
-                # Устанавливаем начальный номер страницы (3 или 4, в зависимости от оглавления)
-                # Находим элемент pgNumType или создаем новый
+                # Порядок элементов в sectPr согласно ECMA-376
+                sectPr_order = {
+                    'headerReference': 1,
+                    'footerReference': 2,
+                    'footnotePr': 3,
+                    'endnotePr': 4,
+                    'type': 5,
+                    'pgSz': 6,
+                    'pgMar': 7,
+                    'paperSrc': 8,
+                    'pgBorders': 9,
+                    'lnNumType': 10,
+                    'pgNumType': 11,
+                    'cols': 12,
+                    'formProt': 13,
+                    'vAlign': 14,
+                    'noEndnote': 15,
+                    'titlePg': 16,
+                    'textDirection': 17,
+                    'bidi': 18,
+                    'rtlGutter': 19,
+                    'docGrid': 20,
+                    'printerSettings': 21,
+                    'sectPrChange': 22
+                }
+
+                def insert_in_order(parent, element):
+                    tag_name = element.tag.split('}')[-1]
+                    target_idx = sectPr_order.get(tag_name, 999)
+                    
+                    inserted = False
+                    for i, child in enumerate(parent):
+                        child_tag = child.tag.split('}')[-1]
+                        child_idx = sectPr_order.get(child_tag, 999)
+                        
+                        if child_idx > target_idx:
+                            parent.insert(i, element)
+                            inserted = True
+                            break
+                    
+                    if not inserted:
+                        parent.append(element)
+
+                # 1. Настраиваем pgNumType (11)
                 pg_num_type = section_props.find(qn('w:pgNumType'))
                 if pg_num_type is None:
                     pg_num_type = OxmlElement('w:pgNumType')
-                    section_props.append(pg_num_type)
+                    insert_in_order(section_props, pg_num_type)
                 
                 # Устанавливаем начальный номер страницы как 3
-                # (можно будет вручную изменить на 4, если оглавление занимает две страницы)
                 pg_num_type.set(qn('w:start'), '3')
+
+                # 2. Настраиваем titlePg (16)
+                title_pg = section_props.find(qn('w:titlePg'))
+                if title_pg is None:
+                    title_pg = OxmlElement('w:titlePg')
+                    insert_in_order(section_props, title_pg)
                 
         except Exception as e:
             print(f"Предупреждение: Не удалось настроить нумерацию начальных страниц: {str(e)}")
@@ -1637,13 +1754,9 @@ class DocumentCorrector:
                             ref = match.group(0)
                             new_text = new_text.replace(text[start-1:match.end()], f"{text[start-1]}\u00A0{ref}")
                     
-                    if new_text != text:
-                        paragraph.text = new_text
-                        
-                        # Восстанавливаем шрифт
-                        for run in paragraph.runs:
-                            run.font.name = self.rules['font']['name']
-                            run.font.size = Pt(self.rules['font']['size'])
+                    # ОТКЛЮЧЕНО: присвоение paragraph.text ломает структуру документа
+                    # if new_text != text:
+                    #     paragraph.text = new_text
                             
         except Exception as e:
             print(f"ОШИБКА при исправлении ссылок на литературу: {str(e)}")
@@ -2035,14 +2148,13 @@ class DocumentCorrector:
                 paragraph_props = paragraph._element.get_or_add_pPr()
                 if paragraph_props is not None:
                     # Создаем элемент для автоматической расстановки переносов
-                    hyphenation_element = OxmlElement('w:suppressAutoHyphens')
-                    hyphenation_element.set(qn('w:val'), '0')  # 0 = включено (не подавлять)
-                    paragraph_props.append(hyphenation_element)
+                    if paragraph_props.find(qn('w:suppressAutoHyphens')) is None:
+                        hyphenation_element = OxmlElement('w:suppressAutoHyphens')
+                        hyphenation_element.set(qn('w:val'), '0')  # 0 = включено (не подавлять)
+                        self._insert_into_pPr(paragraph_props, hyphenation_element)
                     
-                    # Добавляем настройку автоматического разрыва слов для русского языка
-                    lang_element = OxmlElement('w:lang')
-                    lang_element.set(qn('w:val'), 'ru-RU')
-                    paragraph_props.append(lang_element)
+                    # w:lang НЕ является дочерним элементом pPr, он должен быть в rPr
+                    # Удаляем некорректную вставку w:lang в pPr, которая ломала документ
             except Exception as e:
                 print(f"Предупреждение: Не удалось настроить переносы: {str(e)}")
         
@@ -2159,14 +2271,9 @@ class DocumentCorrector:
                 # Заменяем обычный пробел после предлога на неразрывный
                 text = text[:match.end()-1] + '\u00A0' + text[match.end():]
                 
-            # Если текст изменился, обновляем параграф
-            if text != paragraph.text:
-                paragraph.text = text
-                
-                # Восстанавливаем форматирование
-                for run in paragraph.runs:
-                    run.font.name = self.rules['font']['name']
-                    run.font.size = Pt(self.rules['font']['size'])
+            # ОТКЛЮЧЕНО: присвоение paragraph.text ломает структуру документа
+            # if text != paragraph.text:
+            #     paragraph.text = text
 
     def _correct_cross_references(self, document):
         """
@@ -2283,14 +2390,9 @@ class DocumentCorrector:
                     text = text[:match.start()] + correct_ref + text[match.end():]
                     modified = True
             
-            # Обновляем текст параграфа, если были внесены изменения
-            if modified:
-                paragraph.text = text
-                
-                # Восстанавливаем форматирование после изменения текста
-                for run in paragraph.runs:
-                    run.font.name = self.rules['font']['name']
-                    run.font.size = Pt(self.rules['font']['size'])
+            # ОТКЛЮЧЕНО: присвоение paragraph.text ломает структуру документа
+            # if modified:
+            #     paragraph.text = text
 
     def _correct_abbreviations_list(self, document):
         """
@@ -2364,9 +2466,9 @@ class DocumentCorrector:
                     paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
                     
                     # Проверяем, есть ли точка в конце расшифровки
-                    if not description.strip().endswith('.') and not description.strip().endswith(':'):
-                        # Добавляем точку в конце
-                        paragraph.text = f"{abbr.strip()} – {description.strip()}."
+                    # ОТКЛЮЧЕНО: присвоение paragraph.text ломает структуру документа
+                    # if not description.strip().endswith('.') and not description.strip().endswith(':'):
+                    #     paragraph.text = f"{abbr.strip()} – {description.strip()}."
                 
                 # Восстанавливаем форматирование после изменения текста
                 for run in paragraph.runs:
@@ -2408,11 +2510,11 @@ class DocumentCorrector:
                     # Сохраняем информацию о первом использовании
                     abbreviation_first_use[abbr] = (i, paragraph)
                     
-                    # Проверяем, есть ли расшифровка в этом же параграфе
-                    description = abbreviations_dict[abbr]
-                    if description.lower() not in text.lower() and f"({abbr})" not in text:
-                        # Если расшифровки нет, добавляем ее в скобках после первого употребления
-                        text_before = text[:match.end()]
-                        text_after = text[match.end():]
-                        new_text = f"{text_before} ({description}){text_after}"
-                        paragraph.text = new_text
+                    # ОТКЛЮЧЕНО: присвоение paragraph.text ломает структуру документа
+                    # description = abbreviations_dict[abbr]
+                    # if description.lower() not in text.lower() and f"({abbr})" not in text:
+                    #     text_before = text[:match.end()]
+                    #     text_after = text[match.end():]
+                    #     new_text = f"{text_before} ({description}){text_after}"
+                    #     paragraph.text = new_text
+                    pass

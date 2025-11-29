@@ -1,0 +1,40 @@
+{
+    "name": "Кафедра информатики МГУ",
+    "description": "Локальные требования кафедры информатики МГУ, расширяющие общие требования МГУ",
+    "extends": "mgu_requirements",
+    "rules": {
+        "code_listings": {
+            "font_name": "JetBrains Mono",
+            "font_size": 11.0,
+            "line_spacing": 1.0,
+            "highlight_keywords": true,
+            "max_lines_per_page": 50
+        },
+        "required_sections": [
+            "введение",
+            "постановка задачи",
+            "обзор литературы",
+            "архитектура системы",
+            "реализация",
+            "тестирование",
+            "заключение",
+            "список литературы",
+            "приложение"
+        ],
+        "appendix": {
+            "include_source_code": true,
+            "include_screenshots": true,
+            "include_test_results": true
+        }
+    },
+    "bibliography": {
+        "min_sources": 20,
+        "min_english_sources": 5,
+        "min_recent_sources": 10,
+        "recent_years": 5,
+        "patterns": {
+            "github_repo": "^.*GitHub.*$",
+            "arxiv": "^.*arXiv:\\d{4}\\.\\d+.*$"
+        }
+    }
+}

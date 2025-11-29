@@ -4,6 +4,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
+import StarLogo from './StarLogo';
 
 const Footer = () => {
   const theme = useTheme();
@@ -54,18 +55,23 @@ const Footer = () => {
         <Grid container spacing={4}>
           {/* Логотип и описание */}
           <Grid item xs={12} md={4}>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                fontWeight: 800,
-                letterSpacing: '0.05em',
-                fontFamily: '"Montserrat", "Roboto", "Arial", sans-serif',
-                color: theme => theme.palette.mode === 'dark' ? '#60a5fa' : '#2563eb',
-                mb: 2
-              }}
-            >
-              CURSA
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <StarLogo 
+                size={24} 
+                color={theme.palette.mode === 'dark' ? '#60a5fa' : '#2563eb'}
+              />
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  fontWeight: 800,
+                  letterSpacing: '0.05em',
+                  fontFamily: '"Montserrat", "Roboto", "Arial", sans-serif',
+                  color: theme.palette.mode === 'dark' ? '#60a5fa' : '#2563eb',
+                }}
+              >
+                CURSA
+              </Typography>
+            </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: 300 }}>
               Сервис автоматизированной проверки курсовых работ на соответствие требованиям оформления
             </Typography>

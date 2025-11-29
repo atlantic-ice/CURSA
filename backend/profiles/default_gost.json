@@ -1,6 +1,8 @@
 {
     "name": "ГОСТ (по умолчанию)",
     "description": "Стандартный профиль проверки по ГОСТ (строгий)",
+    "is_system": true,
+    "category": "gost",
     "rules": {
         "font": {
             "name": "Times New Roman",
@@ -83,7 +85,19 @@
             "заключение",
             "список литературы",
             "содержание"
-        ]
+        ],
+        "bibliography": {
+            "style": "gost",
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "hanging_indent": 1.25,
+            "sort_order": "alphabetical",
+            "numbering": true,
+            "min_sources": 15,
+            "max_age_years": 5,
+            "require_foreign": false,
+            "foreign_min_percent": 0
+        }
     },
     "bibliography": {
         "patterns": {

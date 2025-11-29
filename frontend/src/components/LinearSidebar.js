@@ -13,6 +13,7 @@ import {
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
 } from '@mui/icons-material';
+import StarLogo from './StarLogo';
 
 const LinearSidebar = ({ colorMode, mode }) => {
   const theme = useTheme();
@@ -49,19 +50,25 @@ const LinearSidebar = ({ colorMode, mode }) => {
           borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <Typography
-          variant="h5"
-          sx={{
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, #007AFF 0%, #0066D6 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          CURSA
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <StarLogo 
+            size={24} 
+            color={theme.palette.primary.main}
+          />
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #007AFF 0%, #0066D6 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            CURSA
+          </Typography>
+        </Box>
         <Typography
           variant="caption"
           sx={{

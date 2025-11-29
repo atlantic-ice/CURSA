@@ -21,9 +21,8 @@ import {
   LinearProgress,
   Stack,
   Tooltip,
-  ToggleButton,
-  ToggleButtonGroup,
-  Avatar
+  Avatar,
+  Slide
 } from '@mui/material';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend,
@@ -64,9 +63,9 @@ import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import SchoolIcon from '@mui/icons-material/School';
 import BuildIcon from '@mui/icons-material/Build';
 
-// База API: в dev используем прокси CRA (""), в prod — REACT_APP_API_BASE или прод-URL
+// База API: в dev используем прямой доступ к бэкенду (5000), в prod — REACT_APP_API_BASE или прод-URL
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const API_BASE = isLocal ? '' : (process.env.REACT_APP_API_BASE || 'https://cursa.onrender.com');
+const API_BASE = isLocal ? 'http://localhost:5000' : (process.env.REACT_APP_API_BASE || 'https://cursa.onrender.com');
 
 // --- Helper Functions ---
 
@@ -1080,6 +1079,10 @@ const ManualFixGuidesPanel = ({ issues }) => {
 };
 
 
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 const ReportPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1090,10 +1093,6 @@ const ReportPage = () => {
   const [loading, setLoading] = useState(false);
   const [correctionSuccess, setCorrectionSuccess] = useState(false);
   const [correctedFilePath, setCorrectedFilePath] = useState('');
-  const [viewMode, setViewMode] = useState('pre'); // 'pre' | 'post'
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiText, setAiText] = useState('');
-  const [showAi, setShowAi] = useState(false);
   const [filterSeverity, setFilterSeverity] = useState('all'); // 'all' | 'high' | 'medium' | 'low'
 
   // Инициализация исправленного файла из reportData (если был автоисправлен при загрузке)
@@ -1102,17 +1101,13 @@ const ReportPage = () => {
     if (reportData?.correction_success && reportData?.corrected_file_path) {
       setCorrectedFilePath(reportData.corrected_file_path);
       setCorrectionSuccess(true);
-      // Переключаем на просмотр результатов после исправления
-      if (reportData.corrected_check_results) {
-        setViewMode('post');
-      }
       
       // Автоматически скачиваем исправленный документ через скрытую ссылку
       const autoDownload = () => {
         let fName = reportData.corrected_file_path.split(/[/\\]/).pop();
         if (!fName.toLowerCase().endsWith('.docx')) fName += '.docx';
         const link = document.createElement('a');
-        link.href = `${API_BASE}/corrections/${encodeURIComponent(fName)}`;
+        link.href = `${API_BASE}/corrections/${encodeURIComponent(fName)}?t=${new Date().getTime()}`;
         link.download = fName;
         document.body.appendChild(link);
         link.click();
@@ -1132,12 +1127,13 @@ const ReportPage = () => {
   // Data processing
   const effectiveResults = useMemo(() => {
     if (!reportData) return {};
-    return viewMode === 'post' && reportData.corrected_check_results 
-      ? reportData.corrected_check_results 
-      : reportData.check_results || {};
-  }, [reportData, viewMode]);
+    return reportData.check_results || {};
+  }, [reportData]);
 
   const issues = useMemo(() => effectiveResults?.issues || [], [effectiveResults]);
+  
+  // Информация о профиле проверки
+  const profileInfo = useMemo(() => effectiveResults?.profile || null, [effectiveResults]);
   
   const filteredIssues = useMemo(() => {
     if (filterSeverity === 'all') return issues;
@@ -1200,30 +1196,12 @@ const ReportPage = () => {
     if (!path) return;
     let fName = path.split(/[/\\]/).pop();
     if (!fName.toLowerCase().endsWith('.docx')) fName += '.docx';
-    window.location.href = `${API_BASE}/corrections/${encodeURIComponent(fName)}`;
+    window.location.href = `${API_BASE}/corrections/${encodeURIComponent(fName)}?t=${new Date().getTime()}`;
   };
 
   const handleDownloadReport = () => {
     if (!reportData?.report_path) return;
     window.location.href = `${API_BASE}/api/document/download-report?path=${encodeURIComponent(reportData.report_path)}`;
-  };
-
-  const handleAiAnalysis = async () => {
-    setAiLoading(true);
-    setShowAi(true);
-    try {
-      const response = await axios.post(`${API_BASE}/api/document/ai/suggest`, {
-        check_results: effectiveResults,
-        filename: fileName
-      });
-      if (response.data?.success) {
-        setAiText(response.data.suggestions);
-      }
-    } catch (e) {
-      setAiText('Не удалось получить ответ от ИИ.');
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   const handlePrint = () => {
@@ -1356,41 +1334,6 @@ const ReportPage = () => {
             </Box>
 
             <Stack direction="row" spacing={1.5} alignItems="center">
-              {/* Переключатель До/После исправления */}
-              {correctionSuccess && reportData?.corrected_check_results && (
-                <ToggleButtonGroup
-                  value={viewMode}
-                  exclusive
-                  onChange={(e, newMode) => newMode && setViewMode(newMode)}
-                  size="small"
-                  sx={{
-                    '& .MuiToggleButton-root': {
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 2,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      borderColor: alpha(theme.palette.divider, 0.2),
-                      '&.Mui-selected': {
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        color: 'primary.main',
-                        borderColor: alpha(theme.palette.primary.main, 0.3),
-                        '&:hover': {
-                          bgcolor: alpha(theme.palette.primary.main, 0.15),
-                        }
-                      }
-                    }
-                  }}
-                >
-                  <ToggleButton value="pre">
-                    До исправления
-                  </ToggleButton>
-                  <ToggleButton value="post">
-                    После исправления
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              )}
               {/* Иконка печати */}
               <IconButton
                 onClick={handlePrint}
@@ -1460,6 +1403,54 @@ const ReportPage = () => {
                 color={theme.palette.info.main}
                 delay={0.3}
               />
+            </Box>
+
+            {/* Профиль проверки */}
+            <Box sx={{ minHeight: 140 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.35 }}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <Paper sx={{ 
+                  p: 2, 
+                  height: '100%', 
+                  width: '100%',
+                  borderRadius: 2, 
+                  bgcolor: alpha(theme.palette.background.paper, 0.4), 
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`, 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Box sx={{ 
+                      p: 0.75, 
+                      borderRadius: 1.5, 
+                      bgcolor: alpha(theme.palette.success.main, 0.1),
+                      display: 'flex'
+                    }}>
+                      <ShieldIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                      Профиль проверки
+                    </Typography>
+                  </Box>
+                  <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.2, mb: 0.5 }}>
+                    {profileInfo?.name || 'ГОСТ 7.32-2017'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {profileInfo?.category === 'university' ? 'Требования ВУЗа' : 
+                     profileInfo?.category === 'gost' ? 'Стандарт ГОСТ' : 'Базовые правила'}
+                  </Typography>
+                  {profileInfo?.rules?.font && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 'auto' }}>
+                      {profileInfo.rules.font.name} {profileInfo.rules.font.size}pt • {profileInfo.rules.line_spacing}x
+                    </Typography>
+                  )}
+                </Paper>
+              </motion.div>
             </Box>
 
             <Box sx={{ minHeight: 140 }}>
@@ -1718,28 +1709,171 @@ const ReportPage = () => {
 
             {/* Right: AI & Actions */}
             <Grid item xs={12} md={4} className="no-print" sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Success Card */}
+              {/* Success Card with Comparison Stats */}
               <AnimatePresence>
                 {correctionSuccess && (
                   <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
                     <Paper sx={{ 
                       p: 3, 
-                      borderRadius: 2, 
-                      bgcolor: alpha(theme.palette.success.main, 0.1), 
+                      borderRadius: 3, 
+                      bgcolor: alpha(theme.palette.success.main, 0.08), 
                       border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
                       position: 'relative',
                       overflow: 'hidden'
                     }}>
+                      {/* Background decoration */}
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        top: -20, 
+                        right: -20, 
+                        width: 100, 
+                        height: 100, 
+                        borderRadius: '50%', 
+                        bgcolor: alpha(theme.palette.success.main, 0.1) 
+                      }} />
+                      
                       <Box sx={{ position: 'relative', zIndex: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Box sx={{ p: 1, borderRadius: '50%', bgcolor: theme.palette.success.main, color: 'white' }}>
-                            <CheckCircleIcon fontSize="small" />
+                        {/* Header */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                          <Box sx={{ 
+                            p: 1.5, 
+                            borderRadius: '50%', 
+                            bgcolor: theme.palette.success.main, 
+                            color: 'white',
+                            boxShadow: `0 4px 14px ${alpha(theme.palette.success.main, 0.4)}`
+                          }}>
+                            <CheckCircleIcon />
                           </Box>
                           <Box>
-                            <Typography variant="subtitle1" fontWeight={800}>Готово!</Typography>
-                            <Typography variant="caption" sx={{ opacity: 0.8 }}>Исправленный файл скачивается автоматически</Typography>
+                            <Typography variant="h6" fontWeight={800} color="success.main">
+                              Документ исправлен!
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Файл скачивается автоматически
+                            </Typography>
                           </Box>
                         </Box>
+                        
+                        {/* Comparison Stats */}
+                        {reportData?.corrected_check_results && (
+                          <Box sx={{ mt: 2 }}>
+                            <Divider sx={{ mb: 2, borderColor: alpha(theme.palette.success.main, 0.2) }} />
+                            
+                            {/* Before/After comparison */}
+                            <Grid container spacing={2}>
+                              <Grid item xs={6}>
+                                <Box sx={{ 
+                                  p: 2, 
+                                  borderRadius: 2, 
+                                  bgcolor: alpha(theme.palette.error.main, 0.08),
+                                  border: `1px solid ${alpha(theme.palette.error.main, 0.15)}`,
+                                  textAlign: 'center'
+                                }}>
+                                  <Typography variant="caption" color="error.main" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    До
+                                  </Typography>
+                                  <Typography variant="h4" fontWeight={800} color="error.main">
+                                    {reportData.check_results?.total_issues_count || 0}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">ошибок</Typography>
+                                </Box>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Box sx={{ 
+                                  p: 2, 
+                                  borderRadius: 2, 
+                                  bgcolor: alpha(theme.palette.success.main, 0.08),
+                                  border: `1px solid ${alpha(theme.palette.success.main, 0.15)}`,
+                                  textAlign: 'center'
+                                }}>
+                                  <Typography variant="caption" color="success.main" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    После
+                                  </Typography>
+                                  <Typography variant="h4" fontWeight={800} color="success.main">
+                                    {reportData.corrected_check_results?.total_issues_count || 0}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">ошибок</Typography>
+                                </Box>
+                              </Grid>
+                            </Grid>
+                            
+                            {/* Improvement indicator */}
+                            {(() => {
+                              const before = reportData.check_results?.total_issues_count || 0;
+                              const after = reportData.corrected_check_results?.total_issues_count || 0;
+                              const fixed = before - after;
+                              const percentFixed = before > 0 ? Math.round((fixed / before) * 100) : 0;
+                              
+                              if (fixed > 0) {
+                                return (
+                                  <Box sx={{ 
+                                    mt: 2, 
+                                    p: 2, 
+                                    borderRadius: 2, 
+                                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                                    border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 2
+                                  }}>
+                                    <Box sx={{ 
+                                      p: 1, 
+                                      borderRadius: '50%', 
+                                      bgcolor: alpha(theme.palette.primary.main, 0.15) 
+                                    }}>
+                                      <AutoFixHighIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                                    </Box>
+                                    <Box sx={{ flexGrow: 1 }}>
+                                      <Typography variant="body2" fontWeight={700}>
+                                        Исправлено {fixed} {fixed === 1 ? 'ошибка' : fixed < 5 ? 'ошибки' : 'ошибок'}
+                                      </Typography>
+                                      <LinearProgress 
+                                        variant="determinate" 
+                                        value={percentFixed} 
+                                        sx={{ 
+                                          mt: 1, 
+                                          height: 6, 
+                                          borderRadius: 3,
+                                          bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                          '& .MuiLinearProgress-bar': {
+                                            bgcolor: 'primary.main',
+                                            borderRadius: 3
+                                          }
+                                        }} 
+                                      />
+                                    </Box>
+                                    <Typography variant="h6" fontWeight={800} color="primary.main">
+                                      {percentFixed}%
+                                    </Typography>
+                                  </Box>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </Box>
+                        )}
+                        
+                        {/* Download button */}
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="success"
+                          startIcon={<DownloadIcon />}
+                          onClick={() => handleDownload(correctedFilePath)}
+                          sx={{ 
+                            mt: 2, 
+                            py: 1.5, 
+                            borderRadius: 2,
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            boxShadow: `0 4px 14px ${alpha(theme.palette.success.main, 0.3)}`,
+                            '&:hover': {
+                              boxShadow: `0 6px 20px ${alpha(theme.palette.success.main, 0.4)}`
+                            }
+                          }}
+                        >
+                          Скачать исправленный файл
+                        </Button>
                       </Box>
                     </Paper>
                   </motion.div>

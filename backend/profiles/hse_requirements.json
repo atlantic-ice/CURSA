@@ -1,0 +1,106 @@
+{
+    "name": "ВШЭ (НИУ ВШЭ)",
+    "description": "Требования к оформлению курсовых и выпускных квалификационных работ НИУ ВШЭ",
+    "rules": {
+        "font": {
+            "name": "Times New Roman",
+            "size": 14.0,
+            "color": "000000"
+        },
+        "margins": {
+            "left": 3.0,
+            "right": 1.5,
+            "top": 2.5,
+            "bottom": 2.5
+        },
+        "line_spacing": 1.5,
+        "first_line_indent": 1.25,
+        "paragraph_alignment": "JUSTIFY",
+        "headings": {
+            "h1": {
+                "font_size": 16.0,
+                "bold": true,
+                "alignment": "CENTER",
+                "all_caps": false,
+                "space_before": 18,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h2": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 6,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h3": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 6,
+                "space_after": 6,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            }
+        },
+        "tables": {
+            "font_size": 12.0,
+            "alignment": "LEFT",
+            "line_spacing": 1.0,
+            "space_before": 6,
+            "space_after": 6,
+            "first_line_indent": 0,
+            "borders": true
+        },
+        "captions": {
+            "font_size": 12.0,
+            "alignment": "CENTER",
+            "space_before": 6,
+            "space_after": 6,
+            "first_line_indent": 0,
+            "line_spacing": 1.0,
+            "separator": ". "
+        },
+        "lists": {
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "alignment": "JUSTIFY",
+            "first_line_indent": 0,
+            "left_indent": 1.0
+        },
+        "footnotes": {
+            "font_size": 10.0,
+            "line_spacing": 1.0,
+            "alignment": "JUSTIFY"
+        },
+        "required_sections": [
+            "введение",
+            "заключение",
+            "список использованных источников",
+            "содержание",
+            "актуальность",
+            "объект исследования",
+            "предмет исследования",
+            "цель",
+            "задачи"
+        ]
+    },
+    "bibliography": {
+        "min_sources": 20,
+        "foreign_min": 5,
+        "recent_years_min": 3,
+        "patterns": {
+            "one_author": "^[А-Я][а-я]+\\s[А-Я]\\.[А-Я]\\.\\s.*\\s//.*\\d{4}.*$",
+            "web_resource": "^.*URL:\\s.+\\s\\(дата\\sобращения:?\\s\\d{2}\\.\\d{2}\\.\\d{4}\\).*$"
+        },
+        "messages": {
+            "one_author": "Оформление по стандарту ВШЭ",
+            "web_resource": "Требуется указание даты обращения"
+        }
+    }
+}

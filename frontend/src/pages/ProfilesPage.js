@@ -8,7 +8,6 @@ import {
   Paper,
   Grid,
   List,
-  ListItem,
   ListItemButton,
   ListItemText,
   ListItemIcon,
@@ -18,21 +17,47 @@ import {
   useTheme,
   alpha,
   CircularProgress,
-  Button
+  Button,
+  Tabs,
+  Tab,
+  Tooltip,
+  Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DescriptionIcon from '@mui/icons-material/Description';
-import RuleIcon from '@mui/icons-material/Rule';
 import FormatSizeIcon from '@mui/icons-material/FormatSize';
-import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
 import CropFreeIcon from '@mui/icons-material/CropFree';
 import TitleIcon from '@mui/icons-material/Title';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import SchoolIcon from '@mui/icons-material/School';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
+
+import ProfileEditor from '../components/ProfileEditor';
+import ProfileComparison from '../components/ProfileComparison';
+import ProfileImportExport from '../components/ProfileImportExport';
+import ProfileValidation from '../components/ProfileValidation';
+import ProfileHistory from '../components/ProfileHistory';
+import ProfileStatistics from '../components/ProfileStatistics';
+import ProfileBulkOperations from '../components/ProfileBulkOperations';
 
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const API_BASE = isLocal ? '' : (process.env.REACT_APP_API_BASE || 'https://cursa.onrender.com');
@@ -62,9 +87,9 @@ const RuleCard = ({ title, icon, children, delay }) => {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <Box sx={{ 
-            p: 1, 
-            borderRadius: 2, 
+          <Box sx={{
+            p: 1,
+            borderRadius: 2,
             bgcolor: alpha(theme.palette.primary.main, 0.1),
             color: theme.palette.primary.main,
             display: 'flex'
@@ -93,20 +118,31 @@ const RuleItem = ({ label, value }) => (
 export default function ProfilesPage() {
   const navigate = useNavigate();
   const theme = useTheme();
-  
+
   const [profiles, setProfiles] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [categoryTab, setCategoryTab] = useState('all');
+
+  // Edit/Create State
+  const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+  const [showImportExport, setShowImportExport] = useState(false);
+  const [showStatistics, setShowStatistics] = useState(false);
+  const [showBulkOperations, setShowBulkOperations] = useState(false);
 
   useEffect(() => {
     fetchProfiles();
   }, []);
 
   useEffect(() => {
-    if (selectedId) {
+    if (selectedId && !isCreating) {
       fetchProfileDetails(selectedId);
+      setIsEditing(false);
     }
   }, [selectedId]);
 
@@ -114,7 +150,7 @@ export default function ProfilesPage() {
     try {
       const res = await axios.get(`${API_BASE}/api/profiles/`);
       setProfiles(res.data);
-      if (res.data.length > 0) {
+      if (res.data.length > 0 && !selectedId) {
         setSelectedId(res.data[0].id);
       }
     } catch (err) {
@@ -136,6 +172,153 @@ export default function ProfilesPage() {
     }
   };
 
+  const handleCreateStart = () => {
+    setIsCreating(true);
+    setIsEditing(false);
+    setShowComparison(false);
+    setShowImportExport(false);
+    setSelectedId(null);
+    setProfileData(null);
+  };
+
+  const handleEditStart = () => {
+    setIsEditing(true);
+    setIsCreating(false);
+    setShowComparison(false);
+    setShowImportExport(false);
+  };
+
+  const handleCancel = () => {
+    setIsCreating(false);
+    setIsEditing(false);
+    setShowComparison(false);
+    setShowImportExport(false);
+    setShowStatistics(false);
+    setShowBulkOperations(false);
+    if (!selectedId && profiles.length > 0) {
+      setSelectedId(profiles[0].id);
+    }
+  };
+
+  const handleShowComparison = () => {
+    setShowComparison(true);
+    setShowImportExport(false);
+    setShowStatistics(false);
+    setShowBulkOperations(false);
+    setIsEditing(false);
+    setIsCreating(false);
+  };
+
+  const handleShowImportExport = () => {
+    setShowImportExport(true);
+    setShowComparison(false);
+    setShowStatistics(false);
+    setShowBulkOperations(false);
+    setIsEditing(false);
+    setIsCreating(false);
+  };
+
+  const handleShowStatistics = () => {
+    setShowStatistics(true);
+    setShowImportExport(false);
+    setShowComparison(false);
+    setShowBulkOperations(false);
+    setIsEditing(false);
+    setIsCreating(false);
+  };
+
+  const handleShowBulkOperations = () => {
+    setShowBulkOperations(true);
+    setShowStatistics(false);
+    setShowImportExport(false);
+    setShowComparison(false);
+    setIsEditing(false);
+    setIsCreating(false);
+  };
+
+  const handleImportSuccess = async (result) => {
+    await fetchProfiles();
+    if (result.id) {
+      setSelectedId(result.id);
+      setShowImportExport(false);
+    }
+  };
+
+  const handleSave = async (data) => {
+    try {
+      if (isCreating) {
+        const res = await axios.post(`${API_BASE}/api/profiles/`, data);
+        await fetchProfiles();
+        setSelectedId(res.data.id);
+        setIsCreating(false);
+      } else {
+        await axios.put(`${API_BASE}/api/profiles/${selectedId}`, data);
+        await fetchProfileDetails(selectedId);
+        setIsEditing(false);
+        // Refresh list to update name/desc if changed
+        const res = await axios.get(`${API_BASE}/api/profiles/`);
+        setProfiles(res.data);
+      }
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      alert('Ошибка при сохранении профиля: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDuplicate = async () => {
+    if (!selectedId) return;
+    try {
+      const res = await axios.post(`${API_BASE}/api/profiles/${selectedId}/duplicate`);
+      await fetchProfiles();
+      setSelectedId(res.data.id);
+    } catch (err) {
+      console.error('Error duplicating profile:', err);
+      alert('Ошибка при дублировании: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await axios.delete(`${API_BASE}/api/profiles/${selectedId}`);
+      setDeleteDialogOpen(false);
+      const res = await axios.get(`${API_BASE}/api/profiles/`);
+      setProfiles(res.data);
+      if (res.data.length > 0) {
+        setSelectedId(res.data[0].id);
+      } else {
+        setSelectedId(null);
+        setProfileData(null);
+      }
+    } catch (err) {
+      console.error('Error deleting profile:', err);
+      alert('Ошибка при удалении: ' + (err.response?.data?.error || err.message));
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const getCategoryIcon = (category) => {
+    switch (category) {
+      case 'gost': return <VerifiedIcon fontSize="small" />;
+      case 'university': return <SchoolIcon fontSize="small" />;
+      default: return <DescriptionIcon fontSize="small" />;
+    }
+  };
+
+  const filteredProfiles = categoryTab === 'all'
+    ? profiles
+    : profiles.filter(p => p.category === categoryTab);
+
+  const categoryCounts = {
+    all: profiles.length,
+    gost: profiles.filter(p => p.category === 'gost').length,
+    university: profiles.filter(p => p.category === 'university').length,
+    custom: profiles.filter(p => p.category === 'custom').length
+  };
+
   if (loading) {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -149,10 +332,10 @@ export default function ProfilesPage() {
       {/* Header */}
       <Box sx={{ pt: 3, px: 0, zIndex: 10, flexShrink: 0 }}>
         <Container maxWidth="xl">
-          <Paper 
+          <Paper
             elevation={0}
-            sx={{ 
-              p: 2, 
+            sx={{
+              p: 2,
               borderRadius: 2,
               bgcolor: alpha(theme.palette.background.paper, 0.6),
               backdropFilter: 'blur(20px)',
@@ -170,6 +353,74 @@ export default function ProfilesPage() {
                 Стандарты оформления
               </Typography>
             </Box>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Chip
+                  icon={<VerifiedIcon />}
+                  label={`${categoryCounts.gost} ГОСТ`}
+                  size="small"
+                  sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main' }}
+                />
+                <Chip
+                  icon={<SchoolIcon />}
+                  label={`${categoryCounts.university} вузов`}
+                  size="small"
+                  sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), color: 'info.main' }}
+                />
+              </Box>
+              <Tooltip title="Сравнить профили">
+                <IconButton 
+                  onClick={handleShowComparison}
+                  sx={{ 
+                    bgcolor: showComparison ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+                  }}
+                >
+                  <CompareArrowsIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Импорт / Экспорт">
+                <IconButton 
+                  onClick={handleShowImportExport}
+                  sx={{ 
+                    bgcolor: showImportExport ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+                  }}
+                >
+                  <FileDownloadIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Статистика">
+                <IconButton 
+                  onClick={handleShowStatistics}
+                  sx={{ 
+                    bgcolor: showStatistics ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+                  }}
+                >
+                  <BarChartIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Массовые операции">
+                <IconButton 
+                  onClick={handleShowBulkOperations}
+                  sx={{ 
+                    bgcolor: showBulkOperations ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+                  }}
+                >
+                  <PlaylistPlayIcon />
+                </IconButton>
+              </Tooltip>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleCreateStart}
+                disabled={isCreating}
+              >
+                Создать профиль
+              </Button>
+            </Box>
           </Paper>
         </Container>
       </Box>
@@ -177,7 +428,7 @@ export default function ProfilesPage() {
       <Container maxWidth="xl" sx={{ flexGrow: 1, py: 3, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <Grid container spacing={3} sx={{ flexGrow: 1, height: '100%', overflow: 'hidden' }}>
           {/* Sidebar List */}
-          <Grid item xs={12} md={3} lg={2} sx={{ height: '100%' }}>
+          <Grid item xs={12} md={3} lg={2.5} sx={{ height: '100%' }}>
             <Paper
               elevation={0}
               sx={{
@@ -185,26 +436,45 @@ export default function ProfilesPage() {
                 bgcolor: alpha(theme.palette.background.paper, 0.4),
                 border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                 borderRadius: 3,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
-              <List sx={{ p: 2 }}>
-                <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ px: 2, mb: 1.5, display: 'block', letterSpacing: 1 }}>
-                  ДОСТУПНЫЕ ПРОФИЛИ
-                </Typography>
-                {profiles.map((profile, idx) => (
+              {/* Category Tabs */}
+              <Tabs
+                value={categoryTab}
+                onChange={(e, v) => setCategoryTab(v)}
+                variant="fullWidth"
+                sx={{
+                  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  minHeight: 42,
+                  '& .MuiTab-root': { minHeight: 42, py: 1, fontSize: '0.75rem' }
+                }}
+              >
+                <Tab value="all" label={<Badge badgeContent={categoryCounts.all} color="primary" max={99}><span>Все</span></Badge>} />
+                <Tab value="gost" label="ГОСТ" />
+                <Tab value="university" label="Вузы" />
+              </Tabs>
+
+              <List sx={{ p: 1.5, flexGrow: 1, overflow: 'auto' }}>
+                {filteredProfiles.map((profile, idx) => (
                   <motion.div
                     key={profile.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+                    transition={{ delay: idx * 0.03 }}
                   >
                     <ListItemButton
-                      selected={selectedId === profile.id}
-                      onClick={() => setSelectedId(profile.id)}
+                      selected={selectedId === profile.id && !isCreating}
+                      onClick={() => {
+                        setSelectedId(profile.id);
+                        setIsCreating(false);
+                      }}
                       sx={{
                         borderRadius: 2,
-                        mb: 1,
+                        mb: 0.5,
+                        py: 1,
                         transition: 'all 0.2s',
                         '&.Mui-selected': {
                           bgcolor: alpha(theme.palette.primary.main, 0.1),
@@ -219,15 +489,19 @@ export default function ProfilesPage() {
                         }
                       }}
                     >
-                      <ListItemIcon sx={{ minWidth: 36, color: selectedId === profile.id ? 'primary.main' : 'text.secondary' }}>
-                        <DescriptionIcon fontSize="small" />
+                      <ListItemIcon sx={{ minWidth: 32, color: selectedId === profile.id && !isCreating ? 'primary.main' : 'text.secondary' }}>
+                        {getCategoryIcon(profile.category)}
                       </ListItemIcon>
-                      <ListItemText 
-                        primary={profile.name} 
-                        primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
+                      <ListItemText
+                        primary={profile.name}
+                        secondary={profile.university || profile.version}
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 600, noWrap: true }}
+                        secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
                       />
-                      {selectedId === profile.id && (
-                        <motion.div layoutId="active-indicator" style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: theme.palette.primary.main }} />
+                      {profile.is_system && (
+                        <Tooltip title="Системный профиль">
+                          <VerifiedIcon fontSize="small" sx={{ color: 'success.main', ml: 0.5 }} />
+                        </Tooltip>
                       )}
                     </ListItemButton>
                   </motion.div>
@@ -237,9 +511,76 @@ export default function ProfilesPage() {
           </Grid>
 
           {/* Main Content */}
-          <Grid item xs={12} md={9} lg={10} sx={{ height: '100%' }}>
+          <Grid item xs={12} md={9} lg={9.5} sx={{ height: '100%' }}>
             <AnimatePresence mode="wait">
-              {loadingDetails || !profileData ? (
+              {showComparison ? (
+                <motion.div
+                  key="comparison"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  style={{ height: '100%' }}
+                >
+                  <ProfileComparison 
+                    profiles={profiles}
+                    onClose={() => setShowComparison(false)}
+                  />
+                </motion.div>
+              ) : showImportExport ? (
+                <motion.div
+                  key="import-export"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  style={{ height: '100%' }}
+                >
+                  <ProfileImportExport 
+                    selectedProfile={profileData}
+                    onImportSuccess={handleImportSuccess}
+                    onClose={() => setShowImportExport(false)}
+                  />
+                </motion.div>
+              ) : showStatistics ? (
+                <motion.div
+                  key="statistics"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  style={{ height: '100%' }}
+                >
+                  <ProfileStatistics 
+                    onClose={() => setShowStatistics(false)}
+                  />
+                </motion.div>
+              ) : showBulkOperations ? (
+                <motion.div
+                  key="bulk-operations"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  style={{ height: '100%' }}
+                >
+                  <ProfileBulkOperations 
+                    profiles={profiles}
+                    onClose={() => setShowBulkOperations(false)}
+                    onComplete={fetchProfiles}
+                  />
+                </motion.div>
+              ) : isCreating || isEditing ? (
+                <motion.div
+                  key="editor"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  style={{ height: '100%' }}
+                >
+                  <ProfileEditor
+                    initialData={isEditing ? profileData : null}
+                    onSave={handleSave}
+                    onCancel={handleCancel}
+                  />
+                </motion.div>
+              ) : (loadingDetails || !profileData ? (
                 <motion.div
                   key="loading"
                   initial={{ opacity: 0 }}
@@ -247,7 +588,7 @@ export default function ProfilesPage() {
                   exit={{ opacity: 0 }}
                   style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <CircularProgress size={32} />
+                  {selectedId ? <CircularProgress size={32} /> : <Typography color="text.secondary">Выберите профиль</Typography>}
                 </motion.div>
               ) : (
                 <motion.div
@@ -258,13 +599,59 @@ export default function ProfilesPage() {
                   transition={{ duration: 0.3, ease: "easeOut" }}
                   style={{ height: '100%', overflowY: 'auto', paddingRight: 8 }}
                 >
-                  <Box sx={{ mb: 4 }}>
-                    <Typography variant="h4" fontWeight={800} gutterBottom>
-                      {profileData.name}
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                      {profileData.description}
-                    </Typography>
+                  <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Box>
+                      <Typography variant="h4" fontWeight={800} gutterBottom>
+                        {profileData.name}
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary">
+                        {profileData.description}
+                      </Typography>
+                      {profileData.extends && (
+                        <Chip 
+                          size="small" 
+                          label={`Наследует: ${profileData.extends}`}
+                          sx={{ mt: 1 }}
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tooltip title="Дублировать">
+                        <IconButton onClick={handleDuplicate}>
+                          <ContentCopyIcon />
+                        </IconButton>
+                      </Tooltip>
+                      {!profileData.is_system && (
+                        <>
+                          <Tooltip title="Редактировать">
+                            <IconButton onClick={handleEditStart} color="primary">
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Удалить">
+                            <IconButton onClick={handleDeleteClick} color="error">
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Profile Validation */}
+                  <Box sx={{ mb: 3 }}>
+                    <ProfileValidation profileId={selectedId} profileName={profileData.name} />
+                  </Box>
+
+                  {/* Profile History */}
+                  <Box sx={{ mb: 3 }}>
+                    <ProfileHistory 
+                      profileId={selectedId} 
+                      profileName={profileData.name}
+                      isSystemProfile={profileData.is_system}
+                      onRestore={() => fetchProfileDetails(selectedId)}
+                    />
                   </Box>
 
                   <Grid container spacing={3}>
@@ -298,9 +685,9 @@ export default function ProfilesPage() {
                         <RuleItem label="Размер" value={`${profileData.rules.headings.h1.font_size} пт`} />
                         <RuleItem label="Выравнивание" value={profileData.rules.headings.h1.alignment} />
                         <RuleItem label="Интервал после" value={`${profileData.rules.headings.h1.space_after} пт`} />
-                        
+
                         <Divider sx={{ my: 1 }} />
-                        
+
                         <Typography variant="caption" color="primary" fontWeight={600}>УРОВЕНЬ 2</Typography>
                         <RuleItem label="Размер" value={`${profileData.rules.headings.h2.font_size} пт`} />
                         <RuleItem label="Отступ" value={`${profileData.rules.headings.h2.first_line_indent} см`} />
@@ -330,17 +717,31 @@ export default function ProfilesPage() {
                       </RuleCard>
                     </Grid>
 
+                    {/* Bibliography */}
+                    {profileData.rules.bibliography && (
+                      <Grid item xs={12} md={6} lg={4}>
+                        <RuleCard title="Библиография" icon={<MenuBookIcon />} delay={0.55}>
+                          <RuleItem label="Стиль" value={profileData.rules.bibliography.style === 'gost' ? 'ГОСТ' : profileData.rules.bibliography.style} />
+                          <RuleItem label="Размер шрифта" value={`${profileData.rules.bibliography.font_size || 14} пт`} />
+                          <RuleItem label="Сортировка" value={profileData.rules.bibliography.sort_order === 'alphabetical' ? 'По алфавиту' : profileData.rules.bibliography.sort_order} />
+                          <Divider sx={{ my: 1 }} />
+                          <RuleItem label="Мин. источников" value={profileData.rules.bibliography.min_sources || 15} />
+                          <RuleItem label="Макс. возраст" value={`${profileData.rules.bibliography.max_age_years || 5} лет`} />
+                        </RuleCard>
+                      </Grid>
+                    )}
+
                     {/* Required Sections */}
                     <Grid item xs={12} md={6} lg={4}>
                       <RuleCard title="Структура" icon={<MenuBookIcon />} delay={0.6}>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Обязательные разделы:</Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                           {profileData.rules.required_sections.map((sec, idx) => (
-                            <Chip 
-                              key={idx} 
-                              label={sec} 
-                              size="small" 
-                              sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }} 
+                            <Chip
+                              key={idx}
+                              label={sec}
+                              size="small"
+                              sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}
                             />
                           ))}
                         </Box>
@@ -348,11 +749,30 @@ export default function ProfilesPage() {
                     </Grid>
                   </Grid>
                 </motion.div>
-              )}
+              ))}
             </AnimatePresence>
           </Grid>
         </Grid>
       </Container>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Удалить профиль?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Вы действительно хотите удалить профиль "{profileData?.name}"? Это действие нельзя отменить.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
+          <Button onClick={handleDeleteConfirm} color="error" autoFocus>
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -1,0 +1,159 @@
+{
+    "name": "РАНХиГС",
+    "description": "Требования к оформлению ВКР в Российской академии народного хозяйства и государственной службы",
+    "version": "2024",
+    "is_system": false,
+    "category": "university",
+    "extends": "default_gost",
+    "university": {
+        "full_name": "Федеральное государственное бюджетное образовательное учреждение высшего образования «Российская академия народного хозяйства и государственной службы при Президенте Российской Федерации»",
+        "short_name": "РАНХиГС",
+        "city": "Москва"
+    },
+    "rules": {
+        "font": {
+            "name": "Times New Roman",
+            "size": 14.0,
+            "color": "000000"
+        },
+        "margins": {
+            "left": 3.0,
+            "right": 1.5,
+            "top": 2.0,
+            "bottom": 2.0
+        },
+        "line_spacing": 1.5,
+        "first_line_indent": 1.25,
+        "paragraph_alignment": "JUSTIFY",
+        "page_numbering": {
+            "position": "top_center",
+            "start_from": 3,
+            "skip_title": true,
+            "skip_toc": true,
+            "font_size": 14
+        },
+        "headings": {
+            "h1": {
+                "font_size": 16.0,
+                "bold": true,
+                "alignment": "CENTER",
+                "all_caps": true,
+                "space_before": 0,
+                "space_after": 18,
+                "line_spacing": 1.5,
+                "keep_with_next": true,
+                "page_break_before": true
+            },
+            "h2": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "all_caps": false,
+                "first_line_indent": 1.25,
+                "space_before": 18,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h3": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 6,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            }
+        },
+        "tables": {
+            "font_size": 12.0,
+            "min_font_size": 10.0,
+            "alignment": "LEFT",
+            "line_spacing": 1.0,
+            "space_before": 12,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "borders": true
+        },
+        "captions": {
+            "font_size": 14.0,
+            "alignment": "LEFT",
+            "space_before": 6,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "line_spacing": 1.0,
+            "separator": " – "
+        },
+        "lists": {
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "alignment": "JUSTIFY",
+            "first_line_indent": 0,
+            "left_indent": 1.25
+        },
+        "footnotes": {
+            "font_size": 10.0,
+            "line_spacing": 1.0,
+            "alignment": "JUSTIFY"
+        },
+        "required_sections": [
+            "титульный лист",
+            "содержание",
+            "введение",
+            "глава 1",
+            "глава 2",
+            "заключение",
+            "список использованных источников"
+        ],
+        "optional_sections": [
+            "реферат",
+            "список сокращений",
+            "глоссарий",
+            "приложения"
+        ],
+        "introduction_structure": [
+            "актуальность темы",
+            "степень разработанности проблемы",
+            "цель исследования",
+            "задачи исследования",
+            "объект исследования",
+            "предмет исследования",
+            "теоретическая и методологическая основа",
+            "информационная база",
+            "научная новизна",
+            "практическая значимость",
+            "структура работы"
+        ]
+    },
+    "bibliography": {
+        "style": "gost_r_7_0_100_2018",
+        "min_sources": 40,
+        "foreign_min": 5,
+        "recent_years_min": 5,
+        "sorting": "alphabetical",
+        "foreign_last": true
+    },
+    "volume": {
+        "bachelor": {
+            "min_pages": 50,
+            "max_pages": 60
+        },
+        "master": {
+            "min_pages": 80,
+            "max_pages": 100
+        }
+    },
+    "validation": {
+        "check_font": true,
+        "check_margins": true,
+        "check_spacing": true,
+        "check_headings": true,
+        "check_tables": true,
+        "check_figures": true,
+        "check_bibliography": true,
+        "check_structure": true,
+        "check_page_numbers": true,
+        "check_introduction": true
+    }
+}

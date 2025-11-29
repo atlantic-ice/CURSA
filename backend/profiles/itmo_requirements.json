@@ -1,0 +1,160 @@
+{
+    "name": "ИТМО (СПб)",
+    "description": "Требования к оформлению ВКР в Университете ИТМО (Санкт-Петербург)",
+    "version": "2024",
+    "is_system": false,
+    "category": "university",
+    "extends": "gost_7_32_2017",
+    "university": {
+        "full_name": "Федеральное государственное автономное образовательное учреждение высшего образования «Национальный исследовательский университет ИТМО»",
+        "short_name": "Университет ИТМО",
+        "city": "Санкт-Петербург"
+    },
+    "rules": {
+        "font": {
+            "name": "Times New Roman",
+            "size": 14.0,
+            "color": "000000",
+            "allowed_fonts": ["Times New Roman"]
+        },
+        "margins": {
+            "left": 3.0,
+            "right": 1.5,
+            "top": 2.0,
+            "bottom": 2.0
+        },
+        "line_spacing": 1.5,
+        "first_line_indent": 1.25,
+        "paragraph_alignment": "JUSTIFY",
+        "page_numbering": {
+            "position": "bottom_center",
+            "start_from": 1,
+            "skip_title": true,
+            "skip_toc": false,
+            "font_size": 14
+        },
+        "headings": {
+            "h1": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "CENTER",
+                "all_caps": true,
+                "space_before": 0,
+                "space_after": 18,
+                "line_spacing": 1.5,
+                "keep_with_next": true,
+                "page_break_before": true
+            },
+            "h2": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "JUSTIFY",
+                "all_caps": false,
+                "first_line_indent": 1.25,
+                "space_before": 18,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h3": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "JUSTIFY",
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 6,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            }
+        },
+        "tables": {
+            "font_size": 12.0,
+            "min_font_size": 10.0,
+            "alignment": "LEFT",
+            "line_spacing": 1.0,
+            "space_before": 12,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "borders": true,
+            "caption_position": "top",
+            "caption_alignment": "LEFT"
+        },
+        "figures": {
+            "caption_position": "bottom",
+            "alignment": "CENTER",
+            "space_before": 12,
+            "space_after": 6
+        },
+        "captions": {
+            "font_size": 14.0,
+            "alignment": "LEFT",
+            "space_before": 6,
+            "space_after": 6,
+            "first_line_indent": 0,
+            "line_spacing": 1.5,
+            "separator": " – ",
+            "table_prefix": "Таблица",
+            "figure_prefix": "Рисунок"
+        },
+        "lists": {
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "alignment": "JUSTIFY",
+            "first_line_indent": 0,
+            "left_indent": 1.25
+        },
+        "footnotes": {
+            "font_size": 12.0,
+            "line_spacing": 1.0,
+            "alignment": "JUSTIFY"
+        },
+        "code_listings": {
+            "font_name": "Courier New",
+            "font_size": 12.0,
+            "line_spacing": 1.0,
+            "frame": true
+        },
+        "required_sections": [
+            "титульный лист",
+            "задание на ВКР",
+            "реферат",
+            "содержание",
+            "введение",
+            "основная часть",
+            "заключение",
+            "список использованных источников"
+        ],
+        "optional_sections": [
+            "список сокращений",
+            "приложения"
+        ]
+    },
+    "bibliography": {
+        "style": "gost_r_7_0_100_2018",
+        "min_sources": 25,
+        "foreign_min": 3,
+        "recent_years_percent": 30,
+        "sorting": "appearance"
+    },
+    "title_page": {
+        "university_name_case": "upper",
+        "faculty_required": true,
+        "department_required": true,
+        "work_type_case": "upper",
+        "topic_case": "sentence",
+        "signatures_required": ["student", "supervisor"],
+        "city_year_position": "bottom_center"
+    },
+    "validation": {
+        "check_font": true,
+        "check_margins": true,
+        "check_spacing": true,
+        "check_headings": true,
+        "check_tables": true,
+        "check_figures": true,
+        "check_bibliography": true,
+        "check_structure": true,
+        "check_page_numbers": true,
+        "check_title_page": true
+    }
+}

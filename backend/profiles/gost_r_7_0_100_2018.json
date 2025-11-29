@@ -1,0 +1,127 @@
+{
+    "name": "ГОСТ Р 7.0.100-2018",
+    "description": "ГОСТ Р 7.0.100-2018 — Библиографическая запись. Библиографическое описание. Общие требования и правила составления.",
+    "version": "7.0.100-2018",
+    "is_system": true,
+    "category": "gost",
+    "extends": "gost_7_32_2017",
+    "rules": {
+        "font": {
+            "name": "Times New Roman",
+            "size": 14.0,
+            "color": "000000"
+        },
+        "margins": {
+            "left": 3.0,
+            "right": 1.5,
+            "top": 2.0,
+            "bottom": 2.0
+        },
+        "line_spacing": 1.5,
+        "first_line_indent": 1.25,
+        "paragraph_alignment": "JUSTIFY",
+        "headings": {
+            "h1": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "CENTER",
+                "all_caps": true,
+                "space_before": 0,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h2": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h3": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 0,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            }
+        },
+        "tables": {
+            "font_size": 12.0,
+            "alignment": "LEFT",
+            "line_spacing": 1.0,
+            "space_before": 0,
+            "space_after": 0,
+            "first_line_indent": 0,
+            "borders": true
+        },
+        "captions": {
+            "font_size": 12.0,
+            "alignment": "CENTER",
+            "space_before": 6,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "line_spacing": 1.0,
+            "separator": " – "
+        },
+        "lists": {
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "alignment": "JUSTIFY",
+            "first_line_indent": 0,
+            "left_indent": 1.25
+        },
+        "footnotes": {
+            "font_size": 10.0,
+            "line_spacing": 1.0,
+            "alignment": "JUSTIFY"
+        },
+        "required_sections": [
+            "введение",
+            "заключение",
+            "список литературы",
+            "содержание"
+        ]
+    },
+    "bibliography": {
+        "style": "gost_r_7_0_100_2018",
+        "min_sources": 10,
+        "sorting": "alphabetical",
+        "foreign_last": true,
+        "patterns": {
+            "book_one_author": "^[А-Яа-яЁё]+,\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s.+\\s\\/\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s[А-Яа-яЁё]+\\.\\s[–—]\\s.+:\\s.+,\\s\\d{4}\\.\\s[–—]\\s\\d+\\sс\\.$",
+            "book_two_authors": "^[А-Яа-яЁё]+,\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s.+\\s\\/\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s[А-Яа-яЁё]+,\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s[А-Яа-яЁё]+\\.\\s[–—]\\s.+:\\s.+,\\s\\d{4}\\.\\s[–—]\\s\\d+\\sс\\.$",
+            "book_three_authors": "^[А-Яа-яЁё]+,\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s.+\\s\\/\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s[А-Яа-яЁё]+\\s\\[и\\sдр\\.\\]\\.\\s[–—]\\s.+:\\s.+,\\s\\d{4}\\.\\s[–—]\\s\\d+\\sс\\.$",
+            "article": "^[А-Яа-яЁё]+,\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s.+\\s\\/\\/\\s.+\\.\\s[–—]\\s\\d{4}\\.\\s[–—]\\s[№Т].*$",
+            "web_resource": "^.+\\s\\[Электронный\\sресурс\\].*URL:\\s.+\\s\\(дата\\sобращения:\\s\\d{2}\\.\\d{2}\\.\\d{4}\\)\\.$",
+            "dissertation": "^[А-Яа-яЁё]+,\\s[А-ЯЁ]\\.[А-ЯЁ]?\\.?\\s.+\\s:\\s(дис|автореф)\\..+\\s\\/\\s.+\\.\\s[–—]\\s.+,\\s\\d{4}\\.\\s[–—]\\s\\d+\\sс\\.$",
+            "gost": "^ГОСТ\\s[\\dР\\.]+-\\d{4}\\.\\s.+\\.$",
+            "law": "^(Конституция|Федеральный\\sзакон|Закон|Указ|Постановление|Распоряжение)\\s.+от\\s\\d{2}(\\.\\d{2})?\\.(\\d{2})?\\d{2}\\s№?.*$"
+        },
+        "messages": {
+            "book_one_author": "Книга (1 автор): Фамилия, И.О. Заглавие / И.О. Фамилия. – Город: Издательство, Год. – 000 с.",
+            "book_two_authors": "Книга (2 автора): Фамилия, И.О. Заглавие / И.О. Фамилия, И.О. Фамилия. – Город: Издательство, Год. – 000 с.",
+            "article": "Статья: Фамилия, И.О. Название статьи // Название журнала. – Год. – № 0. – С. 00–00.",
+            "web_resource": "Электронный ресурс: Название [Электронный ресурс]. URL: http://... (дата обращения: ДД.ММ.ГГГГ).",
+            "gost": "ГОСТ: ГОСТ 00000-0000. Название ГОСТа."
+        }
+    },
+    "validation": {
+        "check_font": true,
+        "check_margins": true,
+        "check_spacing": true,
+        "check_headings": true,
+        "check_tables": true,
+        "check_figures": true,
+        "check_bibliography": true,
+        "check_structure": true,
+        "check_page_numbers": true,
+        "strict_bibliography": true
+    }
+}

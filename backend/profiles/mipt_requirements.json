@@ -1,0 +1,111 @@
+{
+    "name": "МФТИ",
+    "description": "Требования к оформлению научных работ Московского физико-технического института",
+    "rules": {
+        "font": {
+            "name": "Times New Roman",
+            "size": 12.0,
+            "color": "000000"
+        },
+        "margins": {
+            "left": 3.0,
+            "right": 1.0,
+            "top": 2.0,
+            "bottom": 2.0
+        },
+        "line_spacing": 1.5,
+        "first_line_indent": 1.0,
+        "paragraph_alignment": "JUSTIFY",
+        "headings": {
+            "h1": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "CENTER",
+                "all_caps": false,
+                "space_before": 24,
+                "space_after": 12,
+                "line_spacing": 1.0,
+                "keep_with_next": true
+            },
+            "h2": {
+                "font_size": 12.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.0,
+                "space_before": 18,
+                "space_after": 6,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h3": {
+                "font_size": 12.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.0,
+                "space_before": 12,
+                "space_after": 6,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            }
+        },
+        "tables": {
+            "font_size": 10.0,
+            "alignment": "CENTER",
+            "line_spacing": 1.0,
+            "space_before": 12,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "borders": true
+        },
+        "captions": {
+            "font_size": 12.0,
+            "alignment": "CENTER",
+            "space_before": 6,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "line_spacing": 1.0,
+            "separator": ". "
+        },
+        "lists": {
+            "font_size": 12.0,
+            "line_spacing": 1.5,
+            "alignment": "JUSTIFY",
+            "first_line_indent": 0,
+            "left_indent": 1.0
+        },
+        "footnotes": {
+            "font_size": 10.0,
+            "line_spacing": 1.0,
+            "alignment": "JUSTIFY"
+        },
+        "required_sections": [
+            "введение",
+            "заключение",
+            "список литературы"
+        ],
+        "formulas": {
+            "alignment": "CENTER",
+            "numbering": "right",
+            "space_before": 6,
+            "space_after": 6
+        },
+        "code_listings": {
+            "font_name": "Consolas",
+            "font_size": 10.0,
+            "line_spacing": 1.0
+        }
+    },
+    "bibliography": {
+        "min_sources": 10,
+        "patterns": {
+            "one_author": "^\\d+\\.\\s[А-Я][а-я]+\\s[А-Я]\\.[А-Я]\\..*$",
+            "english_source": "^\\d+\\.\\s[A-Z][a-z]+.*$",
+            "web_resource": "^.*\\[Электронный\\sресурс\\].*$"
+        },
+        "messages": {
+            "one_author": "Автор И.О. Название работы",
+            "english_source": "English sources allowed",
+            "web_resource": "Должна содержать метку [Электронный ресурс]"
+        }
+    }
+}
