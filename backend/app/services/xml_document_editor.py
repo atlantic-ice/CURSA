@@ -512,6 +512,207 @@ class XMLDocumentEditor:
         
         return False
     
+    def fix_heading_styles(self) -> int:
+        """
+        Исправляет стили заголовков (Heading 1-9) по ГОСТ.
+        
+        Правила:
+        - Heading 1: Times New Roman 14pt, жирный, по центру, ВСЕ ЗАГЛАВНЫЕ
+        - Heading 2: Times New Roman 14pt, жирный, по левому краю
+        - Heading 3+: Times New Roman 14pt, жирный, по левому краю
+        
+        Returns:
+            Количество исправленных стилей
+        """
+        if self.styles_xml is None:
+            return 0
+        
+        fixed_count = 0
+        root = self.styles_xml.getroot()
+        w = '{%s}' % NAMESPACES['w']
+        
+        # Настройки для разных уровней заголовков
+        heading_config = {
+            'Heading1': {'alignment': 'center', 'caps': True, 'space_before': 720, 'space_after': 480},
+            'Heading2': {'alignment': 'left', 'caps': False, 'space_before': 480, 'space_after': 480},
+            'Heading3': {'alignment': 'left', 'caps': False, 'space_before': 240, 'space_after': 120},
+            '1': {'alignment': 'center', 'caps': True, 'space_before': 720, 'space_after': 480},  # Альтернативные ID
+            '2': {'alignment': 'left', 'caps': False, 'space_before': 480, 'space_after': 480},
+            '3': {'alignment': 'left', 'caps': False, 'space_before': 240, 'space_after': 120},
+        }
+        
+        for style in root.iter(f'{w}style'):
+            style_id = style.get(f'{w}styleId', '')
+            style_name = None
+            
+            # Получаем имя стиля
+            name_elem = style.find(f'{w}name')
+            if name_elem is not None:
+                style_name = name_elem.get(f'{w}val', '')
+            
+            # Проверяем, является ли это стилем заголовка
+            config = None
+            if style_id in heading_config:
+                config = heading_config[style_id]
+            elif style_name and 'heading' in style_name.lower():
+                # Извлекаем уровень из имени
+                match = re.search(r'(\d+)', style_name)
+                if match:
+                    level = match.group(1)
+                    config = heading_config.get(level, heading_config.get('3'))
+            
+            if config is None:
+                continue
+            
+            # Находим или создаём rPr (свойства текста)
+            rPr = style.find(f'{w}rPr')
+            if rPr is None:
+                rPr = etree.SubElement(style, f'{w}rPr')
+            
+            # Устанавливаем шрифт
+            self._fix_run_properties(rPr, self.gost_rules['font_name'], 
+                                    self.gost_rules['font_size'])
+            
+            # Устанавливаем жирность
+            b = rPr.find(f'{w}b')
+            if b is None:
+                b = etree.SubElement(rPr, f'{w}b')
+            b.set(f'{w}val', '1')
+            
+            bCs = rPr.find(f'{w}bCs')
+            if bCs is None:
+                bCs = etree.SubElement(rPr, f'{w}bCs')
+            bCs.set(f'{w}val', '1')
+            
+            # Устанавливаем ЗАГЛАВНЫЕ если нужно
+            caps = rPr.find(f'{w}caps')
+            if config['caps']:
+                if caps is None:
+                    caps = etree.SubElement(rPr, f'{w}caps')
+                caps.set(f'{w}val', '1')
+            elif caps is not None:
+                rPr.remove(caps)
+            
+            # Находим или создаём pPr (свойства абзаца)
+            pPr = style.find(f'{w}pPr')
+            if pPr is None:
+                pPr = etree.SubElement(style, f'{w}pPr')
+            
+            # Устанавливаем выравнивание
+            jc = pPr.find(f'{w}jc')
+            if jc is None:
+                jc = etree.SubElement(pPr, f'{w}jc')
+            jc.set(f'{w}val', config['alignment'])
+            
+            # Убираем отступ первой строки для заголовков
+            ind = pPr.find(f'{w}ind')
+            if ind is None:
+                ind = etree.SubElement(pPr, f'{w}ind')
+            ind.set(f'{w}firstLine', '0')
+            ind.set(f'{w}left', '0')
+            ind.set(f'{w}right', '0')
+            
+            # Устанавливаем интервалы до/после
+            spacing = pPr.find(f'{w}spacing')
+            if spacing is None:
+                spacing = etree.SubElement(pPr, f'{w}spacing')
+            
+            spacing.set(f'{w}before', str(config['space_before']))
+            spacing.set(f'{w}after', str(config['space_after']))
+            spacing.set(f'{w}line', str(self.gost_rules['line_spacing']))
+            spacing.set(f'{w}lineRule', 'auto')
+            
+            # Запрещаем разрыв страницы внутри заголовка
+            keepNext = pPr.find(f'{w}keepNext')
+            if keepNext is None:
+                keepNext = etree.SubElement(pPr, f'{w}keepNext')
+            
+            keepLines = pPr.find(f'{w}keepLines')
+            if keepLines is None:
+                keepLines = etree.SubElement(pPr, f'{w}keepLines')
+            
+            self._log_edit(XMLEditType.STYLE, f"Heading style: {style_id}", 
+                         None, f"Updated with alignment={config['alignment']}", True)
+            fixed_count += 1
+        
+        return fixed_count
+    
+    def fix_toc_styles(self) -> int:
+        """
+        Исправляет стили оглавления (TOC 1-9) по ГОСТ.
+        
+        Returns:
+            Количество исправленных стилей
+        """
+        if self.styles_xml is None:
+            return 0
+        
+        fixed_count = 0
+        root = self.styles_xml.getroot()
+        w = '{%s}' % NAMESPACES['w']
+        
+        for style in root.iter(f'{w}style'):
+            style_id = style.get(f'{w}styleId', '')
+            style_name = None
+            
+            name_elem = style.find(f'{w}name')
+            if name_elem is not None:
+                style_name = name_elem.get(f'{w}val', '')
+            
+            # Проверяем, является ли это стилем оглавления
+            if not (style_id.startswith('TOC') or (style_name and 'toc' in style_name.lower())):
+                continue
+            
+            # Находим или создаём rPr
+            rPr = style.find(f'{w}rPr')
+            if rPr is None:
+                rPr = etree.SubElement(style, f'{w}rPr')
+            
+            # Устанавливаем шрифт (12pt для оглавления)
+            self._fix_run_properties(rPr, self.gost_rules['font_name'], 24)  # 12pt * 2
+            
+            # Убираем жирность и курсив
+            for elem_name in ['b', 'bCs', 'i', 'iCs']:
+                elem = rPr.find(f'{w}{elem_name}')
+                if elem is not None:
+                    rPr.remove(elem)
+            
+            # Находим или создаём pPr
+            pPr = style.find(f'{w}pPr')
+            if pPr is None:
+                pPr = etree.SubElement(style, f'{w}pPr')
+            
+            # Устанавливаем отступы в зависимости от уровня
+            level = 1
+            match = re.search(r'(\d+)', style_id)
+            if match:
+                level = int(match.group(1))
+            
+            ind = pPr.find(f'{w}ind')
+            if ind is None:
+                ind = etree.SubElement(pPr, f'{w}ind')
+            
+            # Отступ слева зависит от уровня (0, 240, 480 твипов)
+            left_indent = (level - 1) * 240
+            ind.set(f'{w}left', str(left_indent))
+            ind.set(f'{w}firstLine', '0')
+            
+            # Межстрочный интервал
+            spacing = pPr.find(f'{w}spacing')
+            if spacing is None:
+                spacing = etree.SubElement(pPr, f'{w}spacing')
+            
+            spacing.set(f'{w}line', str(self.gost_rules['line_spacing']))
+            spacing.set(f'{w}lineRule', 'auto')
+            spacing.set(f'{w}before', '0')
+            spacing.set(f'{w}after', '0')
+            
+            self._log_edit(XMLEditType.STYLE, f"TOC style: {style_id}", 
+                         None, "Updated", True)
+            fixed_count += 1
+        
+        return fixed_count
+    
     # =========================================================================
     # ПОЛНОЕ ИСПРАВЛЕНИЕ ДОКУМЕНТА
     # =========================================================================
@@ -526,13 +727,19 @@ class XMLDocumentEditor:
         # 1. Исправляем стиль Normal
         self.fix_normal_style()
         
-        # 2. Исправляем поля страницы
+        # 2. Исправляем стили заголовков
+        self.fix_heading_styles()
+        
+        # 3. Исправляем стили оглавления
+        self.fix_toc_styles()
+        
+        # 4. Исправляем поля страницы
         self.fix_page_margins()
         
-        # 3. Исправляем все шрифты
+        # 5. Исправляем все шрифты
         self.fix_all_fonts()
         
-        # 4. Исправляем все абзацы
+        # 6. Исправляем все абзацы
         self.fix_all_paragraphs()
         
         return self.report

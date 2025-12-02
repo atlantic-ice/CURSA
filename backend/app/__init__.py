@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, send_file
+from flask import Flask, send_from_directory, send_file, jsonify
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -53,11 +53,29 @@ def create_app():
     os.makedirs(corrections_dir, exist_ok=True)
     app.logger.info(f"Директория для исправленных файлов: {corrections_dir}")
     
+    # Подключаем Swagger документацию (если flasgger установлен)
+    try:
+        from flasgger import Swagger
+        from app.api.swagger_config import SWAGGER_CONFIG, SWAGGER_TEMPLATE
+        Swagger(app, config=SWAGGER_CONFIG, template=SWAGGER_TEMPLATE)
+        app.logger.info("Swagger UI доступен по адресу /api/docs/")
+    except ImportError:
+        app.logger.warning("flasgger не установлен. Swagger UI недоступен. Установите: pip install flasgger")
+    except Exception as e:
+        app.logger.warning(f"Не удалось инициализировать Swagger: {e}")
+    
     # Регистрация API маршрутов
     from app.api import document_routes
     from app.api import profile_routes
     app.register_blueprint(document_routes.bp)
     app.register_blueprint(profile_routes.bp)
+    
+    # Маршрут для API документации (JSON)
+    @app.route('/api/openapi.json')
+    def openapi_spec():
+        """Возвращает OpenAPI спецификацию в формате JSON"""
+        from app.api.swagger_config import SWAGGER_TEMPLATE
+        return jsonify(SWAGGER_TEMPLATE)
     
     # Маршрут для прямого доступа к исправленным файлам
     @app.route('/corrections/<path:filename>')

@@ -1,10 +1,109 @@
 [
   {
-    "test_id": "tests/unit/test_heading_spacing_correction.py::test_pseudo_heading_promoted_and_spaced",
-    "test_name": "test_pseudo_heading_promoted_and_spaced",
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_context_manager",
+    "test_name": "test_context_manager",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.05442210000001069,
+    "duration": 0.0473883999948157,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_fix_all_fonts",
+    "test_name": "test_fix_all_fonts",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.1703062000015052,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_fix_page_margins",
+    "test_name": "test_fix_page_margins",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.13023759999487083,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_fix_all_paragraphs",
+    "test_name": "test_fix_all_paragraphs",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.13470589999633376,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_fix_normal_style",
+    "test_name": "test_fix_normal_style",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.10927629999059718,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_fix_heading_styles",
+    "test_name": "test_fix_heading_styles",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.1117647999926703,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_fix_all",
+    "test_name": "test_fix_all",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.11960809999436606,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_apply_xml_corrections_function",
+    "test_name": "test_apply_xml_corrections_function",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.12224419999984093,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_report_structure",
+    "test_name": "test_report_structure",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.05389209999702871,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLEditorEdgeCases::test_empty_document",
+    "test_name": "test_empty_document",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.05268990001059137,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLEditorEdgeCases::test_document_with_tables",
+    "test_name": "test_document_with_tables",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.13869789999444038,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_xml_document_editor.py::TestXMLEditorGOSTCompliance::test_gost_compliance_after_fix",
+    "test_name": "test_gost_compliance_after_fix",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.13605570000072476,
     "failed": false,
     "skipped": false
   }

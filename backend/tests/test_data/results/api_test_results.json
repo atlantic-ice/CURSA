@@ -34,5 +34,19 @@
     "duration": 1.0632888000109233,
     "failed": false,
     "skipped": false
+  },
+  {
+    "test_name": "Загрузка некорректного файла",
+    "test_case": "Загрузка файла неподдерживаемого формата (не .docx)",
+    "timestamp": "2025-12-02T22:01:29.469469",
+    "expected": {
+      "status_code": 400,
+      "error_message": "Недопустимый формат файла"
+    },
+    "actual": {
+      "status_code": 400,
+      "error_message": "Недопустимый формат файла. Разрешены только файлы DOCX."
+    },
+    "passed": true
   }
 ]
