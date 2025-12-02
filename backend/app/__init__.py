@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, send_file
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -55,13 +55,26 @@ def create_app():
     
     # Регистрация API маршрутов
     from app.api import document_routes
+    from app.api import profile_routes
     app.register_blueprint(document_routes.bp)
+    app.register_blueprint(profile_routes.bp)
     
     # Маршрут для прямого доступа к исправленным файлам
     @app.route('/corrections/<path:filename>')
     def serve_correction(filename):
         app.logger.info(f"Запрос на скачивание файла: {filename}")
-        return send_from_directory(corrections_dir, filename)
+        file_path = os.path.join(corrections_dir, filename)
+        if not os.path.exists(file_path):
+            app.logger.error(f"Файл не найден: {file_path}")
+            return "File not found", 404
+        
+        # Используем send_file с правильным MIME-типом для docx
+        return send_file(
+            file_path,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name=filename
+        )
     
     return app
 
