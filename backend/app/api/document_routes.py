@@ -16,7 +16,7 @@ from lxml import etree
 
 from app.services.document_processor import DocumentProcessor
 from app.services.norm_control_checker import NormControlChecker
-from app.services.document_corrector import DocumentCorrector
+from app.services.document_corrector import DocumentCorrector, CorrectionReport
 # ИИ функциональность удалена для упрощения приложения
 
 bp = Blueprint('document', __name__, url_prefix='/api/document')
@@ -401,6 +401,126 @@ def correct_document():
         
     except Exception as e:
         current_app.logger.error(f"Ошибка при исправлении документа: {type(e).__name__}: {str(e)}")
+        traceback.print_exc(file=sys.stdout)
+        return jsonify({'error': f'Ошибка при исправлении документа: {str(e)}'}), 500
+
+
+@bp.route('/correct-multipass', methods=['POST'])
+def correct_document_multipass():
+    """
+    Многопроходное исправление ошибок в документе с верификацией.
+    
+    Этот метод выполняет до 3 проходов коррекции:
+    1. Структурный анализ и стили
+    2. Детальное форматирование
+    3. Верификация и доработка
+    
+    Возвращает детальный отчёт о выполненных исправлениях.
+    """
+    data = request.json
+    current_app.logger.info(f"Получен запрос на многопроходное исправление документа: {data}")
+    
+    if not data or ('file_path' not in data and 'path' not in data):
+        current_app.logger.error("Необходимо указать путь к файлу")
+        return jsonify({'error': 'Необходимо указать путь к файлу'}), 400
+    
+    file_path = data.get('file_path') or data.get('path')
+    original_filename = data.get('original_filename', '') or data.get('filename', '')
+    max_passes = data.get('max_passes', 3)
+    verbose = data.get('verbose', False)
+    
+    current_app.logger.info(f"Путь к файлу для исправления: {file_path}")
+    current_app.logger.info(f"Максимальное количество проходов: {max_passes}")
+    
+    try:
+        # Проверяем существование файла
+        if not os.path.exists(file_path):
+            if not file_path.lower().endswith('.docx'):
+                new_file_path = file_path + '.docx'
+                if os.path.exists(new_file_path):
+                    file_path = new_file_path
+                else:
+                    return jsonify({'error': 'Файл не найден'}), 404
+            else:
+                return jsonify({'error': 'Файл не найден'}), 404
+        
+        current_app.logger.info(f"Файл существует, размер: {os.path.getsize(file_path)} байт")
+        
+        # Создаем уникальный ID и путь
+        correction_id = str(uuid.uuid4())
+        correction_date = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Загружаем профиль ГОСТ
+        profile_data = None
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            profile_path = os.path.join(base_dir, 'profiles', 'default_gost.json')
+            if os.path.exists(profile_path):
+                with open(profile_path, 'r', encoding='utf-8') as f:
+                    profile_data = json.load(f)
+        except Exception as e:
+            current_app.logger.warning(f"Не удалось загрузить профиль ГОСТ: {e}")
+
+        # Создаём корректор с многопроходным режимом
+        corrector = DocumentCorrector(profile_data=profile_data)
+        corrector.verbose_logging = verbose
+        corrector.max_passes = max_passes
+        
+        current_app.logger.info("Запуск многопроходной коррекции...")
+        
+        # Создаем путь для сохранения
+        if original_filename:
+            original_name, ext = os.path.splitext(original_filename)
+            safe_original_name = secure_filename(original_name)
+            permanent_filename = f"{safe_original_name}_multipass_{correction_date}.docx"
+        else:
+            permanent_filename = f"corrected_multipass_{correction_date}.docx"
+        
+        permanent_path = os.path.join(CORRECTIONS_DIR, permanent_filename)
+        current_app.logger.info(f"Путь для сохранения: {permanent_path}")
+        
+        # Выполняем многопроходную коррекцию
+        corrected_file_path, report = corrector.correct_document_multipass(
+            file_path, 
+            out_path=permanent_path,
+            max_passes=max_passes
+        )
+        
+        current_app.logger.info(f"Документ успешно исправлен, новый путь: {corrected_file_path}")
+        
+        # Проверяем результат
+        if not os.path.exists(corrected_file_path):
+            current_app.logger.error(f"Исправленный файл не найден: {corrected_file_path}")
+            return jsonify({'error': 'Файл не был создан при исправлении'}), 500
+            
+        file_size = os.path.getsize(corrected_file_path)
+        current_app.logger.info(f"Размер исправленного файла: {file_size} байт")
+        
+        # Получаем сводку отчёта
+        report_summary = report.get_summary()
+        
+        return jsonify({
+            'success': True,
+            'corrected_file_path': permanent_filename,
+            'corrected_path': permanent_filename,
+            'filename': permanent_filename,
+            'original_filename': original_filename,
+            'correction_id': correction_id,
+            'multipass': True,
+            'report': {
+                'passes_completed': report_summary['passes_completed'],
+                'total_issues_found': report_summary['total_issues_found'],
+                'total_issues_fixed': report_summary['total_issues_fixed'],
+                'remaining_issues': report_summary['remaining_issues'],
+                'success_rate': report_summary['success_rate'],
+                'duration_seconds': report_summary['duration_seconds'],
+                'actions_by_phase': report_summary['actions_by_phase'],
+                'verification_results': report.verification_results
+            }
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Ошибка при многопроходном исправлении: {type(e).__name__}: {str(e)}")
         traceback.print_exc(file=sys.stdout)
         return jsonify({'error': f'Ошибка при исправлении документа: {str(e)}'}), 500
 

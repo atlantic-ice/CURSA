@@ -3,6 +3,10 @@ import re
 import datetime
 import tempfile
 import json
+import copy
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Optional, Tuple
+from enum import Enum
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT, WD_LINE_SPACING
@@ -14,6 +18,132 @@ from docx.text.paragraph import Paragraph
 import shutil
 from docxtpl import DocxTemplate
 from docxcompose.composer import Composer
+
+# Импортируем XML-редактор для гибридного подхода
+try:
+    from app.services.xml_document_editor import XMLDocumentEditor, apply_xml_corrections
+    XML_EDITOR_AVAILABLE = True
+except ImportError:
+    XML_EDITOR_AVAILABLE = False
+
+
+class CorrectionPhase(Enum):
+    """Фазы многопроходной коррекции"""
+    STRUCTURE = "structure"      # Структурный анализ
+    STYLES = "styles"           # Применение стилей
+    FORMATTING = "formatting"    # Форматирование текста
+    VERIFICATION = "verification" # Финальная верификация
+    XML_DEEP = "xml_deep"        # Глубокая XML-коррекция
+
+
+@dataclass
+class CorrectionAction:
+    """Описание одного действия коррекции"""
+    phase: CorrectionPhase
+    element_type: str  # paragraph, table, heading, etc.
+    element_index: int
+    action_type: str  # font_change, spacing_change, alignment_change, etc.
+    old_value: Any
+    new_value: Any
+    description: str
+    success: bool = True
+    error_message: str = ""
+
+
+@dataclass
+class CorrectionReport:
+    """Полный отчёт о коррекции документа"""
+    file_path: str
+    start_time: datetime.datetime = field(default_factory=datetime.datetime.now)
+    end_time: Optional[datetime.datetime] = None
+    actions: List[CorrectionAction] = field(default_factory=list)
+    verification_results: Dict[str, Any] = field(default_factory=dict)
+    total_issues_found: int = 0
+    total_issues_fixed: int = 0
+    remaining_issues: int = 0
+    passes_completed: int = 0
+    max_passes: int = 3
+    
+    def add_action(self, action: CorrectionAction):
+        """Добавляет действие в отчёт"""
+        self.actions.append(action)
+        if action.success:
+            self.total_issues_fixed += 1
+    
+    def get_summary(self) -> Dict[str, Any]:
+        """Возвращает краткую сводку отчёта"""
+        return {
+            "file": self.file_path,
+            "duration_seconds": (self.end_time - self.start_time).total_seconds() if self.end_time else None,
+            "passes_completed": self.passes_completed,
+            "total_issues_found": self.total_issues_found,
+            "total_issues_fixed": self.total_issues_fixed,
+            "remaining_issues": self.remaining_issues,
+            "success_rate": round(self.total_issues_fixed / max(self.total_issues_found, 1) * 100, 2),
+            "actions_by_phase": self._count_actions_by_phase(),
+            "actions_by_type": self._count_actions_by_type(),
+        }
+    
+    def _count_actions_by_phase(self) -> Dict[str, int]:
+        """Считает действия по фазам"""
+        counts = {}
+        for action in self.actions:
+            phase_name = action.phase.value
+            counts[phase_name] = counts.get(phase_name, 0) + 1
+        return counts
+    
+    def _count_actions_by_type(self) -> Dict[str, int]:
+        """Считает действия по типам"""
+        counts = {}
+        for action in self.actions:
+            counts[action.action_type] = counts.get(action.action_type, 0) + 1
+        return counts
+    
+    def get_detailed_report(self) -> str:
+        """Генерирует детальный текстовый отчёт"""
+        lines = [
+            "=" * 60,
+            "ОТЧЁТ О КОРРЕКЦИИ ДОКУМЕНТА",
+            "=" * 60,
+            f"Файл: {self.file_path}",
+            f"Начало: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}",
+            f"Окончание: {self.end_time.strftime('%Y-%m-%d %H:%M:%S') if self.end_time else 'В процессе'}",
+            f"Проходов выполнено: {self.passes_completed}/{self.max_passes}",
+            "",
+            f"Найдено проблем: {self.total_issues_found}",
+            f"Исправлено: {self.total_issues_fixed}",
+            f"Осталось: {self.remaining_issues}",
+            f"Успешность: {round(self.total_issues_fixed / max(self.total_issues_found, 1) * 100, 2)}%",
+            "",
+            "-" * 60,
+            "ДЕЙСТВИЯ ПО ФАЗАМ:",
+            "-" * 60,
+        ]
+        
+        for phase in CorrectionPhase:
+            phase_actions = [a for a in self.actions if a.phase == phase]
+            if phase_actions:
+                lines.append(f"\n[{phase.value.upper()}] ({len(phase_actions)} действий)")
+                for action in phase_actions[:10]:  # Показываем первые 10
+                    status = "✓" if action.success else "✗"
+                    lines.append(f"  {status} {action.description}")
+                if len(phase_actions) > 10:
+                    lines.append(f"  ... и ещё {len(phase_actions) - 10} действий")
+        
+        if self.verification_results:
+            lines.extend([
+                "",
+                "-" * 60,
+                "РЕЗУЛЬТАТЫ ВЕРИФИКАЦИИ:",
+                "-" * 60,
+            ])
+            for check, result in self.verification_results.items():
+                status = "✓" if result.get("passed", False) else "✗"
+                lines.append(f"  {status} {check}: {result.get('message', '')}")
+        
+        lines.append("=" * 60)
+        return "\n".join(lines)
+
 
 class DocumentCorrector:
     """
@@ -53,6 +183,11 @@ class DocumentCorrector:
         
         self.errors = []
         self.temp_files = []
+        self.correction_report: Optional[CorrectionReport] = None
+        self.enable_multipass = True  # Включить многопроходную коррекцию
+        self.enable_xml_correction = True  # Включить глубокую XML-коррекцию
+        self.max_passes = 3  # Максимальное количество проходов
+        self.verbose_logging = False  # Подробное логирование
     
     def __del__(self):
         """
@@ -71,6 +206,426 @@ class DocumentCorrector:
                     print(f"Удалена пустая временная директория: {temp_dir}")
             except Exception as e:
                 print(f"Ошибка при удалении временного файла {temp_file}: {str(e)}")
+    
+    # ============================================================================
+    # МНОГОПРОХОДНАЯ КОРРЕКЦИЯ С ВЕРИФИКАЦИЕЙ
+    # ============================================================================
+    
+    def correct_document_multipass(self, file_path: str, errors: List = None, 
+                                   out_path: str = None, max_passes: int = None) -> Tuple[str, CorrectionReport]:
+        """
+        Исправляет документ с использованием многопроходной коррекции.
+        
+        Алгоритм:
+        1. Проход 1 (Структура): Анализ и исправление структуры документа
+        2. Проход 2 (Форматирование): Применение стилей и форматирования
+        3. Проход 3 (Верификация): Проверка результатов и исправление пропущенного
+        
+        Args:
+            file_path: Путь к исходному файлу
+            errors: Список ошибок для исправления (опционально)
+            out_path: Путь для сохранения (опционально)
+            max_passes: Максимальное количество проходов (по умолчанию 3)
+            
+        Returns:
+            Tuple[str, CorrectionReport]: Путь к исправленному файлу и отчёт
+        """
+        if max_passes is None:
+            max_passes = self.max_passes
+        
+        # Инициализируем отчёт
+        self.correction_report = CorrectionReport(
+            file_path=file_path,
+            max_passes=max_passes
+        )
+        
+        # Проверяем существование файла
+        if not os.path.exists(file_path):
+            if not file_path.lower().endswith('.docx'):
+                corrected_path = file_path + '.docx'
+                if os.path.exists(corrected_path):
+                    file_path = corrected_path
+                else:
+                    raise FileNotFoundError(f"Файл не найден: {file_path}")
+            else:
+                raise FileNotFoundError(f"Файл не найден: {file_path}")
+        
+        try:
+            # Загружаем документ
+            document = Document(file_path)
+            
+            # Подготавливаем путь для сохранения
+            out_path = self._prepare_output_path(file_path, out_path)
+            
+            # Сначала собираем информацию о проблемах
+            initial_issues = self._analyze_document_issues(document)
+            self.correction_report.total_issues_found = len(initial_issues)
+            
+            if self.verbose_logging:
+                print(f"[MULTIPASS] Найдено проблем: {len(initial_issues)}")
+            
+            # Выполняем многопроходную коррекцию
+            for pass_num in range(1, max_passes + 1):
+                if self.verbose_logging:
+                    print(f"\n[MULTIPASS] === Проход {pass_num}/{max_passes} ===")
+                
+                issues_before = self._count_current_issues(document)
+                
+                # Определяем фазу в зависимости от номера прохода
+                if pass_num == 1:
+                    # Проход 1: Структура и стили
+                    self._execute_structure_pass(document)
+                elif pass_num == 2:
+                    # Проход 2: Детальное форматирование
+                    self._execute_formatting_pass(document)
+                else:
+                    # Проход 3+: Верификация и доработка
+                    self._execute_verification_pass(document)
+                
+                self.correction_report.passes_completed = pass_num
+                
+                issues_after = self._count_current_issues(document)
+                
+                if self.verbose_logging:
+                    print(f"[MULTIPASS] Проход {pass_num}: {issues_before} -> {issues_after} проблем")
+                
+                # Если проблем не осталось, прекращаем
+                if issues_after == 0:
+                    if self.verbose_logging:
+                        print("[MULTIPASS] Все проблемы исправлены!")
+                    break
+                
+                # Если прогресса нет, прекращаем
+                if issues_after >= issues_before and pass_num > 1:
+                    if self.verbose_logging:
+                        print("[MULTIPASS] Прогресса нет, завершаем.")
+                    break
+            
+            # Финальная верификация
+            self._run_final_verification(document)
+            
+            # Сохраняем документ
+            document.save(out_path)
+            
+            # === ГЛУБОКАЯ XML-КОРРЕКЦИЯ ===
+            # Если остались проблемы, применяем прямую работу с XML
+            remaining_before_xml = self._count_current_issues(Document(out_path))
+            if remaining_before_xml > 0 and XML_EDITOR_AVAILABLE and self.enable_xml_correction:
+                if self.verbose_logging:
+                    print(f"\n[XML] Применяем глубокую XML-коррекцию ({remaining_before_xml} проблем)...")
+                
+                try:
+                    self._execute_xml_deep_pass(out_path)
+                    
+                    # Проверяем результат
+                    remaining_after_xml = self._count_current_issues(Document(out_path))
+                    if self.verbose_logging:
+                        print(f"[XML] После XML-коррекции: {remaining_after_xml} проблем")
+                except Exception as e:
+                    if self.verbose_logging:
+                        print(f"[XML] Ошибка XML-коррекции: {e}")
+            
+            # Завершаем отчёт
+            self.correction_report.end_time = datetime.datetime.now()
+            remaining = self._count_current_issues(Document(out_path))
+            self.correction_report.remaining_issues = remaining
+            
+            if self.verbose_logging:
+                print(f"\n[MULTIPASS] Готово! Осталось проблем: {remaining}")
+                print(self.correction_report.get_detailed_report())
+            
+            return out_path, self.correction_report
+            
+        except Exception as e:
+            self.correction_report.end_time = datetime.datetime.now()
+            print(f"Ошибка при многопроходной коррекции: {str(e)}")
+            raise
+    
+    def _execute_xml_deep_pass(self, file_path: str):
+        """
+        Выполняет глубокую XML-коррекцию документа.
+        Напрямую редактирует XML внутри DOCX для исправления проблем,
+        которые python-docx не может обработать.
+        """
+        if not XML_EDITOR_AVAILABLE:
+            return
+        
+        phase = CorrectionPhase.XML_DEEP
+        
+        with XMLDocumentEditor(file_path) as editor:
+            # Устанавливаем правила из профиля
+            editor.gost_rules['font_name'] = self.rules.get('font', {}).get('name', 'Times New Roman')
+            editor.gost_rules['font_size'] = int(self.rules.get('font', {}).get('size', 14) * 2)  # В полупунктах
+            editor.gost_rules['line_spacing'] = int(self.rules.get('line_spacing', 1.5) * 240)  # В твипах
+            # 1 см = 567 твипов, но Word округляет 1.25 см до 720 твипов для совместимости
+            editor.gost_rules['first_line_indent'] = 720  # 1.25 см = 720 твипов (стандарт Word)
+            
+            margins = self.rules.get('margins', {})
+            editor.gost_rules['left_margin'] = int(margins.get('left', 3.0) * 567)
+            editor.gost_rules['right_margin'] = int(margins.get('right', 1.5) * 567)
+            editor.gost_rules['top_margin'] = int(margins.get('top', 2.0) * 567)
+            editor.gost_rules['bottom_margin'] = int(margins.get('bottom', 2.0) * 567)
+            
+            # Применяем все XML-исправления
+            report = editor.fix_all()
+            
+            # Сохраняем
+            editor.save(file_path)
+            
+            # Логируем результаты
+            self._log_action(phase, "xml", 0, "xml_deep_correction",
+                           None, f"Успешно: {report.successful_edits}, Ошибок: {report.failed_edits}",
+                           f"Глубокая XML-коррекция: {report.total_edits} изменений",
+                           success=report.failed_edits == 0)
+    
+    def _prepare_output_path(self, file_path: str, out_path: str = None) -> str:
+        """Подготавливает путь для сохранения файла"""
+        if out_path:
+            if not out_path.lower().endswith('.docx'):
+                out_path = out_path + '.docx'
+            out_dir = os.path.dirname(out_path)
+            if out_dir and not os.path.exists(out_dir):
+                os.makedirs(out_dir, exist_ok=True)
+        else:
+            temp_dir = tempfile.mkdtemp()
+            file_name = os.path.basename(file_path)
+            if not file_name.lower().endswith('.docx'):
+                file_name = os.path.splitext(file_name)[0] + '.docx'
+            out_path = os.path.join(temp_dir, f"corrected_{file_name}")
+            self.temp_files.append(out_path)
+        return out_path
+    
+    def _analyze_document_issues(self, document) -> List[Dict[str, Any]]:
+        """Анализирует документ и возвращает список проблем"""
+        issues = []
+        
+        # Проверяем шрифты
+        for i, para in enumerate(document.paragraphs):
+            for run in para.runs:
+                if run.font.name and run.font.name != self.rules.get('font', {}).get('name', 'Times New Roman'):
+                    issues.append({
+                        'type': 'font_name',
+                        'element': 'paragraph',
+                        'index': i,
+                        'current': run.font.name,
+                        'expected': self.rules.get('font', {}).get('name', 'Times New Roman')
+                    })
+                if run.font.size and run.font.size != Pt(self.rules.get('font', {}).get('size', 14)):
+                    issues.append({
+                        'type': 'font_size',
+                        'element': 'paragraph',
+                        'index': i,
+                        'current': run.font.size,
+                        'expected': Pt(self.rules.get('font', {}).get('size', 14))
+                    })
+        
+        # Проверяем интервалы
+        for i, para in enumerate(document.paragraphs):
+            pf = para.paragraph_format
+            if pf.line_spacing and pf.line_spacing != self.rules.get('line_spacing', 1.5):
+                issues.append({
+                    'type': 'line_spacing',
+                    'element': 'paragraph',
+                    'index': i,
+                    'current': pf.line_spacing,
+                    'expected': self.rules.get('line_spacing', 1.5)
+                })
+        
+        # Проверяем поля
+        for section in document.sections:
+            margins = self.rules.get('margins', {})
+            if section.left_margin and section.left_margin != Cm(margins.get('left', 3.0)):
+                issues.append({
+                    'type': 'left_margin',
+                    'element': 'section',
+                    'current': section.left_margin,
+                    'expected': Cm(margins.get('left', 3.0))
+                })
+        
+        return issues
+    
+    def _count_current_issues(self, document) -> int:
+        """Подсчитывает текущее количество проблем в документе"""
+        return len(self._analyze_document_issues(document))
+    
+    def _execute_structure_pass(self, document):
+        """Проход 1: Структурный анализ и исправление"""
+        phase = CorrectionPhase.STRUCTURE
+        
+        # Применяем базовые стили
+        self._apply_core_styles(document)
+        self._log_action(phase, "styles", 0, "apply_core_styles", None, None, 
+                        "Применены базовые стили документа")
+        
+        # Исправляем поля
+        self._correct_margins(document)
+        self._log_action(phase, "section", 0, "margins", None, None,
+                        "Исправлены поля страницы")
+        
+        # Продвигаем псевдозаголовки
+        self._promote_pseudo_headings_to_styles(document)
+        self._log_action(phase, "headings", 0, "promote_headings", None, None,
+                        "Преобразованы псевдозаголовки в стили")
+        
+        # Исправляем заголовки разделов
+        self._correct_section_headings(document)
+        self._log_action(phase, "headings", 0, "section_headings", None, None,
+                        "Исправлены заголовки разделов")
+    
+    def _execute_formatting_pass(self, document):
+        """Проход 2: Детальное форматирование"""
+        phase = CorrectionPhase.FORMATTING
+        
+        # Исправляем шрифты
+        self._correct_font(document)
+        self._log_action(phase, "font", 0, "font_correction", None, None,
+                        "Исправлены шрифты документа")
+        
+        # Исправляем межстрочный интервал
+        self._correct_line_spacing(document)
+        self._log_action(phase, "spacing", 0, "line_spacing", None, None,
+                        "Исправлен межстрочный интервал")
+        
+        # Исправляем таблицы
+        self._correct_tables(document)
+        self._log_action(phase, "table", 0, "tables", None, None,
+                        "Исправлено оформление таблиц")
+        
+        # Исправляем изображения
+        self._correct_images(document)
+        self._log_action(phase, "image", 0, "images", None, None,
+                        "Исправлены подписи к рисункам")
+        
+        # Исправляем списки
+        self._correct_lists(document)
+        self._log_action(phase, "list", 0, "lists", None, None,
+                        "Исправлено оформление списков")
+        
+        # Исправляем формулы
+        self._correct_formulas(document)
+        self._log_action(phase, "formula", 0, "formulas", None, None,
+                        "Исправлено оформление формул")
+        
+        # Исправляем библиографию
+        self._correct_bibliography_references(document)
+        self._correct_gost_bibliography(document)
+        self._log_action(phase, "bibliography", 0, "bibliography", None, None,
+                        "Исправлен список литературы")
+    
+    def _execute_verification_pass(self, document):
+        """Проход 3+: Верификация и исправление пропущенного"""
+        phase = CorrectionPhase.VERIFICATION
+        
+        fixed_count = 0
+        
+        # Повторно проверяем и исправляем шрифты
+        for i, para in enumerate(document.paragraphs):
+            for run in para.runs:
+                expected_font = self.rules.get('font', {}).get('name', 'Times New Roman')
+                expected_size = Pt(self.rules.get('font', {}).get('size', 14))
+                
+                if run.font.name != expected_font:
+                    old_value = run.font.name
+                    run.font.name = expected_font
+                    self._log_action(phase, "paragraph", i, "font_name_fix",
+                                   old_value, expected_font,
+                                   f"Исправлен шрифт в абзаце {i+1}")
+                    fixed_count += 1
+                
+                # Для обычного текста проверяем размер (не для заголовков)
+                if not para.style.name.startswith('Heading'):
+                    if run.font.size and run.font.size != expected_size:
+                        old_value = run.font.size
+                        run.font.size = expected_size
+                        self._log_action(phase, "paragraph", i, "font_size_fix",
+                                       old_value, expected_size,
+                                       f"Исправлен размер шрифта в абзаце {i+1}")
+                        fixed_count += 1
+        
+        # Повторно проверяем интервалы
+        for i, para in enumerate(document.paragraphs):
+            pf = para.paragraph_format
+            expected_spacing = self.rules.get('line_spacing', 1.5)
+            
+            if pf.line_spacing != expected_spacing:
+                old_value = pf.line_spacing
+                pf.line_spacing = expected_spacing
+                pf.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+                self._log_action(phase, "paragraph", i, "spacing_fix",
+                               old_value, expected_spacing,
+                               f"Исправлен интервал в абзаце {i+1}")
+                fixed_count += 1
+        
+        # Проверяем отступы
+        self._correct_first_line_indent(document)
+        self._correct_paragraph_alignment(document)
+        
+        if self.verbose_logging:
+            print(f"[VERIFICATION] Дополнительно исправлено: {fixed_count}")
+    
+    def _run_final_verification(self, document):
+        """Финальная проверка документа"""
+        results = {}
+        
+        # Проверка шрифтов
+        font_issues = 0
+        expected_font = self.rules.get('font', {}).get('name', 'Times New Roman')
+        for para in document.paragraphs:
+            for run in para.runs:
+                if run.font.name and run.font.name != expected_font:
+                    font_issues += 1
+        results['fonts'] = {
+            'passed': font_issues == 0,
+            'message': f"Найдено {font_issues} проблем со шрифтами" if font_issues else "Все шрифты корректны"
+        }
+        
+        # Проверка интервалов
+        spacing_issues = 0
+        expected_spacing = self.rules.get('line_spacing', 1.5)
+        for para in document.paragraphs:
+            if para.paragraph_format.line_spacing and para.paragraph_format.line_spacing != expected_spacing:
+                spacing_issues += 1
+        results['spacing'] = {
+            'passed': spacing_issues == 0,
+            'message': f"Найдено {spacing_issues} проблем с интервалами" if spacing_issues else "Все интервалы корректны"
+        }
+        
+        # Проверка полей
+        margin_issues = 0
+        margins = self.rules.get('margins', {})
+        for section in document.sections:
+            if section.left_margin and section.left_margin != Cm(margins.get('left', 3.0)):
+                margin_issues += 1
+        results['margins'] = {
+            'passed': margin_issues == 0,
+            'message': f"Найдено {margin_issues} проблем с полями" if margin_issues else "Все поля корректны"
+        }
+        
+        self.correction_report.verification_results = results
+        
+        return all(r['passed'] for r in results.values())
+    
+    def _log_action(self, phase: CorrectionPhase, element_type: str, element_index: int,
+                   action_type: str, old_value: Any, new_value: Any, description: str,
+                   success: bool = True, error_message: str = ""):
+        """Логирует действие коррекции"""
+        if self.correction_report:
+            action = CorrectionAction(
+                phase=phase,
+                element_type=element_type,
+                element_index=element_index,
+                action_type=action_type,
+                old_value=old_value,
+                new_value=new_value,
+                description=description,
+                success=success,
+                error_message=error_message
+            )
+            self.correction_report.add_action(action)
+
+    # ============================================================================
+    # ОСНОВНОЙ МЕТОД КОРРЕКЦИИ (обновлённый)
+    # ============================================================================
     
     def correct_document(self, file_path, errors=None, out_path=None):
         """
