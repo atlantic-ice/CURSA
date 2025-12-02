@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { 
   Box, 
   Paper, 
@@ -66,6 +67,26 @@ const RelatedLinksCard = ({ title, links, sx = {} }) => {
       </List>
     </Paper>
   );
+};
+
+RelatedLinksCard.propTypes = {
+  /** Заголовок карточки */
+  title: PropTypes.string.isRequired,
+  /** Массив ссылок */
+  links: PropTypes.arrayOf(
+    PropTypes.shape({
+      path: PropTypes.string.isRequired,
+      title: PropTypes.string.isRequired,
+      description: PropTypes.string,
+      icon: PropTypes.node,
+    })
+  ).isRequired,
+  /** Дополнительные стили */
+  sx: PropTypes.object,
+};
+
+RelatedLinksCard.defaultProps = {
+  sx: {},
 };
 
 export default RelatedLinksCard; 

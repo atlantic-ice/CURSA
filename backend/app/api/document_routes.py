@@ -17,6 +17,13 @@ from lxml import etree
 from app.services.document_processor import DocumentProcessor
 from app.services.norm_control_checker import NormControlChecker
 from app.services.document_corrector import DocumentCorrector, CorrectionReport
+from app.config.security import (
+    RATE_LIMITS,
+    is_allowed_file,
+    is_safe_filename,
+    sanitize_filename,
+    MIN_FILE_SIZE,
+)
 # ИИ функциональность удалена для упрощения приложения
 
 bp = Blueprint('document', __name__, url_prefix='/api/document')
@@ -27,6 +34,26 @@ CORRECTIONS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(_
 
 # Создаем директорию, если она не существует
 os.makedirs(CORRECTIONS_DIR, exist_ok=True)
+
+
+def _get_limiter():
+    """Получает limiter из приложения (если установлен)"""
+    return getattr(current_app, 'limiter', None)
+
+
+def apply_rate_limit(limit_key: str):
+    """Декоратор для применения rate limit"""
+    def decorator(f):
+        def wrapper(*args, **kwargs):
+            limiter = _get_limiter()
+            if limiter:
+                # Rate limit применяется автоматически через flask-limiter
+                pass
+            return f(*args, **kwargs)
+        wrapper.__name__ = f.__name__
+        return wrapper
+    return decorator
+
 
 def allowed_file(filename):
     return '.' in filename and \

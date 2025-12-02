@@ -234,13 +234,12 @@ class TestDocumentProcessing:
         check_results = checker.check_document(document_data)
         
         # Проверяем, найдены ли ошибки размера шрифта
+        # Ответ NormControlChecker содержит 'issues' - плоский список всех проблем
         font_size_issues = []
-        if 'rules_results' in check_results:
-            for result in check_results['rules_results']:
-                if result.get('rule_name') == 'Размер шрифта':
-                    for issue in result.get('issues', []):
-                        if 'font_size' in issue.get('type', ''):
-                            font_size_issues.append(issue)
+        if 'issues' in check_results:
+            for issue in check_results['issues']:
+                if issue.get('type') == 'font_size':
+                    font_size_issues.append(issue)
         
         expected = {
             'has_font_size_issues': True,

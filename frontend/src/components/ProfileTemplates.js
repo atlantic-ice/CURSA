@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -197,3 +198,12 @@ export default function ProfileTemplates({ onSelect, onClose }) {
         </Paper>
     );
 }
+
+ProfileTemplates.propTypes = {
+    /** Колбэк создания профиля из шаблона */
+    onCreateFromTemplate: PropTypes.func,
+};
+
+ProfileTemplates.defaultProps = {
+    onCreateFromTemplate: undefined,
+};

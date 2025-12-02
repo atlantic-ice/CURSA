@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -262,3 +263,21 @@ export default function ProfileImportExport({ selectedProfile, onImportSuccess, 
         </Paper>
     );
 }
+
+ProfileImportExport.propTypes = {
+    /** Выбранный профиль */
+    selectedProfile: PropTypes.shape({
+        id: PropTypes.string,
+        name: PropTypes.string,
+    }),
+    /** Колбэк успешного импорта */
+    onImportSuccess: PropTypes.func,
+    /** Колбэк закрытия */
+    onClose: PropTypes.func,
+};
+
+ProfileImportExport.defaultProps = {
+    selectedProfile: null,
+    onImportSuccess: undefined,
+    onClose: undefined,
+};

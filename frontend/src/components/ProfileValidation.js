@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -232,3 +233,14 @@ export default function ProfileValidation({ profileId, profileName }) {
         </Paper>
     );
 }
+
+ProfileValidation.propTypes = {
+    /** ID профиля для валидации */
+    profileId: PropTypes.string.isRequired,
+    /** Название профиля */
+    profileName: PropTypes.string,
+};
+
+ProfileValidation.defaultProps = {
+    profileName: '',
+};

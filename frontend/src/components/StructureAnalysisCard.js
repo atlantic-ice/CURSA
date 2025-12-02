@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Card,
@@ -176,6 +177,20 @@ const StructureAnalysisCard = ({ structureIssues }) => {
       </CardContent>
     </Card>
   );
+};
+
+StructureAnalysisCard.propTypes = {
+  /** Массив проблем со структурой */
+  structureIssues: PropTypes.arrayOf(
+    PropTypes.shape({
+      type: PropTypes.oneOf(['missing_section', 'section_order']),
+      description: PropTypes.string.isRequired,
+    })
+  ),
+};
+
+StructureAnalysisCard.defaultProps = {
+  structureIssues: [],
 };
 
 export default StructureAnalysisCard; 

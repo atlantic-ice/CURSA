@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Typography,
@@ -106,6 +107,31 @@ const TemplatesSection = ({ templates = [], title = "Шаблоны докуме
       </Grid>
     </Box>
   );
+};
+
+TemplatesSection.propTypes = {
+  /** Массив объектов с данными о шаблонах */
+  templates: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      description: PropTypes.string,
+      tags: PropTypes.arrayOf(PropTypes.string),
+      size: PropTypes.string,
+      format: PropTypes.string,
+      downloadUrl: PropTypes.string,
+      filename: PropTypes.string,
+    })
+  ),
+  /** Заголовок секции */
+  title: PropTypes.string,
+  /** Дополнительные стили */
+  sx: PropTypes.object,
+};
+
+TemplatesSection.defaultProps = {
+  templates: [],
+  title: "Шаблоны документов",
+  sx: {},
 };
 
 export default TemplatesSection; 

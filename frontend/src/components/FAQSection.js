@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Typography,
@@ -91,6 +92,26 @@ const FAQSection = ({ questions = [], title = "Часто задаваемые �
       </Paper>
     </Box>
   );
+};
+
+FAQSection.propTypes = {
+  /** Массив объектов с вопросами и ответами */
+  questions: PropTypes.arrayOf(
+    PropTypes.shape({
+      question: PropTypes.string.isRequired,
+      answer: PropTypes.string.isRequired,
+    })
+  ),
+  /** Заголовок секции */
+  title: PropTypes.string,
+  /** Дополнительные стили */
+  sx: PropTypes.object,
+};
+
+FAQSection.defaultProps = {
+  questions: [],
+  title: "Часто задаваемые вопросы",
+  sx: {},
 };
 
 export default FAQSection; 

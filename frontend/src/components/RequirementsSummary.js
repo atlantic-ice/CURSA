@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { 
   Box, 
   Typography, 
@@ -227,6 +228,15 @@ const RequirementsSummary = ({ sx = {} }) => {
       </Popover>
     </Paper>
   );
+};
+
+RequirementsSummary.propTypes = {
+  /** Дополнительные стили */
+  sx: PropTypes.object,
+};
+
+RequirementsSummary.defaultProps = {
+  sx: {},
 };
 
 export default RequirementsSummary; 

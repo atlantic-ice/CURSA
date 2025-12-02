@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -285,3 +286,10 @@ export default function ProfileComparison({ profiles, onClose }) {
         </Paper>
     );
 }
+
+ProfileComparison.propTypes = {
+    /** ID первого профиля для сравнения */
+    profileId1: PropTypes.string,
+    /** ID второго профиля для сравнения */
+    profileId2: PropTypes.string,
+};

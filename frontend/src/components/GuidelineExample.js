@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Paper,
@@ -201,6 +202,41 @@ const GuidelineExample = ({
       </Grid>
     </Paper>
   );
+};
+
+GuidelineExample.propTypes = {
+  /** Заголовок примера */
+  title: PropTypes.string.isRequired,
+  /** Описание правила оформления */
+  description: PropTypes.string.isRequired,
+  /** Текст правильного примера */
+  correctExample: PropTypes.string.isRequired,
+  /** Текст неправильного примера */
+  incorrectExample: PropTypes.string.isRequired,
+  /** Изображение правильного примера */
+  correctImage: PropTypes.element,
+  /** Изображение неправильного примера */
+  incorrectImage: PropTypes.element,
+  /** Пояснение к правильному примеру */
+  correctExplanation: PropTypes.string,
+  /** Пояснение к неправильному примеру */
+  incorrectExplanation: PropTypes.string,
+  /** Форматирование для неправильного примера */
+  incorrectFormatting: PropTypes.object,
+  /** Форматирование для правильного примера */
+  correctFormatting: PropTypes.object,
+  /** Дополнительные стили компонента */
+  sx: PropTypes.object,
+};
+
+GuidelineExample.defaultProps = {
+  correctImage: null,
+  incorrectImage: null,
+  correctExplanation: '',
+  incorrectExplanation: '',
+  incorrectFormatting: {},
+  correctFormatting: {},
+  sx: {},
 };
 
 export default GuidelineExample; 

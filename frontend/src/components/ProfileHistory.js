@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -334,3 +335,20 @@ export default function ProfileHistory({ profileId, profileName, isSystemProfile
         </>
     );
 }
+
+ProfileHistory.propTypes = {
+    /** ID профиля */
+    profileId: PropTypes.string.isRequired,
+    /** Название профиля */
+    profileName: PropTypes.string,
+    /** Системный ли профиль */
+    isSystemProfile: PropTypes.bool,
+    /** Колбэк восстановления */
+    onRestore: PropTypes.func,
+};
+
+ProfileHistory.defaultProps = {
+    profileName: '',
+    isSystemProfile: false,
+    onRestore: undefined,
+};

@@ -1,10 +1,253 @@
 [
   {
+    "test_id": "tests/unit/test_app.py::test_app_creation",
+    "test_name": "test_app_creation",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.00012560001050587744,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_app.py::test_cors_enabled",
+    "test_name": "test_cors_enabled",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.005647500001941808,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_app.py::test_corrections_route",
+    "test_name": "test_corrections_route",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0006626999966101721,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_initialization",
+    "test_name": "test_initialization",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.00033990001247730106,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_extract_data",
+    "test_name": "test_extract_data",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.03224430000409484,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_extract_paragraphs",
+    "test_name": "test_extract_paragraphs",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0025348999915877357,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_extract_tables",
+    "test_name": "test_extract_tables",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.00015619999612681568,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_extract_headings",
+    "test_name": "test_extract_headings",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.000607900001341477,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_extract_document_properties",
+    "test_name": "test_extract_document_properties",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0014779999910388142,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_extract_title_page",
+    "test_name": "test_extract_title_page",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0036090999929001555,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_with_nonexistent_file",
+    "test_name": "test_with_nonexistent_file",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.00021220000053290278,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_document_processor.py::TestDocumentProcessor::test_with_invalid_file_format",
+    "test_name": "test_with_invalid_file_format",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0033254000009037554,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_heading_spacing_correction.py::test_pseudo_heading_promoted_and_spaced",
+    "test_name": "test_pseudo_heading_promoted_and_spaced",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0844177000108175,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_initialization",
+    "test_name": "test_initialization",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 8.889999298844486e-05,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_document_empty",
+    "test_name": "test_check_document_empty",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.00014760000340174884,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_font",
+    "test_name": "test_check_font",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0007125000120140612,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_font_size",
+    "test_name": "test_check_font_size",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.00010479999764356762,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_font_code_listing_exception",
+    "test_name": "test_check_font_code_listing_exception",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 7.470000127796084e-05,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_margins",
+    "test_name": "test_check_margins",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 7.740000728517771e-05,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_line_spacing",
+    "test_name": "test_check_line_spacing",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.00014010000450070947,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_paragraphs",
+    "test_name": "test_check_paragraphs",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 8.350001007784158e-05,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_page_numbers",
+    "test_name": "test_check_page_numbers",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0001078000059351325,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_calculate_statistics",
+    "test_name": "test_calculate_statistics",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 7.37000082153827e-05,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_ordinals",
+    "test_name": "test_check_ordinals",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0008377000049222261,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_surnames",
+    "test_name": "test_check_surnames",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.0006964000058360398,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_norm_control_checker.py::TestNormControlChecker::test_check_numbering",
+    "test_name": "test_check_numbering",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.00031859999580774456,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/unit/test_pseudo_headings_multilevel.py::test_multilevel_numbering_promoted",
+    "test_name": "test_multilevel_numbering_promoted",
+    "test_type": "unit",
+    "passed": true,
+    "duration": 0.08805320000101347,
+    "failed": false,
+    "skipped": false
+  },
+  {
     "test_id": "tests/unit/test_xml_document_editor.py::TestXMLDocumentEditor::test_context_manager",
     "test_name": "test_context_manager",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.0473883999948157,
+    "duration": 0.04338350000034552,
     "failed": false,
     "skipped": false
   },
@@ -13,7 +256,7 @@
     "test_name": "test_fix_all_fonts",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.1703062000015052,
+    "duration": 0.13800399999308866,
     "failed": false,
     "skipped": false
   },
@@ -22,7 +265,7 @@
     "test_name": "test_fix_page_margins",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.13023759999487083,
+    "duration": 0.11692549999861512,
     "failed": false,
     "skipped": false
   },
@@ -31,7 +274,7 @@
     "test_name": "test_fix_all_paragraphs",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.13470589999633376,
+    "duration": 0.12064819999795873,
     "failed": false,
     "skipped": false
   },
@@ -40,7 +283,7 @@
     "test_name": "test_fix_normal_style",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.10927629999059718,
+    "duration": 0.10253049999300856,
     "failed": false,
     "skipped": false
   },
@@ -49,7 +292,7 @@
     "test_name": "test_fix_heading_styles",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.1117647999926703,
+    "duration": 0.10342010000022128,
     "failed": false,
     "skipped": false
   },
@@ -58,7 +301,7 @@
     "test_name": "test_fix_all",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.11960809999436606,
+    "duration": 0.11220609999145381,
     "failed": false,
     "skipped": false
   },
@@ -67,7 +310,7 @@
     "test_name": "test_apply_xml_corrections_function",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.12224419999984093,
+    "duration": 0.11353849999431986,
     "failed": false,
     "skipped": false
   },
@@ -76,7 +319,7 @@
     "test_name": "test_report_structure",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.05389209999702871,
+    "duration": 0.07226339999760967,
     "failed": false,
     "skipped": false
   },
@@ -85,7 +328,7 @@
     "test_name": "test_empty_document",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.05268990001059137,
+    "duration": 0.04992219999257941,
     "failed": false,
     "skipped": false
   },
@@ -94,7 +337,7 @@
     "test_name": "test_document_with_tables",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.13869789999444038,
+    "duration": 0.13012470000830945,
     "failed": false,
     "skipped": false
   },
@@ -103,7 +346,7 @@
     "test_name": "test_gost_compliance_after_fix",
     "test_type": "unit",
     "passed": true,
-    "duration": 0.13605570000072476,
+    "duration": 0.13735600000654813,
     "failed": false,
     "skipped": false
   }

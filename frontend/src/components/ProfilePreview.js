@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -219,3 +220,29 @@ export default function ProfilePreview({ rules }) {
         </Paper>
     );
 }
+
+ProfilePreview.propTypes = {
+    /** Объект правил профиля для предпросмотра */
+    rules: PropTypes.shape({
+        font: PropTypes.shape({
+            name: PropTypes.string,
+            size: PropTypes.number,
+        }),
+        margins: PropTypes.shape({
+            left: PropTypes.number,
+            right: PropTypes.number,
+            top: PropTypes.number,
+            bottom: PropTypes.number,
+        }),
+        line_spacing: PropTypes.number,
+        first_line_indent: PropTypes.number,
+        paragraph_alignment: PropTypes.string,
+        headings: PropTypes.object,
+        tables: PropTypes.object,
+        captions: PropTypes.object,
+    }),
+};
+
+ProfilePreview.defaultProps = {
+    rules: null,
+};

@@ -5,6 +5,8 @@ import copy
 import re
 import shutil
 from datetime import datetime, timedelta
+from functools import lru_cache
+from typing import Dict, Any, Optional, List, Tuple
 
 bp = Blueprint('profiles', __name__, url_prefix='/api/profiles')
 
@@ -22,6 +24,77 @@ SYSTEM_PROFILES = ['default_gost', 'gost_7_32_2017', 'gost_r_7_0_100_2018']
 
 # Максимальная глубина наследования
 MAX_INHERITANCE_DEPTH = 5
+
+# Кэш для профилей (сбрасывается при изменениях)
+_profile_cache_version = 0
+
+
+def _get_cache_key() -> int:
+    """Возвращает текущую версию кэша"""
+    return _profile_cache_version
+
+
+def invalidate_profile_cache() -> None:
+    """Сбрасывает кэш профилей при изменениях"""
+    global _profile_cache_version
+    _profile_cache_version += 1
+    # Очищаем lru_cache
+    load_profile_cached.cache_clear()
+    list_profiles_cached.cache_clear()
+
+
+@lru_cache(maxsize=64)
+def load_profile_cached(profile_id: str, cache_version: int) -> Dict[str, Any]:
+    """
+    Загружает профиль с диска с кэшированием.
+    cache_version используется для инвалидации кэша.
+    """
+    profile_path = os.path.join(PROFILES_DIR, f"{sanitize_profile_id(profile_id)}.json")
+    
+    if not os.path.exists(profile_path):
+        raise FileNotFoundError(f"Профиль '{profile_id}' не найден")
+    
+    with open(profile_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+@lru_cache(maxsize=8)
+def list_profiles_cached(cache_version: int, category: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Кэшированный список профилей"""
+    profiles = []
+    
+    if not os.path.exists(PROFILES_DIR):
+        return []
+        
+    for filename in os.listdir(PROFILES_DIR):
+        if filename.endswith('.json'):
+            try:
+                profile_id = filename.replace('.json', '')
+                data = load_profile_cached(profile_id, cache_version)
+                
+                profile_category = data.get('category', 'custom')
+                
+                # Фильтрация по категории
+                if category and profile_category != category:
+                    continue
+                
+                profiles.append({
+                    'id': profile_id,
+                    'name': data.get('name', filename),
+                    'description': data.get('description', ''),
+                    'category': profile_category,
+                    'version': data.get('version', ''),
+                    'is_system': data.get('is_system', profile_id in SYSTEM_PROFILES),
+                    'extends': data.get('extends'),
+                    'university': data.get('university', {}).get('short_name') if data.get('university') else None
+                })
+            except Exception:
+                pass
+    
+    # Сортировка: системные профили первыми, затем по имени
+    profiles.sort(key=lambda x: (not x.get('is_system', False), x.get('name', '')))
+    
+    return profiles
 
 
 def sanitize_profile_id(profile_id):
@@ -189,7 +262,7 @@ def deep_merge(base, override):
 
 
 def load_profile_with_inheritance(profile_id, depth=0, visited=None):
-    """Загружает профиль с применением наследования"""
+    """Загружает профиль с применением наследования (с кэшированием)"""
     if visited is None:
         visited = set()
     
@@ -201,13 +274,9 @@ def load_profile_with_inheritance(profile_id, depth=0, visited=None):
     
     visited.add(profile_id)
     
-    profile_path = os.path.join(PROFILES_DIR, f"{sanitize_profile_id(profile_id)}.json")
-    
-    if not os.path.exists(profile_path):
-        raise FileNotFoundError(f"Профиль '{profile_id}' не найден")
-    
-    with open(profile_path, 'r', encoding='utf-8') as f:
-        profile_data = json.load(f)
+    # Используем кэшированную функцию для загрузки с диска
+    cache_version = _get_cache_key()
+    profile_data = copy.deepcopy(load_profile_cached(profile_id, cache_version))
     
     # Если есть наследование, загружаем родительский профиль
     parent_id = profile_data.get('extends')
@@ -224,43 +293,16 @@ def load_profile_with_inheritance(profile_id, depth=0, visited=None):
 
 @bp.route('/', methods=['GET'])
 def list_profiles():
-    """List all available norm control profiles"""
+    """List all available norm control profiles (с кэшированием)"""
     category = request.args.get('category')  # gost, university, custom
-    
-    profiles = []
     
     if not os.path.exists(PROFILES_DIR):
         return jsonify([]), 200
-        
-    for filename in os.listdir(PROFILES_DIR):
-        if filename.endswith('.json'):
-            try:
-                with open(os.path.join(PROFILES_DIR, filename), 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    
-                    profile_id = filename.replace('.json', '')
-                    profile_category = data.get('category', 'custom')
-                    
-                    # Фильтрация по категории
-                    if category and profile_category != category:
-                        continue
-                    
-                    profiles.append({
-                        'id': profile_id,
-                        'name': data.get('name', filename),
-                        'description': data.get('description', ''),
-                        'category': profile_category,
-                        'version': data.get('version', ''),
-                        'is_system': data.get('is_system', profile_id in SYSTEM_PROFILES),
-                        'extends': data.get('extends'),
-                        'university': data.get('university', {}).get('short_name') if data.get('university') else None
-                    })
-            except Exception as e:
-                current_app.logger.error(f"Error loading profile {filename}: {e}")
     
-    # Сортировка: системные профили первыми, затем по имени
-    profiles.sort(key=lambda x: (not x.get('is_system', False), x.get('name', '')))
-                
+    # Используем кэшированный список
+    cache_version = _get_cache_key()
+    profiles = list_profiles_cached(cache_version, category)
+    
     return jsonify(profiles)
 
 
@@ -374,6 +416,9 @@ def create_profile():
         with open(profile_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
         
+        # Сбрасываем кэш после создания профиля
+        invalidate_profile_cache()
+        
         return jsonify({
             'success': True,
             'id': profile_id,
@@ -424,6 +469,9 @@ def update_profile(profile_id):
         with open(profile_path, 'w', encoding='utf-8') as f:
             json.dump(existing, f, ensure_ascii=False, indent=4)
         
+        # Сбрасываем кэш после обновления профиля
+        invalidate_profile_cache()
+        
         return jsonify({
             'success': True,
             'id': profile_id,
@@ -462,6 +510,10 @@ def delete_profile(profile_id):
     
     try:
         os.remove(profile_path)
+        
+        # Сбрасываем кэш после удаления профиля
+        invalidate_profile_cache()
+        
         return jsonify({
             'success': True,
             'message': 'Profile deleted successfully'
@@ -505,6 +557,9 @@ def duplicate_profile(profile_id):
     try:
         with open(new_path, 'w', encoding='utf-8') as f:
             json.dump(new_data, f, ensure_ascii=False, indent=4)
+        
+        # Сбрасываем кэш после дублирования профиля
+        invalidate_profile_cache()
         
         return jsonify({
             'success': True,
@@ -658,6 +713,9 @@ def import_profile():
         os.makedirs(PROFILES_DIR, exist_ok=True)
         with open(profile_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
+        
+        # Сбрасываем кэш после импорта профиля
+        invalidate_profile_cache()
         
         return jsonify({
             'success': True,
@@ -870,6 +928,9 @@ def restore_profile_version(profile_id, version_filename):
         with open(profile_path, 'w', encoding='utf-8') as f:
             json.dump(old_data, f, ensure_ascii=False, indent=4)
         
+        # Сбрасываем кэш после восстановления профиля
+        invalidate_profile_cache()
+        
         return jsonify({
             'success': True,
             'message': 'Profile restored successfully',
@@ -963,6 +1024,10 @@ def bulk_update_profiles():
                 'success': False,
                 'error': str(e)
             })
+    
+    # Сбрасываем кэш после массового обновления, если были успешные изменения
+    if success_count > 0:
+        invalidate_profile_cache()
     
     return jsonify({
         'success': success_count == len(profile_ids),

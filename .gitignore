@@ -72,11 +72,13 @@ temp/
 # =========================
 # IDEs and editors
 # =========================
-.vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# Keep .vscode settings for team
+# .vscode/
 
 # =========================
 # OS specific
@@ -85,3 +87,24 @@ temp/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# =========================
+# Test data (keep templates)
+# =========================
+backend/tests/test_data/documents/*.docx
+!backend/tests/test_data/documents/.gitkeep
+
+# =========================
+# Build artifacts
+# =========================
+*.pyc
+*.pyo
+.eggs/
+*.egg
+
+# =========================
+# Test results (generated)
+# =========================
+backend/tests/test_data/results/format_test_*.txt
+backend/tests/test_data/results/format_test_*.json
+backend/output.txt

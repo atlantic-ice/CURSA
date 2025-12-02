@@ -1,10 +1,17 @@
 import os
 import re
 import json
+from typing import Dict, Any, List, Optional, Tuple, Union
 from docx.shared import Pt, Cm
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from collections import defaultdict
 from pathlib import Path
+
+# Type aliases для улучшения читаемости
+DocumentData = Dict[str, Any]
+IssueDict = Dict[str, Any]
+RuleResult = Dict[str, Any]
+CheckResult = Dict[str, Any]
 
 # Директория с профилями
 PROFILES_DIR = Path(__file__).parent.parent.parent / 'profiles'
@@ -228,7 +235,7 @@ class NormControlChecker:
             if 'max_age_years' in bib:
                 self.standard_rules['bibliography']['max_age_years'] = int(bib['max_age_years'])
     
-    def get_profile_info(self):
+    def get_profile_info(self) -> Dict[str, Any]:
         """Возвращает информацию о текущем профиле"""
         return {
             'name': self.profile_name,
@@ -237,7 +244,7 @@ class NormControlChecker:
             'rules': self.standard_rules
         }
     
-    def check_document(self, document_data):
+    def check_document(self, document_data: DocumentData) -> CheckResult:
         """
         Проверяет документ на соответствие требованиям нормоконтроля
         
@@ -247,7 +254,7 @@ class NormControlChecker:
         Returns:
             dict: Результаты проверки с выявленными несоответствиями
         """
-        results = []
+        results: List[RuleResult] = []
         for rule in NORM_RULES:
             check_func = getattr(self, rule["checker"], None)
             if check_func is not None:

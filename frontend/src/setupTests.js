@@ -4,45 +4,44 @@
 // больше информации: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
-// Моки для компонентов Material-UI, которые могут вызывать проблемы
-jest.mock('@mui/material/styles', () => {
-  const originalModule = jest.requireActual('@mui/material/styles');
-  
-  return {
-    __esModule: true,
-    ...originalModule,
-    useTheme: () => ({
-      palette: {
-        mode: 'light',
-        primary: { main: '#2563eb', contrastText: '#ffffff' },
-        text: { primary: '#000000', secondary: '#666666' },
-        divider: '#e0e0e0',
-        action: { selected: '#f5f5f5' }
-      },
-      breakpoints: {
-        down: jest.fn().mockImplementation(() => false),
-        up: jest.fn(),
-        values: { xs: 0, sm: 600, md: 900, lg: 1200, xl: 1536 }
-      },
-      typography: {
-        fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
-      },
-      spacing: (factor) => `${0.25 * factor}rem`
-    })
+// Глобальный мок для window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});
+
+// Мок для ResizeObserver
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
+
+// Подавляем предупреждения в тестах
+const originalError = console.error;
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Warning: ReactDOM.render is no longer supported')
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
   };
 });
 
-// Мок для react-router-dom
-jest.mock('react-router-dom', () => {
-  const originalModule = jest.requireActual('react-router-dom');
-  
-  return {
-    __esModule: true,
-    ...originalModule,
-    useLocation: jest.fn().mockReturnValue({ pathname: '/' }),
-    useNavigate: jest.fn().mockReturnValue(jest.fn()),
-    useParams: jest.fn().mockReturnValue({}),
-  };
+afterAll(() => {
+  console.error = originalError;
 });
 
 // Настройка для сброса всех моков после каждого теста

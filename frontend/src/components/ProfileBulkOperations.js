@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -439,3 +440,16 @@ export default function ProfileBulkOperations({ profiles, onClose, onComplete })
         </Paper>
     );
 }
+
+ProfileBulkOperations.propTypes = {
+    /** Список профилей для операций */
+    profiles: PropTypes.array.isRequired,
+    /** Колбэк закрытия */
+    onClose: PropTypes.func.isRequired,
+    /** Колбэк завершения операции */
+    onComplete: PropTypes.func,
+};
+
+ProfileBulkOperations.defaultProps = {
+    onComplete: undefined,
+};

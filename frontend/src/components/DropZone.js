@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import {
   Box,
   Typography,
@@ -257,6 +258,18 @@ const DropZone = ({ children, sx: sxOverride }) => {
       </motion.div>
     </Box>
   );
+};
+
+DropZone.propTypes = {
+  /** Custom render function or React node for the dropzone content */
+  children: PropTypes.oneOfType([PropTypes.func, PropTypes.node]),
+  /** Custom styles to override the dropzone container */
+  sx: PropTypes.object,
+};
+
+DropZone.defaultProps = {
+  children: null,
+  sx: {},
 };
 
 export default DropZone;

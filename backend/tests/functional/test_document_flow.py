@@ -5,93 +5,72 @@ import os
 import io
 import pytest
 import tempfile
-import time
-from unittest.mock import patch
+from pathlib import Path
+from docx import Document
 
-@pytest.mark.skip(reason="Требуется интеграция с реальным сервером и файлами")
+# Путь к тестовым данным
+TEST_DATA_DIR = Path(__file__).parent.parent / "test_data"
+
+
 def test_complete_document_flow(client):
     """Тестирует полный поток работы с документом.
     
-    1. Загрузка документа для анализа
-    2. Получение результатов анализа
-    3. Отправка запроса на исправление
-    4. Получение исправленного документа
-    
-    Этот тест пропущен, так как требует реальный docx файл и интеграцию с сервером.
+    1. Загрузка документа для анализа через /api/document/upload
+    2. Получение результатов проверки
+    3. Отправка запроса на исправление через /api/document/correct
+    4. Скачивание исправленного документа через /api/document/download-corrected
     """
-    # Путь к тестовому файлу docx
-    test_file_path = os.path.join(os.path.dirname(__file__), '..', 'test_data', 'test_document.docx')
-    
-    if not os.path.exists(test_file_path):
-        pytest.skip(f"Тестовый файл не найден: {test_file_path}")
-    
-    # 1. Загрузка документа для анализа
-    with open(test_file_path, 'rb') as f:
-        file_data = io.BytesIO(f.read())
-    
-    # Отправляем файл на анализ
-    response_analysis = client.post(
-        '/api/document/analyze',
-        data={
-            'file': (file_data, 'test_document.docx')
-        },
-        content_type='multipart/form-data'
-    )
-    
-    assert response_analysis.status_code == 200
-    analysis_result = response_analysis.json
-    assert 'analysis' in analysis_result
-    assert 'document_id' in analysis_result
-    
-    document_id = analysis_result['document_id']
-    
-    # 2. Отправка запроса на исправление
-    response_correction = client.post(
-        f'/api/document/{document_id}/correct',
-        json={
-            'corrections': ['formatting', 'structure']  # Пример параметров исправления
-        }
-    )
-    
-    assert response_correction.status_code == 200
-    correction_result = response_correction.json
-    assert 'correction_id' in correction_result
-    
-    correction_id = correction_result['correction_id']
-    
-    # 3. Проверка статуса исправления (может быть асинхронным)
-    max_retries = 5
-    for _ in range(max_retries):
-        response_status = client.get(f'/api/document/correction/{correction_id}/status')
-        assert response_status.status_code == 200
-        status = response_status.json
+    # Создаём тестовый документ с ошибками
+    with tempfile.TemporaryDirectory() as tmpdir:
+        test_file_path = os.path.join(tmpdir, 'test_flow.docx')
         
-        if status.get('status') == 'completed':
-            break
-            
-        time.sleep(1)  # Ждем 1 секунду перед повторной проверкой
-    
-    assert status.get('status') == 'completed'
-    assert 'download_url' in status
-    
-    # 4. Скачивание исправленного документа
-    download_url = status['download_url']
-    response_download = client.get(download_url)
-    
-    assert response_download.status_code == 200
-    assert response_download.content_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    
-    # Проверяем, что мы получили непустой документ
-    assert len(response_download.data) > 0
-    
-    # Опционально: Сохраняем файл во временную директорию для проверки
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_file:
-        temp_file.write(response_download.data)
-        temp_file_path = temp_file.name
-    
-    # Проверяем, что файл существует и не пустой
-    assert os.path.exists(temp_file_path)
-    assert os.path.getsize(temp_file_path) > 0
-    
-    # Удаляем временный файл
-    os.unlink(temp_file_path) 
+        doc = Document()
+        # Добавляем текст с неправильным шрифтом
+        p = doc.add_paragraph("Тестовый документ для проверки полного потока")
+        for run in p.runs:
+            run.font.name = 'Arial'  # Неправильный шрифт
+        doc.save(test_file_path)
+        
+        # 1. Загрузка документа для анализа
+        with open(test_file_path, 'rb') as f:
+            response_upload = client.post(
+                '/api/document/upload',
+                data={'file': (io.BytesIO(f.read()), 'test_flow.docx')},
+                content_type='multipart/form-data'
+            )
+        
+        assert response_upload.status_code == 200, f"Upload failed: {response_upload.json}"
+        upload_result = response_upload.json
+        
+        # Проверяем результат загрузки
+        assert 'check_results' in upload_result, "check_results not in response"
+        assert 'temp_path' in upload_result, "temp_path not in response"
+        
+        temp_path = upload_result['temp_path']
+        check_results = upload_result['check_results']
+        
+        # 2. Отправка запроса на исправление
+        correction_data = {
+            'file_path': temp_path,
+            'original_filename': 'test_flow.docx',
+            'errors_to_fix': check_results.get('issues', [])
+        }
+        
+        response_correction = client.post('/api/document/correct', json=correction_data)
+        
+        assert response_correction.status_code == 200, f"Correction failed: {response_correction.json}"
+        correction_result = response_correction.json
+        assert 'corrected_file_path' in correction_result, "corrected_file_path not in response"
+        
+        corrected_file_path = correction_result['corrected_file_path']
+        
+        # 3. Скачивание исправленного документа
+        download_url = f"/api/document/download-corrected?path={corrected_file_path}"
+        response_download = client.get(download_url)
+        
+        assert response_download.status_code == 200, f"Download failed with status {response_download.status_code}"
+        assert len(response_download.data) > 0, "Downloaded file is empty"
+        
+        # Проверяем что это валидный DOCX
+        content_type = response_download.headers.get('Content-Type', '')
+        assert 'application/vnd.openxmlformats-officedocument' in content_type or len(response_download.data) > 1000 

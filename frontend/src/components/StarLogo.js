@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { memo } from 'react';
+import PropTypes from 'prop-types';
 import { Box } from '@mui/material';
 import { motion } from 'framer-motion';
 
 /**
  * 4-конечная звезда - логотип CURSA
- * Минималистичный дизайн, вдохновленный гемами из Genshin Impact
  */
-const StarLogo = ({ 
+const StarLogo = memo(({ 
   size = 32, 
   color = '#fff', 
   glowColor,
@@ -54,12 +54,14 @@ const StarLogo = ({
   }
 
   return logoContent;
-};
+});
+
+StarLogo.displayName = 'StarLogo';
 
 /**
  * Версия с градиентом
  */
-export const StarLogoGradient = ({ 
+export const StarLogoGradient = memo(({ 
   size = 32, 
   gradientColors = ['#8B5CF6', '#06B6D4'],
   animate = false,
@@ -110,12 +112,14 @@ export const StarLogoGradient = ({
   }
 
   return logoContent;
-};
+});
+
+StarLogoGradient.displayName = 'StarLogoGradient';
 
 /**
  * Версия с пульсирующим свечением
  */
-export const StarLogoPulsing = ({ 
+export const StarLogoPulsing = memo(({ 
   size = 32, 
   color = '#fff',
   glowColor = '#8B5CF6',
@@ -153,6 +157,69 @@ export const StarLogoPulsing = ({
       </Box>
     </motion.div>
   );
+});
+
+StarLogoPulsing.displayName = 'StarLogoPulsing';
+
+// PropTypes definitions
+StarLogo.propTypes = {
+  /** Размер логотипа в пикселях */
+  size: PropTypes.number,
+  /** Цвет звезды */
+  color: PropTypes.string,
+  /** Цвет свечения */
+  glowColor: PropTypes.string,
+  /** Включить анимацию */
+  animate: PropTypes.bool,
+  /** Скорость пульсации в секундах */
+  pulseSpeed: PropTypes.number,
+  /** Дополнительные стили */
+  sx: PropTypes.object,
+};
+
+StarLogo.defaultProps = {
+  size: 32,
+  color: '#fff',
+  glowColor: undefined,
+  animate: false,
+  pulseSpeed: 2,
+  sx: {},
+};
+
+StarLogoGradient.propTypes = {
+  /** Размер логотипа в пикселях */
+  size: PropTypes.number,
+  /** Цвета градиента [start, end] */
+  gradientColors: PropTypes.arrayOf(PropTypes.string),
+  /** Включить анимацию */
+  animate: PropTypes.bool,
+  /** Дополнительные стили */
+  sx: PropTypes.object,
+};
+
+StarLogoGradient.defaultProps = {
+  size: 32,
+  gradientColors: ['#8B5CF6', '#06B6D4'],
+  animate: false,
+  sx: {},
+};
+
+StarLogoPulsing.propTypes = {
+  /** Размер логотипа в пикселях */
+  size: PropTypes.number,
+  /** Цвет звезды */
+  color: PropTypes.string,
+  /** Цвет свечения */
+  glowColor: PropTypes.string,
+  /** Дополнительные стили */
+  sx: PropTypes.object,
+};
+
+StarLogoPulsing.defaultProps = {
+  size: 32,
+  color: '#fff',
+  glowColor: '#8B5CF6',
+  sx: {},
 };
 
 export default StarLogo;

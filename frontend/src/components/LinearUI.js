@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Box, Typography, Button as MuiButton, Chip, Avatar as MuiAvatar } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -324,4 +325,43 @@ export default {
   LinearAvatar,
   LinearStatusIndicator,
   LinearGrid,
+};
+
+// PropTypes definitions
+LinearCard.propTypes = {
+  children: PropTypes.node,
+  hover: PropTypes.bool,
+  onClick: PropTypes.func,
+  sx: PropTypes.object,
+};
+
+LinearDivider.propTypes = {
+  vertical: PropTypes.bool,
+  sx: PropTypes.object,
+};
+
+LinearSectionHeader.propTypes = {
+  title: PropTypes.string.isRequired,
+  subtitle: PropTypes.string,
+  action: PropTypes.node,
+  children: PropTypes.node,
+};
+
+LinearEmptyState.propTypes = {
+  icon: PropTypes.node,
+  title: PropTypes.string.isRequired,
+  description: PropTypes.string,
+  action: PropTypes.node,
+};
+
+LinearStatusIndicator.propTypes = {
+  status: PropTypes.oneOf(['success', 'warning', 'error', 'info', 'neutral']),
+  label: PropTypes.string,
+};
+
+LinearGrid.propTypes = {
+  children: PropTypes.node,
+  columns: PropTypes.number,
+  gap: PropTypes.number,
+  sx: PropTypes.object,
 };

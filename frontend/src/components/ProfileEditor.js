@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -833,3 +834,16 @@ export default function ProfileEditor({ initialData, onSave, onCancel }) {
         </Box>
     );
 }
+
+ProfileEditor.propTypes = {
+    /** Initial profile data to edit */
+    initialData: PropTypes.object,
+    /** Callback when save is clicked */
+    onSave: PropTypes.func.isRequired,
+    /** Callback when cancel is clicked */
+    onCancel: PropTypes.func.isRequired,
+};
+
+ProfileEditor.defaultProps = {
+    initialData: null,
+};

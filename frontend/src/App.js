@@ -1,12 +1,34 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Box } from '@mui/material';
-import UploadPage from './pages/UploadPage';
-import ReportPage from './pages/ReportPage';
-import ProfilesPage from './pages/ProfilesPage';
+import { Box, CircularProgress } from '@mui/material';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Lazy loading для страниц - уменьшает начальный bundle
+const UploadPage = lazy(() => import('./pages/UploadPage'));
+const ReportPage = lazy(() => import('./pages/ReportPage'));
+const ProfilesPage = lazy(() => import('./pages/ProfilesPage'));
+
+// Компонент загрузки для Suspense
+const PageLoader = () => (
+  <Box
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      background: '#050505',
+    }}
+  >
+    <CircularProgress
+      sx={{
+        color: '#8B5CF6',
+      }}
+    />
+  </Box>
+);
 
 // Более строгая тёмная тема (Neutral Dark / Black)
 const theme = createTheme({
@@ -99,23 +121,27 @@ const AnimatedRoutes = () => {
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {/* Global Background Noise/Gradient */}
-      <Box sx={{ 
-        position: 'fixed', 
-        inset: 0, 
-        zIndex: -1,
-        background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.03) 0%, transparent 50%)',
-        pointerEvents: 'none'
-      }} />
-      
-      <Router>
-        <Box sx={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
-          <AnimatedRoutes />
-        </Box>
-      </Router>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {/* Global Background Noise/Gradient */}
+        <Box sx={{ 
+          position: 'fixed', 
+          inset: 0, 
+          zIndex: -1,
+          background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.03) 0%, transparent 50%)',
+          pointerEvents: 'none'
+        }} />
+        
+        <Router>
+          <Box sx={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
+            <Suspense fallback={<PageLoader />}>
+              <AnimatedRoutes />
+            </Suspense>
+          </Box>
+        </Router>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

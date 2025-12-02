@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Box } from '@mui/material';
 import DropZone from './DropZone';
 
@@ -40,6 +41,15 @@ const InvisibleDropZone = ({ onDrop }) => {
       )}
     </DropZone>
   );
+};
+
+InvisibleDropZone.propTypes = {
+  /** Callback when file is dropped (currently unused but reserved for future use) */
+  onDrop: PropTypes.func,
+};
+
+InvisibleDropZone.defaultProps = {
+  onDrop: undefined,
 };
 
 export default InvisibleDropZone;

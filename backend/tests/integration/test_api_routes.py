@@ -2,44 +2,42 @@
 import os
 import io
 import pytest
+import tempfile
+from docx import Document
 
-def test_api_document_analysis_route_exists(client):
-    """Тест существования маршрута для анализа документа."""
-    # Отправляем пустой запрос, ожидаем ошибку 400 или 422, но не 404
-    response = client.post('/api/document/analyze')
-    assert response.status_code in [400, 422]
-    assert response.status_code != 404
 
-def test_document_analysis_with_invalid_data(client):
-    """Тест анализа документа с неверными данными."""
-    response = client.post('/api/document/analyze', data={
+def test_api_document_upload_route_exists(client):
+    """Тест существования маршрута для загрузки документа."""
+    # Отправляем пустой запрос, ожидаем ошибку 400, но не 404
+    response = client.post('/api/document/upload')
+    assert response.status_code != 404, "Route /api/document/upload should exist"
+    assert response.status_code == 400  # Нет файла
+
+
+def test_document_upload_with_invalid_data(client):
+    """Тест загрузки документа с неверными данными."""
+    response = client.post('/api/document/upload', data={
         'wrong_key': 'wrong_value'
     })
-    assert response.status_code in [400, 422]
+    assert response.status_code == 400
     
-@pytest.mark.skip(reason="Требуется реальный docx файл для тестирования")
-def test_document_analysis_with_valid_file(client):
-    """Тест анализа документа с корректным файлом.
-    
-    Этот тест пропущен, так как требует реальный docx файл.
-    Для запуска теста, создайте тестовый файл и уберите декоратор @pytest.mark.skip.
-    """
-    # Путь к тестовому файлу docx
-    test_file_path = os.path.join(os.path.dirname(__file__), '..', 'test_data', 'test_document.docx')
-    
-    if not os.path.exists(test_file_path):
-        pytest.skip(f"Тестовый файл не найден: {test_file_path}")
-    
-    with open(test_file_path, 'rb') as f:
-        file_data = io.BytesIO(f.read())
-    
-    response = client.post(
-        '/api/document/analyze',
-        data={
-            'file': (file_data, 'test_document.docx')
-        },
-        content_type='multipart/form-data'
-    )
-    
-    assert response.status_code == 200
-    assert 'analysis' in response.json 
+
+def test_document_upload_with_valid_file(client):
+    """Тест загрузки документа с корректным файлом."""
+    # Создаём тестовый DOCX файл
+    with tempfile.TemporaryDirectory() as tmpdir:
+        test_path = os.path.join(tmpdir, 'test.docx')
+        doc = Document()
+        doc.add_paragraph("Тестовый документ")
+        doc.save(test_path)
+        
+        with open(test_path, 'rb') as f:
+            response = client.post(
+                '/api/document/upload',
+                data={'file': (io.BytesIO(f.read()), 'test.docx')},
+                content_type='multipart/form-data'
+            )
+        
+        assert response.status_code == 200
+        assert 'check_results' in response.json
+        assert 'temp_path' in response.json 

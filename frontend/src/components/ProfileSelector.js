@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { Box, MenuItem, Select, FormControl, Typography, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import axios from 'axios';
@@ -80,6 +81,17 @@ const ProfileSelector = ({ selectedProfile, onSelect }) => {
       </FormControl>
     </Box>
   );
+};
+
+ProfileSelector.propTypes = {
+  /** Currently selected profile ID */
+  selectedProfile: PropTypes.string,
+  /** Callback when profile is selected */
+  onSelect: PropTypes.func.isRequired,
+};
+
+ProfileSelector.defaultProps = {
+  selectedProfile: '',
 };
 
 export default ProfileSelector;

@@ -1,10 +1,28 @@
 [
   {
+    "test_id": "tests/integration/test_api_routes.py::test_api_document_analysis_route_exists",
+    "test_name": "test_api_document_analysis_route_exists",
+    "test_type": "integration",
+    "passed": true,
+    "duration": 0.0024527000059606507,
+    "failed": false,
+    "skipped": false
+  },
+  {
+    "test_id": "tests/integration/test_api_routes.py::test_document_analysis_with_invalid_data",
+    "test_name": "test_document_analysis_with_invalid_data",
+    "test_type": "integration",
+    "passed": true,
+    "duration": 0.0009157000022241846,
+    "failed": false,
+    "skipped": false
+  },
+  {
     "test_id": "tests/integration/test_document_flow.py::TestDocumentIntegrationFlow::test_full_document_flow",
     "test_name": "test_full_document_flow",
     "test_type": "integration",
     "passed": true,
-    "duration": 0.307253099999798,
+    "duration": 0.2644430999935139,
     "failed": false,
     "skipped": false
   },
@@ -13,7 +31,7 @@
     "test_name": "test_document_flow_with_invalid_file",
     "test_type": "integration",
     "passed": true,
-    "duration": 0.00289580000389833,
+    "duration": 0.0024323999969055876,
     "failed": false,
     "skipped": false
   }

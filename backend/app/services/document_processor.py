@@ -3,6 +3,7 @@
 Отвечает за извлечение и анализ структуры и форматирования документов.
 """
 
+from typing import Dict, Any, List, Optional, Union, BinaryIO
 import docx
 from docx.oxml.text.paragraph import CT_P
 from docx.oxml.table import CT_Tbl
@@ -28,6 +29,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Type aliases
+DocumentData = Dict[str, Any]
+ProcessResult = Dict[str, Any]
+
+
 class DocumentProcessor:
     """
     Класс для обработки документов формата DOCX.
@@ -35,11 +41,11 @@ class DocumentProcessor:
     """
     
     # Константы класса
-    ALLOWED_EXTENSIONS = ['.docx']
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+    ALLOWED_EXTENSIONS: List[str] = ['.docx']
+    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
     
     @staticmethod
-    def is_valid_file(file):
+    def is_valid_file(file: Any) -> bool:
         """
         Проверяет, является ли файл допустимым для обработки.
         
@@ -62,7 +68,7 @@ class DocumentProcessor:
         return True
     
     @staticmethod
-    def process_document(file):
+    def process_document(file: Any) -> ProcessResult:
         """
         Обрабатывает документ DOCX и извлекает его структуру и форматирование.
         

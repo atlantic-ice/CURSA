@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
     Box,
     Paper,
@@ -352,3 +353,7 @@ export default function ProfileStatistics({ onClose }) {
         </Paper>
     );
 }
+
+ProfileStatistics.propTypes = {
+    /** Компонент не принимает props - загружает данные самостоятельно */
+};

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Box, Container, Grid, Typography, Link, Divider, useTheme, IconButton } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import GitHubIcon from '@mui/icons-material/GitHub';
@@ -6,7 +6,7 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import StarLogo from './StarLogo';
 
-const Footer = () => {
+const Footer = memo(() => {
   const theme = useTheme();
   const currentYear = new Date().getFullYear();
 
@@ -240,6 +240,8 @@ const Footer = () => {
       </Container>
     </Box>
   );
-};
+});
+
+Footer.displayName = 'Footer';
 
 export default Footer; 
