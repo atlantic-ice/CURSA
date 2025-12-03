@@ -11,6 +11,14 @@ from app.config.security import (
     RATE_LIMITS,
 )
 
+# SocketIO instance - глобальный для использования в других модулях
+socketio = None
+
+
+def get_socketio():
+    """Получить экземпляр SocketIO"""
+    return socketio
+
 
 def _collect_allowed_origins():
     default_origins = {
@@ -61,6 +69,8 @@ def setup_security_headers(app):
         return response
 
 def create_app():
+    global socketio
+    
     # Load repository-level .env if present so env vars like PINTEREST_RSS_URL are available
     try:
         repo_env = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
@@ -90,6 +100,34 @@ def create_app():
         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allow_headers=['Content-Type', 'Authorization'],
         supports_credentials=True)
+    
+    # === Инициализация SocketIO для WebSocket ===
+    try:
+        from flask_socketio import SocketIO
+        socketio = SocketIO(
+            app,
+            cors_allowed_origins=cors_origins,
+            async_mode='eventlet',
+            logger=not is_testing,
+            engineio_logger=False
+        )
+        if not is_testing:
+            app.logger.info("WebSocket (SocketIO) инициализирован")
+        
+        # Инициализируем ProgressEmitter
+        from app.websocket import init_socketio
+        init_socketio(socketio)
+    except ImportError:
+        if not is_testing:
+            app.logger.warning(
+                "flask-socketio не установлен. WebSocket недоступен. "
+                "Установите: pip install flask-socketio eventlet"
+            )
+        socketio = None
+    except Exception as e:
+        if not is_testing:
+            app.logger.warning(f"Не удалось инициализировать SocketIO: {e}")
+        socketio = None
     
     # Настройка логгирования (отключено в тестовом режиме)
     setup_logging(app)

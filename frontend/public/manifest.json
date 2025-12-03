@@ -28,5 +28,45 @@
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#3b82f6",
-  "background_color": "#0f172a"
+  "background_color": "#0f172a",
+  "orientation": "any",
+  "categories": ["education", "productivity", "utilities"],
+  "lang": "ru-RU",
+  "dir": "ltr",
+  "scope": "/",
+  "id": "cursa-normcontrol-app",
+  "shortcuts": [
+    {
+      "name": "Загрузить документ",
+      "short_name": "Загрузить",
+      "description": "Быстрая загрузка документа для проверки",
+      "url": "/?action=upload",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Профили проверки",
+      "short_name": "Профили",
+      "description": "Управление профилями нормоконтроля",
+      "url": "/profiles",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Результаты",
+      "short_name": "Результаты",
+      "description": "Просмотр результатов проверки",
+      "url": "/results",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "CURSA - Главный экран"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
