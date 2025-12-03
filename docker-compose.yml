@@ -1,9 +1,10 @@
 # ===========================================
-# CURSA - Docker Compose
+# CURSA - Docker Compose (Full Stack)
 # ===========================================
 # Запуск: docker-compose up -d
 # Остановка: docker-compose down
 # Логи: docker-compose logs -f
+# Мониторинг: http://localhost:3001 (Grafana)
 # ===========================================
 
 services:
@@ -20,8 +21,14 @@ services:
       - FLASK_ENV=production
       - FRONTEND_ORIGINS=http://localhost:3000,http://localhost,http://frontend
       - RATE_LIMIT_ENABLED=true
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
     volumes:
-      # Персистентное хранение данных
       - corrections_data:/app/app/static/corrections
       - reports_data:/app/app/static/reports
       - logs_data:/app/app/logs
@@ -34,6 +41,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - cursa-network
 
@@ -60,6 +70,120 @@ services:
     networks:
       - cursa-network
 
+  # ================
+  # Redis (Broker + Cache)
+  # ================
+  redis:
+    image: redis:7-alpine
+    container_name: cursa-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cursa-network
+
+  # ================
+  # Celery Worker
+  # ================
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cursa-celery-worker
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_tasks worker --loglevel=info --concurrency=2
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+    volumes:
+      - corrections_data:/app/app/static/corrections
+      - reports_data:/app/app/static/reports
+      - profiles_data:/app/profiles
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - cursa-network
+
+  # ================
+  # Celery Beat (Scheduler)
+  # ================
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cursa-celery-beat
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_tasks beat --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    networks:
+      - cursa-network
+
+  # ================
+  # Prometheus (Metrics)
+  # ================
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: cursa-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - cursa-network
+
+  # ================
+  # Grafana (Dashboards)
+  # ================
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: cursa-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - cursa-network
+
 # ================
 # Volumes
 # ================
@@ -72,6 +196,12 @@ volumes:
     name: cursa-logs
   profiles_data:
     name: cursa-profiles
+  redis_data:
+    name: cursa-redis
+  prometheus_data:
+    name: cursa-prometheus
+  grafana_data:
+    name: cursa-grafana
 
 # ================
 # Networks

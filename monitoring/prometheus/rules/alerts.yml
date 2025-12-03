@@ -1,0 +1,100 @@
+# ===========================================
+# Prometheus Alert Rules for CURSA
+# ===========================================
+
+groups:
+  - name: cursa_alerts
+    interval: 30s
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(cursa_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | printf \"%.2f\" }} errors/sec"
+
+      # High response time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(cursa_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time"
+          description: "95th percentile response time is {{ $value | printf \"%.2f\" }}s"
+
+      # Service down
+      - alert: CursaBackendDown
+        expr: up{job="cursa-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CURSA Backend is down"
+          description: "Backend service has been unavailable for more than 1 minute"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{job="cursa-backend"} / 1024 / 1024 > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | printf \"%.0f\" }}MB"
+
+      # Too many active requests
+      - alert: TooManyActiveRequests
+        expr: cursa_active_requests > 100
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Too many active requests"
+          description: "{{ $value }} active requests"
+
+      # Disk space low
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Only {{ $value | printf \"%.1f\" }}% disk space remaining"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total{job="cursa-backend"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | printf \"%.1f\" }}%"
+
+  - name: cursa_business
+    interval: 1m
+    rules:
+      # No documents processed
+      - alert: NoDocumentsProcessed
+        expr: increase(cursa_documents_processed_total[1h]) == 0
+        for: 2h
+        labels:
+          severity: info
+        annotations:
+          summary: "No documents processed"
+          description: "No documents have been processed in the last 2 hours"
+
+      # Document processing slow
+      - alert: SlowDocumentProcessing
+        expr: histogram_quantile(0.95, rate(cursa_processing_time_seconds_bucket[15m])) > 60
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow document processing"
+          description: "95th percentile processing time is {{ $value | printf \"%.0f\" }}s"

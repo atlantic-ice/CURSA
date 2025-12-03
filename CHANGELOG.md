@@ -4,6 +4,68 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.0.0/).
 
+## [1.3.0] - 2024-12-03
+
+### 📊 Мониторинг (Prometheus + Grafana)
+
+- **Prometheus метрики**: Расширенный сборщик метрик
+  - Counters, Gauges, Histograms
+  - Декораторы `@track_request_time`, `@track_document_processing`
+  - Middleware для автоматического сбора HTTP-метрик
+- **Alert Rules**: Правила алертинга
+  - HighErrorRate, HighResponseTime, ServiceDown
+  - HighMemoryUsage, LowDiskSpace, SlowDocumentProcessing
+- **Grafana Dashboard**: Готовый дашборд с панелями:
+  - Overview (статус, uptime, счётчики)
+  - Request Metrics (RPS, latency percentiles)
+  - Document Processing (throughput, время)
+  - System Metrics (CPU, RAM, диск)
+  - Errors (rate by type, exceptions)
+
+### 🔄 Background Tasks (Celery + Redis)
+
+- **Celery Worker**: Фоновая обработка документов
+  - `process_document` — полный цикл обработки
+  - `send_email` — отправка уведомлений
+  - `cleanup_old_files` — очистка старых файлов
+  - `batch_process` — пакетная обработка
+- **Celery Beat**: Периодические задачи
+  - Ежедневная очистка файлов старше 7 дней
+  - Ежеминутный health check системы
+- **Redis**: Брокер сообщений и кэш результатов
+
+### 📧 Email-уведомления
+
+- **EmailService**: Полноценный сервис отправки
+  - SMTP с TLS
+  - Шаблоны писем (corrections_ready, error, batch_summary)
+  - Прикрепление файлов (DOCX, PDF)
+- **Шаблоны**: 5 готовых шаблонов
+  - default, corrections_ready, batch_summary, error, weekly_report
+
+### 🐳 Docker Compose (расширенный)
+
+- **Redis**: Брокер для Celery с persistence
+- **Celery Worker**: 2 воркера с автоперезапуском
+- **Celery Beat**: Планировщик периодических задач
+- **Prometheus**: Сбор метрик с retention 15 дней
+- **Grafana**: Дашборды с auto-provisioning
+
+### 📦 Зависимости
+
+- **Backend**: celery>=5.3.0, redis>=5.0.0
+
+### 📁 Новые файлы
+
+- `backend/app/metrics/prometheus.py` — сборщик метрик
+- `backend/app/tasks/celery_tasks.py` — Celery задачи
+- `backend/app/services/email_service.py` — email сервис
+- `monitoring/prometheus/prometheus.yml` — конфиг Prometheus
+- `monitoring/prometheus/rules/alerts.yml` — правила алертов
+- `monitoring/grafana/dashboards/cursa-dashboard.json` — дашборд
+
+---
+
 ## [1.2.0] - 2024-12-02
 
 ### 🧪 E2E-тестирование (Playwright)
