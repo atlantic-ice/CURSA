@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Test data
+tests/test_data/documents/*.docx
+tests/test_data/results/
+
+# Logs
+app/logs/*.log
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!requirements.txt

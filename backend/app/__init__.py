@@ -125,8 +125,10 @@ def create_app():
     # Регистрация API маршрутов
     from app.api import document_routes
     from app.api import profile_routes
+    from app.api import health_routes
     app.register_blueprint(document_routes.bp)
     app.register_blueprint(profile_routes.bp)
+    app.register_blueprint(health_routes.bp)
     
     # Маршрут для API документации (JSON)
     @app.route('/api/openapi.json')

@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# Test
+coverage/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md

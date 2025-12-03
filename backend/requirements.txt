@@ -7,3 +7,4 @@ flask-limiter==3.5.0
 docxtpl==0.16.7
 lxml>=5.0.0 
 flasgger==0.9.7.1
+psutil>=5.9.0
