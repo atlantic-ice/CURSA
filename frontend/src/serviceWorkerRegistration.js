@@ -2,6 +2,8 @@
  * Регистрация Service Worker для PWA
  */
 
+import { useState, useEffect } from 'react';
+
 const isLocalhost = Boolean(
   window.location.hostname === 'localhost' ||
   window.location.hostname === '[::1]' ||
@@ -229,6 +231,3 @@ export function useSWStatus() {
 
   return status;
 }
-
-// Импортируем useState и useEffect если используем хук
-import { useState, useEffect } from 'react';

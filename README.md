@@ -60,6 +60,7 @@ chmod +x start_app.sh && ./start_app.sh
 | Метод | Endpoint | Описание |
 |-------|----------|----------|
 | `POST` | `/api/document/upload` | Загрузка и анализ DOCX |
+| `POST` | `/api/document/upload-batch` | Пакетная загрузка и обработка |
 | `POST` | `/api/document/correct` | Автоматическое исправление |
 | `POST` | `/api/document/generate-report` | Генерация отчёта |
 | `GET` | `/api/profiles` | Список профилей |

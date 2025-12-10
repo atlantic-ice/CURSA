@@ -744,6 +744,101 @@ class NormControlChecker:
             
         return issues
 
+    def _check_bibliography_references(self, document_data):
+        """
+        Проверяет корректность оформления библиографических ссылок в тексте
+        
+        Требования:
+        - Ссылки должны быть в квадратных скобках: [1], [2, с. 15]
+        - Номера источников должны соответствовать списку литературы
+        """
+        issues = []
+        
+        # Получаем список литературы для проверки номеров
+        bibliography = document_data.get('bibliography', [])
+        if not bibliography:
+            # Если списка литературы нет, мы не можем проверить корректность ссылок
+            # (отсутствие списка литературы проверяется в _check_bibliography)
+            return issues
+            
+        # Определяем количество источников
+        max_source_number = len(bibliography)
+        
+        # Регулярное выражение для поиска ссылок в квадратных скобках
+        # Ищем скобки, начинающиеся с цифры (возможно после пробела)
+        ref_pattern = r'\[\s*\d+(?:[^\]]*)\]'
+        
+        for para in document_data['paragraphs']:
+            # Пропускаем сам список литературы
+            if 'bibliography' in document_data and para.get('index') in [p.get('index') for p in bibliography]:
+                continue
+                
+            text = para.get('text', '')
+            if not text:
+                continue
+                
+            # Ищем все ссылки в параграфе
+            matches = re.finditer(ref_pattern, text)
+            
+            for match in matches:
+                full_match = match.group(0)
+                # Убираем скобки для анализа содержимого
+                ref_content = full_match[1:-1]
+                
+                # Проверяем формат содержимого ссылки
+                # Разрешенные символы: цифры, пробелы, запятые, тире, 'с', 'С', '.', 'p', 'P'
+                if re.search(r'[^\d\s,\-–—сС\.pP]', ref_content):
+                    issues.append({
+                        'type': 'reference_format_invalid_chars',
+                        'severity': 'medium',
+                        'location': f"Параграф {para.get('index', 0) + 1}",
+                        'description': f"Ссылка содержит недопустимые символы: '{full_match}'.",
+                        'auto_fixable': False,
+                        'context': full_match
+                    })
+                    continue
+                
+                # Извлекаем номера источников
+                # Заменяем тире на дефисы для упрощения
+                normalized_content = re.sub(r'[–—]', '-', ref_content)
+                
+                # Удаляем указания страниц (с. 25, p. 25)
+                sources_part = re.sub(r'[сСpP]\.?\s*\d+', '', normalized_content)
+                
+                # Разбиваем по запятым
+                parts = [p.strip() for p in sources_part.split(',')]
+                
+                for part in parts:
+                    if not part:
+                        continue
+                        
+                    # Обработка диапазонов (1-3)
+                    if '-' in part:
+                        try:
+                            start, end = map(int, part.split('-'))
+                            nums = range(start, end + 1)
+                        except ValueError:
+                            continue
+                    else:
+                        try:
+                            nums = [int(part)]
+                        except ValueError:
+                            continue
+                            
+                    # Проверяем каждый номер
+                    for num in nums:
+                        if num < 1 or num > max_source_number:
+                            issues.append({
+                                'type': 'reference_out_of_bounds',
+                                'severity': 'high',
+                                'location': f"Параграф {para.get('index', 0) + 1}",
+                                'description': f"Ссылка на несуществующий источник: [{num}]. В списке литературы всего {max_source_number} источников.",
+                                'auto_fixable': False,
+                                'context': full_match
+                            })
+
+        return issues
+
     def _determine_bibliography_record_type(self, text):
         """
         Определяет тип библиографической записи

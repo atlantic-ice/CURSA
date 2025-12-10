@@ -6,25 +6,31 @@ import {
   Typography,
   Button,
   Paper,
-  CircularProgress,
   Alert,
   AlertTitle,
   useTheme,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  CircularProgress
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
 import { motion } from 'framer-motion';
-import axios from 'axios';
 import { CheckHistoryContext } from '../App';
+import api from '../utils/api';
 
-const DropZone = ({ children, sx: sxOverride }) => {
+const DropZone = ({ children, sx: sxOverride, multiple = false }) => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [fileSize, setFileSize] = useState(0);
+  const [batchResults, setBatchResults] = useState(null);
   const fileInputRef = useRef(null);
   const { addToHistory } = useContext(CheckHistoryContext);
 
@@ -38,13 +44,18 @@ const DropZone = ({ children, sx: sxOverride }) => {
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
-      const selectedFile = acceptedFiles[0];
-      setFile(selectedFile);
-      setFileSize(formatFileSize(selectedFile.size));
-      setError('');
-      handleUpload(selectedFile);
+      if (multiple) {
+        setFiles(acceptedFiles);
+        setError('');
+        handleBatchUpload(acceptedFiles);
+      } else {
+        const selectedFile = acceptedFiles[0];
+        setFiles([selectedFile]);
+        setError('');
+        handleUpload(selectedFile);
+      }
     }
-  }, []);
+  }, [multiple]);
 
   const onDropRejected = useCallback((fileRejections) => {
     const rejection = fileRejections && fileRejections[0];
@@ -63,14 +74,14 @@ const DropZone = ({ children, sx: sxOverride }) => {
     accept: {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     },
-    maxFiles: 1,
+    maxFiles: multiple ? 10 : 1,
     maxSize: 20971520, // 20 MB
     onDrop,
     onDropRejected,
+    multiple: multiple
   });
 
-  const handleUpload = async (uploadedFile) => {
-    const fileToUpload = uploadedFile || file;
+  const handleUpload = async (fileToUpload) => {
     if (!fileToUpload) {
       setError('Выберите файл');
       return;
@@ -79,19 +90,14 @@ const DropZone = ({ children, sx: sxOverride }) => {
     setLoading(true);
     setError('');
 
-    const formData = new FormData();
-    formData.append('file', fileToUpload);
-
     try {
-      const response = await axios.post('http://localhost:5000/api/document/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const data = await api.uploadDocument(fileToUpload);
 
       const checkData = {
         id: new Date().toISOString(),
         fileName: fileToUpload.name,
         timestamp: new Date().toISOString(),
-        reportData: response.data,
+        reportData: data,
       };
 
       try {
@@ -102,7 +108,7 @@ const DropZone = ({ children, sx: sxOverride }) => {
 
       navigate('/report', {
         state: {
-          reportData: response.data,
+          reportData: data,
           fileName: fileToUpload.name,
         },
       });
@@ -114,11 +120,40 @@ const DropZone = ({ children, sx: sxOverride }) => {
     }
   };
 
-  const handleReset = () => {
-    setFile(null);
-    setFileSize(0);
+  const handleBatchUpload = async (filesToUpload) => {
+    if (!filesToUpload || filesToUpload.length === 0) {
+      setError('Выберите файлы');
+      return;
+    }
+
+    setLoading(true);
     setError('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    setBatchResults(null);
+
+    try {
+      const data = await api.uploadBatch(filesToUpload);
+      setBatchResults(data.results);
+      
+      // Add successful uploads to history
+      if (addToHistory && data.results) {
+        data.results.forEach(res => {
+            if (res.success) {
+                addToHistory({
+                    id: new Date().toISOString() + Math.random(),
+                    fileName: res.filename,
+                    timestamp: new Date().toISOString(),
+                    reportData: res
+                });
+            }
+        });
+      }
+
+    } catch (err) {
+      console.error('Error uploading batch:', err);
+      setError(err.response?.data?.error || 'Произошла ошибка при пакетной загрузке.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const dropzoneStyles = {
@@ -149,7 +184,6 @@ const DropZone = ({ children, sx: sxOverride }) => {
       },
     },
     active: {
-      // keep active state semantic but remove blurred outlines
       borderColor: 'primary.main'
     },
     reject: {
@@ -157,14 +191,37 @@ const DropZone = ({ children, sx: sxOverride }) => {
     },
   };
 
-  // Note: loading state is handled inline (no full-screen analyzing overlay)
-  // The previous implementation returned a full loading view here. That behavior
-  // was removed so that the page does not switch to an analyzing screen after
-  // a file is selected — upload proceeds in background and navigation still
-  // happens on success.
+  if (batchResults) {
+      return (
+          <Box>
+              <Typography variant="h6" gutterBottom>Результаты пакетной обработки</Typography>
+              <List>
+                  {batchResults.map((res, index) => (
+                      <ListItem key={index}>
+                          <ListItemIcon>
+                              {res.success ? <CheckCircleIcon color="success" /> : <ErrorIcon color="error" />}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={res.filename} 
+                            secondary={res.success ? `Ошибок: ${res.check_results?.total_issues_count || 0}` : res.error} 
+                          />
+                          {res.success && (
+                              <Button 
+                                variant="outlined" 
+                                size="small" 
+                                onClick={() => navigate('/report', { state: { reportData: res, fileName: res.filename } })}
+                              >
+                                  Отчет
+                              </Button>
+                          )}
+                      </ListItem>
+                  ))}
+              </List>
+              <Button variant="contained" onClick={() => { setBatchResults(null); setFiles([]); }}>Загрузить еще</Button>
+          </Box>
+      );
+  }
 
-  // If a child is provided we render a "bare" drop area and call the child as a render-prop
-  // so pages can render custom UI (for example an SVG outline) while still using the drop behaviour.
   if (children) {
     return (
       <Box>
@@ -176,7 +233,6 @@ const DropZone = ({ children, sx: sxOverride }) => {
                 ...dropzoneStyles.base,
                 ...(isDragActive ? dropzoneStyles.active : {}),
                 ...(isDragReject ? dropzoneStyles.reject : {}),
-                // keep wrapper transparent so child visuals show through
                 backgroundColor: 'transparent',
                 width: '100%',
                 height: '100%',
@@ -185,7 +241,7 @@ const DropZone = ({ children, sx: sxOverride }) => {
             >
               <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
               {typeof children === 'function'
-                ? children({ isDragActive, isDragReject, file, fileSize, error, openFile: () => fileInputRef.current && fileInputRef.current.click() })
+                ? children({ isDragActive, isDragReject, file: files[0], fileSize: formatFileSize(files[0]?.size), error, openFile: () => fileInputRef.current && fileInputRef.current.click() })
                 : children}
             </Box>
           </Paper>
@@ -196,12 +252,12 @@ const DropZone = ({ children, sx: sxOverride }) => {
               {error}
             </Alert>
           )}
+           {loading && <CircularProgress />}
         </motion.div>
       </Box>
     );
   }
 
-  // Default rendering (no children): render the built-in drop UI
   return (
     <Box>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -219,7 +275,7 @@ const DropZone = ({ children, sx: sxOverride }) => {
 
             {isDragActive ? (
               <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                Перетащите файл сюда…
+                {multiple ? 'Перетащите файлы сюда…' : 'Перетащите файл сюда…'}
               </Typography>
             ) : isDragReject ? (
               <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
@@ -228,7 +284,7 @@ const DropZone = ({ children, sx: sxOverride }) => {
             ) : (
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                  Перетащите файл сюда
+                   {multiple ? 'Перетащите файлы сюда' : 'Перетащите файл сюда'}
                 </Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
                   или нажмите, чтобы выбрать
@@ -242,10 +298,11 @@ const DropZone = ({ children, sx: sxOverride }) => {
                     if (fileInputRef.current) fileInputRef.current.click();
                   }}
                 >
-                  Выбрать файл
+                  {multiple ? 'Выбрать файлы' : 'Выбрать файл'}
                 </Button>
               </Box>
             )}
+             {loading && <CircularProgress sx={{ mt: 2 }} />}
           </Box>
         </Paper>
 
@@ -261,15 +318,15 @@ const DropZone = ({ children, sx: sxOverride }) => {
 };
 
 DropZone.propTypes = {
-  /** Custom render function or React node for the dropzone content */
   children: PropTypes.oneOfType([PropTypes.func, PropTypes.node]),
-  /** Custom styles to override the dropzone container */
   sx: PropTypes.object,
+  multiple: PropTypes.bool,
 };
 
 DropZone.defaultProps = {
   children: null,
   sx: {},
+  multiple: false,
 };
 
 export default DropZone;

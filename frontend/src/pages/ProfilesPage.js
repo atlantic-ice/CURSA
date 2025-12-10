@@ -47,7 +47,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 
@@ -69,6 +68,7 @@ const RuleCard = ({ title, icon, children, delay }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
+      style={{ height: '100%' }}
     >
       <Paper
         elevation={0}
@@ -79,6 +79,8 @@ const RuleCard = ({ title, icon, children, delay }) => {
           bgcolor: alpha(theme.palette.background.paper, 0.4),
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           transition: 'all 0.2s',
+          display: 'flex',
+          flexDirection: 'column',
           '&:hover': {
             bgcolor: alpha(theme.palette.background.paper, 0.6),
             borderColor: alpha(theme.palette.primary.main, 0.3),
@@ -86,7 +88,7 @@ const RuleCard = ({ title, icon, children, delay }) => {
           }
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexShrink: 0 }}>
           <Box sx={{
             p: 1,
             borderRadius: 2,
@@ -100,7 +102,7 @@ const RuleCard = ({ title, icon, children, delay }) => {
             {title}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1 }}>
           {children}
         </Box>
       </Paper>
@@ -124,6 +126,7 @@ export default function ProfilesPage() {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [error, setError] = useState(null);
   const [categoryTab, setCategoryTab] = useState('all');
 
   // Edit/Create State
@@ -155,6 +158,7 @@ export default function ProfilesPage() {
       }
     } catch (err) {
       console.error(err);
+      setError('Не удалось загрузить список профилей');
     } finally {
       setLoading(false);
     }
@@ -162,11 +166,14 @@ export default function ProfilesPage() {
 
   const fetchProfileDetails = async (id) => {
     setLoadingDetails(true);
+    setError(null);
     try {
       const res = await axios.get(`${API_BASE}/api/profiles/${id}`);
       setProfileData(res.data);
     } catch (err) {
       console.error(err);
+      setError('Не удалось загрузить данные профиля');
+      setProfileData(null);
     } finally {
       setLoadingDetails(false);
     }
@@ -177,6 +184,8 @@ export default function ProfilesPage() {
     setIsEditing(false);
     setShowComparison(false);
     setShowImportExport(false);
+    setShowStatistics(false);
+    setShowBulkOperations(false);
     setSelectedId(null);
     setProfileData(null);
   };
@@ -186,6 +195,8 @@ export default function ProfilesPage() {
     setIsCreating(false);
     setShowComparison(false);
     setShowImportExport(false);
+    setShowStatistics(false);
+    setShowBulkOperations(false);
   };
 
   const handleCancel = () => {
@@ -370,7 +381,7 @@ export default function ProfilesPage() {
               </Box>
               <Tooltip title="Сравнить профили">
                 <IconButton 
-                  onClick={handleShowComparison}
+                  onClick={(e) => { e.stopPropagation(); handleShowComparison(); }}
                   sx={{ 
                     bgcolor: showComparison ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
                     border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
@@ -381,7 +392,7 @@ export default function ProfilesPage() {
               </Tooltip>
               <Tooltip title="Импорт / Экспорт">
                 <IconButton 
-                  onClick={handleShowImportExport}
+                  onClick={(e) => { e.stopPropagation(); handleShowImportExport(); }}
                   sx={{ 
                     bgcolor: showImportExport ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
                     border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
@@ -392,7 +403,7 @@ export default function ProfilesPage() {
               </Tooltip>
               <Tooltip title="Статистика">
                 <IconButton 
-                  onClick={handleShowStatistics}
+                  onClick={(e) => { e.stopPropagation(); handleShowStatistics(); }}
                   sx={{ 
                     bgcolor: showStatistics ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
                     border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
@@ -403,7 +414,7 @@ export default function ProfilesPage() {
               </Tooltip>
               <Tooltip title="Массовые операции">
                 <IconButton 
-                  onClick={handleShowBulkOperations}
+                  onClick={(e) => { e.stopPropagation(); handleShowBulkOperations(); }}
                   sx={{ 
                     bgcolor: showBulkOperations ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
                     border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
@@ -413,9 +424,11 @@ export default function ProfilesPage() {
                 </IconButton>
               </Tooltip>
               <Button
+                id="create-profile-btn"
+                data-testid="create-profile-btn"
                 variant="contained"
                 startIcon={<AddIcon />}
-                onClick={handleCreateStart}
+                onClick={(e) => { e.stopPropagation(); handleCreateStart(); }}
                 disabled={isCreating}
               >
                 Создать профиль
@@ -428,7 +441,7 @@ export default function ProfilesPage() {
       <Container maxWidth="xl" sx={{ flexGrow: 1, py: 3, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <Grid container spacing={3} sx={{ flexGrow: 1, height: '100%', overflow: 'hidden' }}>
           {/* Sidebar List */}
-          <Grid item xs={12} md={3} lg={2.5} sx={{ height: '100%' }}>
+          <Grid size={{ xs: 12, md: 3, lg: 2.5 }} sx={{ height: '100%' }}>
             <Paper
               elevation={0}
               sx={{
@@ -448,11 +461,11 @@ export default function ProfilesPage() {
                 variant="fullWidth"
                 sx={{
                   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                  minHeight: 42,
-                  '& .MuiTab-root': { minHeight: 42, py: 1, fontSize: '0.75rem' }
+                  minHeight: 48,
+                  '& .MuiTab-root': { minHeight: 48, py: 1, fontSize: '0.875rem' }
                 }}
               >
-                <Tab value="all" label={<Badge badgeContent={categoryCounts.all} color="primary" max={99}><span>Все</span></Badge>} />
+                <Tab value="all" label={<Badge badgeContent={categoryCounts.all} color="primary" max={99} sx={{ '& .MuiBadge-badge': { right: -8, top: 5 } }}><Box component="span" sx={{ px: 1.5 }}>Все</Box></Badge>} />
                 <Tab value="gost" label="ГОСТ" />
                 <Tab value="university" label="Вузы" />
               </Tabs>
@@ -511,7 +524,7 @@ export default function ProfilesPage() {
           </Grid>
 
           {/* Main Content */}
-          <Grid item xs={12} md={9} lg={9.5} sx={{ height: '100%' }}>
+          <Grid size={{ xs: 12, md: 9, lg: 9.5 }} sx={{ height: '100%' }}>
             <AnimatePresence mode="wait">
               {showComparison ? (
                 <motion.div
@@ -535,8 +548,9 @@ export default function ProfilesPage() {
                   style={{ height: '100%' }}
                 >
                   <ProfileImportExport 
-                    selectedProfile={profileData}
-                    onImportSuccess={handleImportSuccess}
+                    profiles={profiles}
+                    onImport={handleImportSuccess}
+                    onRefresh={fetchProfiles}
                     onClose={() => setShowImportExport(false)}
                   />
                 </motion.div>
@@ -549,6 +563,7 @@ export default function ProfilesPage() {
                   style={{ height: '100%' }}
                 >
                   <ProfileStatistics 
+                    profiles={profiles}
                     onClose={() => setShowStatistics(false)}
                   />
                 </motion.div>
@@ -563,7 +578,7 @@ export default function ProfilesPage() {
                   <ProfileBulkOperations 
                     profiles={profiles}
                     onClose={() => setShowBulkOperations(false)}
-                    onComplete={fetchProfiles}
+                    onRefresh={fetchProfiles}
                   />
                 </motion.div>
               ) : isCreating || isEditing ? (
@@ -586,9 +601,18 @@ export default function ProfilesPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}
                 >
-                  {selectedId ? <CircularProgress size={32} /> : <Typography color="text.secondary">Выберите профиль</Typography>}
+                  {loadingDetails ? (
+                    <CircularProgress size={32} />
+                  ) : error ? (
+                    <>
+                      <Typography color="error" variant="h6">{error}</Typography>
+                      <Button variant="outlined" onClick={() => fetchProfileDetails(selectedId)}>Повторить</Button>
+                    </>
+                  ) : (
+                    <Typography color="text.secondary">Выберите профиль</Typography>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div
@@ -656,7 +680,7 @@ export default function ProfilesPage() {
 
                   <Grid container spacing={3}>
                     {/* Basic Formatting */}
-                    <Grid item xs={12} md={6} lg={4}>
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
                       <RuleCard title="Шрифт и текст" icon={<FormatSizeIcon />} delay={0.1}>
                         <RuleItem label="Гарнитура" value={profileData.rules.font.name} />
                         <RuleItem label="Размер" value={`${profileData.rules.font.size} пт`} />
@@ -669,7 +693,7 @@ export default function ProfilesPage() {
                     </Grid>
 
                     {/* Margins */}
-                    <Grid item xs={12} md={6} lg={4}>
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
                       <RuleCard title="Поля страницы" icon={<CropFreeIcon />} delay={0.2}>
                         <RuleItem label="Левое" value={`${profileData.rules.margins.left} см`} />
                         <RuleItem label="Правое" value={`${profileData.rules.margins.right} см`} />
@@ -679,7 +703,7 @@ export default function ProfilesPage() {
                     </Grid>
 
                     {/* Headings */}
-                    <Grid item xs={12} md={6} lg={4}>
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
                       <RuleCard title="Заголовки" icon={<TitleIcon />} delay={0.3}>
                         <Typography variant="caption" color="primary" fontWeight={600}>УРОВЕНЬ 1</Typography>
                         <RuleItem label="Размер" value={`${profileData.rules.headings.h1.font_size} пт`} />
@@ -695,7 +719,7 @@ export default function ProfilesPage() {
                     </Grid>
 
                     {/* Tables & Captions */}
-                    <Grid item xs={12} md={6} lg={4}>
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
                       <RuleCard title="Таблицы и подписи" icon={<TableChartIcon />} delay={0.4}>
                         <RuleItem label="Шрифт таблиц" value={`${profileData.rules.tables.font_size} пт`} />
                         <RuleItem label="Интервал таблиц" value={`${profileData.rules.tables.line_spacing}x`} />
@@ -707,7 +731,7 @@ export default function ProfilesPage() {
                     </Grid>
 
                     {/* Lists & Footnotes */}
-                    <Grid item xs={12} md={6} lg={4}>
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
                       <RuleCard title="Списки и сноски" icon={<FormatListBulletedIcon />} delay={0.5}>
                         <RuleItem label="Шрифт списков" value={`${profileData.rules.lists.font_size} пт`} />
                         <RuleItem label="Отступ слева" value={`${profileData.rules.lists.left_indent} см`} />
@@ -719,7 +743,7 @@ export default function ProfilesPage() {
 
                     {/* Bibliography */}
                     {profileData.rules.bibliography && (
-                      <Grid item xs={12} md={6} lg={4}>
+                      <Grid size={{ xs: 12, md: 6, lg: 4 }}>
                         <RuleCard title="Библиография" icon={<MenuBookIcon />} delay={0.55}>
                           <RuleItem label="Стиль" value={profileData.rules.bibliography.style === 'gost' ? 'ГОСТ' : profileData.rules.bibliography.style} />
                           <RuleItem label="Размер шрифта" value={`${profileData.rules.bibliography.font_size || 14} пт`} />
@@ -732,7 +756,7 @@ export default function ProfilesPage() {
                     )}
 
                     {/* Required Sections */}
-                    <Grid item xs={12} md={6} lg={4}>
+                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
                       <RuleCard title="Структура" icon={<MenuBookIcon />} delay={0.6}>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Обязательные разделы:</Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>

@@ -68,6 +68,16 @@ backend/app/static/reports/*.docx
 *.temp
 tmp/
 temp/
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# =========================
+# Coverage
+# =========================
+.coverage
+coverage.xml
+htmlcov/
 
 # =========================
 # IDEs and editors
@@ -105,6 +115,9 @@ backend/tests/test_data/documents/*.docx
 # =========================
 # Test results (generated)
 # =========================
-backend/tests/test_data/results/format_test_*.txt
-backend/tests/test_data/results/format_test_*.json
+backend/tests/test_data/results/*.txt
+backend/tests/test_data/results/*.json
+backend/tests/test_data/results/*.py
+backend/tests/test_data/results/html_reports/*.html
+backend/tests/test_data/results/__pycache__/
 backend/output.txt

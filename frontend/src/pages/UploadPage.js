@@ -18,6 +18,7 @@ import {
   InputLabel,
   List,
   ListItem,
+  ListItemIcon,
   ListItemText,
   ListItemAvatar,
   Avatar,
@@ -25,7 +26,11 @@ import {
   Tooltip,
   Fade,
   Chip,
-  LinearProgress
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -40,6 +45,7 @@ import VerifiedIcon from '@mui/icons-material/Verified';
 import SchoolIcon from '@mui/icons-material/School';
 import toast, { Toaster } from 'react-hot-toast';
 import StarLogo, { StarLogoPulsing } from '../components/StarLogo';
+import api from '../utils/api';
 
 // В дев-среде используем прокси CRA (пустая база), иначе — REACT_APP_API_BASE или прод-URL
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -57,6 +63,8 @@ export default function UploadPage() {
   const [selectedProfile, setSelectedProfile] = useState('');
   const [recentFiles, setRecentFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [batchResults, setBatchResults] = useState(null);
+  const [showBatchDialog, setShowBatchDialog] = useState(false);
   
   const navigate = useNavigate();
   const theme = useTheme();
@@ -95,8 +103,7 @@ export default function UploadPage() {
 
   const handleUpload = useCallback(async (acceptedFiles) => {
     if (!acceptedFiles?.length) return;
-    const file = acceptedFiles[0];
-    setFileName(file.name);
+    
     setStatus('loading');
     setError('');
     setUploadProgress(0);
@@ -109,31 +116,51 @@ export default function UploadPage() {
       });
     }, 200);
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('profile_id', selectedProfile);
-
     try {
-      const response = await axios.post(`${API_BASE}/api/document/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000,
-      });
-      
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      setStatus('success');
-      toast.success(`Файл «${file.name}» успешно проверен`);
-      addToHistory(file, selectedProfile);
-      
-      // Переход на страницу отчета с данными
-      setTimeout(() => {
-        navigate('/report', { 
-          state: { 
-            reportData: response.data,
-            fileName: file.name 
-          } 
-        });
-      }, 500);
+        if (acceptedFiles.length > 1) {
+            // Batch Upload
+            const data = await api.uploadBatch(acceptedFiles, selectedProfile);
+            
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+            setStatus('success');
+            setBatchResults(data.results);
+            setShowBatchDialog(true);
+            toast.success(`Обработано ${data.results.length} файлов`);
+            
+            // Add successful uploads to history
+            data.results.forEach(res => {
+                if (res.success) {
+                    const originalFile = acceptedFiles.find(f => f.name === res.filename);
+                    if (originalFile) {
+                        addToHistory(originalFile, selectedProfile);
+                    }
+                }
+            });
+
+        } else {
+            // Single Upload
+            const file = acceptedFiles[0];
+            setFileName(file.name);
+            
+            const data = await api.uploadDocument(file, selectedProfile);
+            
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+            setStatus('success');
+            toast.success(`Файл «${file.name}» успешно проверен`);
+            addToHistory(file, selectedProfile);
+            
+            // Переход на страницу отчета с данными
+            setTimeout(() => {
+                navigate('/report', { 
+                state: { 
+                    reportData: data,
+                    fileName: file.name 
+                } 
+                });
+            }, 500);
+        }
       
     } catch (err) {
       clearInterval(progressInterval);
@@ -158,12 +185,13 @@ export default function UploadPage() {
     open,
   } = useDropzone({
     accept: ACCEPTED_TYPES,
-    maxFiles: 1,
+    maxFiles: 10,
     maxSize: 20 * 1024 * 1024,
     onDrop: handleUpload,
     onDropRejected: handleRejected,
     noClick: true,
     noKeyboard: true,
+    multiple: true
   });
 
   return (
@@ -171,7 +199,7 @@ export default function UploadPage() {
       minHeight: '100vh', 
       bgcolor: '#000',
       color: 'text.primary',
-      display: 'flex',
+      display: 'flex', 
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
@@ -566,6 +594,57 @@ export default function UploadPage() {
           )}
         </Stack>
       </Container>
+
+      {/* Batch Results Dialog */}
+      <Dialog 
+        open={showBatchDialog} 
+        onClose={() => setShowBatchDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+            sx: {
+                bgcolor: '#1e293b',
+                color: '#fff',
+                borderRadius: 3
+            }
+        }}
+      >
+        <DialogTitle>Результаты пакетной обработки</DialogTitle>
+        <DialogContent>
+            <List>
+                {batchResults && batchResults.map((res, index) => (
+                    <ListItem key={index} divider>
+                        <ListItemIcon>
+                            {res.success ? <CheckCircleIcon color="success" /> : <ErrorIcon color="error" />}
+                        </ListItemIcon>
+                        <ListItemText 
+                            primary={res.filename} 
+                            secondary={
+                                <Typography variant="caption" color="text.secondary">
+                                    {res.success ? `Ошибок: ${res.check_results?.total_issues_count || 0}` : res.error}
+                                </Typography>
+                            }
+                        />
+                        {res.success && (
+                            <Button 
+                                variant="outlined" 
+                                size="small" 
+                                onClick={() => {
+                                    setShowBatchDialog(false);
+                                    navigate('/report', { state: { reportData: res, fileName: res.filename } });
+                                }}
+                            >
+                                Отчет
+                            </Button>
+                        )}
+                    </ListItem>
+                ))}
+            </List>
+        </DialogContent>
+        <DialogActions>
+            <Button onClick={() => setShowBatchDialog(false)}>Закрыть</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -1,0 +1,124 @@
+{
+    "name": "ГОСТ (по умолчанию)",
+    "description": "Стандартный профиль проверки по ГОСТ (строгий)",
+    "is_system": false,
+    "category": "gost",
+    "rules": {
+        "font": {
+            "name": "Times New Roman",
+            "size": 14.0,
+            "color": "000000"
+        },
+        "margins": {
+            "left": 3.0,
+            "right": 1.5,
+            "top": 2.0,
+            "bottom": 2.0
+        },
+        "line_spacing": 1.5,
+        "first_line_indent": 1.25,
+        "paragraph_alignment": "JUSTIFY",
+        "headings": {
+            "h1": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "CENTER",
+                "all_caps": true,
+                "space_before": 0,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h2": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 12,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            },
+            "h3": {
+                "font_size": 14.0,
+                "bold": true,
+                "alignment": "LEFT",
+                "first_line_indent": 1.25,
+                "space_before": 12,
+                "space_after": 0,
+                "line_spacing": 1.5,
+                "keep_with_next": true
+            }
+        },
+        "tables": {
+            "font_size": 12.0,
+            "alignment": "LEFT",
+            "line_spacing": 1.0,
+            "space_before": 0,
+            "space_after": 0,
+            "first_line_indent": 0,
+            "borders": true
+        },
+        "captions": {
+            "font_size": 12.0,
+            "alignment": "CENTER",
+            "space_before": 6,
+            "space_after": 12,
+            "first_line_indent": 0,
+            "line_spacing": 1.0,
+            "separator": " – "
+        },
+        "lists": {
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "alignment": "JUSTIFY",
+            "first_line_indent": 0,
+            "left_indent": 1.25
+        },
+        "footnotes": {
+            "font_size": 10.0,
+            "line_spacing": 1.0,
+            "alignment": "JUSTIFY"
+        },
+        "required_sections": [
+            "введение",
+            "заключение",
+            "список литературы",
+            "содержание"
+        ],
+        "bibliography": {
+            "style": "gost",
+            "font_size": 14.0,
+            "line_spacing": 1.5,
+            "hanging_indent": 1.25,
+            "sort_order": "alphabetical",
+            "numbering": true,
+            "min_sources": 15,
+            "max_age_years": 5,
+            "require_foreign": false,
+            "foreign_min_percent": 0
+        }
+    },
+    "bibliography": {
+        "patterns": {
+            "one_author": "^[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]\\.\\s.*\\s[–—-].*,\\s\\d{4}\\.\\s[–—-].*\\sс\\.?$",
+            "2_3_authors": "^[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]\\.,\\s[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]\\..*\\s[–—-].*,\\s\\d{4}\\.\\s[–—-].*\\sс\\.?$",
+            "4_authors": "^[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]\\.,\\s[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]\\.,\\s[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]\\.,\\s[А-Я][а-я]+,\\s[А-Я]\\.\\s?[А-Я]\\..*$",
+            "5_plus_authors": "^.*\\[и\\sдр\\.\\].*$",
+            "web_resource": "^.*\\s?\\[Электронный\\sресурс\\]\\s?.*URL:\\s.+\\s\\(дата\\sобращения:?\\s\\d{2}\\.\\d{2}\\.\\d{4}\\)\\.?$",
+            "law": "^.*(закон|постановление|указ|кодекс).*от\\s\\d{2}\\.\\d{2}\\.\\d{4}.*№.*$",
+            "gost": "^ГОСТ\\s.*[–—-].*\\d{4}.*$"
+        },
+        "messages": {
+            "one_author": "Неправильное оформление источника с одним автором. Должно быть: 'Фамилия, И.О. Название – Город, Год. – Количество страниц с.'",
+            "2_3_authors": "Неправильное оформление источника с 2-3 авторами. Должно быть: 'Фамилия, И.О., Фамилия, И.О. Название – Город, Год. – Количество страниц с.'",
+            "4_authors": "Неправильное оформление источника с 4 авторами. Должно содержать четыре автора, разделенных запятыми.",
+            "5_plus_authors": "Неправильное оформление источника с 5 и более авторами. Должно содержать '[и др.]'.",
+            "web_resource": "Неправильное оформление интернет-ресурса. Должно содержать '[Электронный ресурс]', 'URL:' и '(дата обращения: ДД.ММ.ГГГГ)'.",
+            "law": "Неправильное оформление законодательного акта. Должно содержать тип документа, дату и номер.",
+            "gost": "Неправильное оформление ГОСТа. Должно быть: 'ГОСТ Номер–Год...'."
+        }
+    },
+    "imported_at": "2025-12-08T22:26:02.069404",
+    "version": "1.0"
+}

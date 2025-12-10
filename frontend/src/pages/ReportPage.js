@@ -62,6 +62,7 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import SchoolIcon from '@mui/icons-material/School';
 import BuildIcon from '@mui/icons-material/Build';
+import DifferenceIcon from '@mui/icons-material/Difference';
 
 // База API: в dev используем прямой доступ к бэкенду (5000), в prod — REACT_APP_API_BASE или прод-URL
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -1873,6 +1874,24 @@ const ReportPage = () => {
                           }}
                         >
                           Скачать исправленный файл
+                        </Button>
+
+                        {/* View Changes button */}
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<DifferenceIcon />}
+                          onClick={() => navigate(`/preview?original=${encodeURIComponent(reportData.temp_path)}&corrected=${encodeURIComponent(correctedFilePath)}&filename=${encodeURIComponent(fileName)}`)}
+                          sx={{ 
+                            mt: 1, 
+                            py: 1.5, 
+                            borderRadius: 2,
+                            fontWeight: 700,
+                            textTransform: 'none',
+                          }}
+                        >
+                          Просмотреть изменения
                         </Button>
                       </Box>
                     </Paper>

@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 const UploadPage = lazy(() => import('./pages/UploadPage'));
 const ReportPage = lazy(() => import('./pages/ReportPage'));
 const ProfilesPage = lazy(() => import('./pages/ProfilesPage'));
+const PreviewPage = lazy(() => import('./pages/PreviewPage'));
 
 // Компонент загрузки для Suspense
 const PageLoader = () => (
@@ -113,6 +114,7 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<PageWrapper><UploadPage /></PageWrapper>} />
         <Route path="/report" element={<PageWrapper><ReportPage /></PageWrapper>} />
         <Route path="/profiles" element={<PageWrapper><ProfilesPage /></PageWrapper>} />
+        <Route path="/preview" element={<PageWrapper><PreviewPage /></PageWrapper>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

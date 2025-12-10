@@ -17,6 +17,7 @@ from lxml import etree
 from app.services.document_processor import DocumentProcessor
 from app.services.norm_control_checker import NormControlChecker
 from app.services.document_corrector import DocumentCorrector, CorrectionReport
+from app.services.workflow_service import WorkflowService
 from app.config.security import (
     RATE_LIMITS,
     is_allowed_file,
@@ -34,6 +35,9 @@ CORRECTIONS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(_
 
 # Создаем директорию, если она не существует
 os.makedirs(CORRECTIONS_DIR, exist_ok=True)
+
+# Инициализация сервиса рабочего процесса
+workflow_service = WorkflowService(CORRECTIONS_DIR)
 
 
 def _get_limiter():
@@ -177,117 +181,19 @@ def upload_document():
         
         current_app.logger.info(f"Файл сохранен по пути {file_path}, размер: {os.path.getsize(file_path)} байт")
         
-        try:
-            # Обрабатываем документ
-            current_app.logger.info("Шаг 1: Создание DocumentProcessor")
-            doc_processor = DocumentProcessor(file_path)
-            
-            current_app.logger.info("Шаг 2: Извлечение данных")
-            document_data = doc_processor.extract_data()
-            
-            # Проверяем результат извлечения данных
-            current_app.logger.info(f"Результат извлечения данных: {type(document_data)}")
-            if not document_data:
-                return jsonify({'error': 'Не удалось извлечь данные из документа'}), 500
-                
-            # Выводим ключи для отладки
-            current_app.logger.info(f"Ключи документа: {document_data.keys()}")
-            
-            current_app.logger.info("Шаг 3: Создание NormControlChecker")
-            
-            # Получаем ID профиля из запроса
-            profile_id = request.form.get('profile_id')
-            current_app.logger.info(f"Используемый профиль: {profile_id or 'default_gost'}")
-            
-            # Создаем checker с указанным профилем
-            checker = NormControlChecker(profile_id=profile_id)
-            
-            current_app.logger.info("Шаг 4: Выполнение проверки")
-            check_results = checker.check_document(document_data)
-            
-            current_app.logger.info("Шаг 5: Проверка завершена успешно")
-
-            # Дополнительно: Автоисправление для достижения безупречного результата
-            correction_success = False
-            corrected_filename = None
-            corrected_file_path = None
-            corrected_check_results = None
-            try:
-                current_app.logger.info("Шаг 6: Автоисправление документа для соответствия нормам")
-                
-                # Загружаем профиль (по умолчанию или выбранный)
-                profile_id = request.form.get('profile_id')
-                profile_filename = f"{profile_id}.json" if profile_id else 'default_gost.json'
-                
-                profile_data = None
-                try:
-                    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-                    profile_path = os.path.join(base_dir, 'profiles', profile_filename)
-                    
-                    # Fallback to default if specific profile not found
-                    if not os.path.exists(profile_path):
-                        current_app.logger.warning(f"Профиль {profile_filename} не найден, используем default_gost.json")
-                        profile_path = os.path.join(base_dir, 'profiles', 'default_gost.json')
-
-                    if os.path.exists(profile_path):
-                        with open(profile_path, 'r', encoding='utf-8') as f:
-                            profile_data = json.load(f)
-                        current_app.logger.info(f"Загружен профиль: {profile_path}")
-                except Exception as e:
-                    current_app.logger.warning(f"Не удалось загрузить профиль: {e}")
-
-                corrector = DocumentCorrector(profile_data=profile_data)
-
-                # Генерируем безопасное имя исправленного файла на основе оригинала и времени
-                base_name, _ = os.path.splitext(filename)
-                safe_base = secure_filename(base_name) or "document"
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                corrected_filename = f"{safe_base}_corrected_{timestamp}.docx"
-                permanent_path = os.path.join(CORRECTIONS_DIR, corrected_filename)
-
-                # Применяем все доступные исправления и сохраняем в постоянную директорию
-                corrected_file_path = corrector.correct_document(file_path, None, out_path=permanent_path)
-                correction_success = os.path.exists(corrected_file_path)
-                current_app.logger.info(f"Автоисправление завершено: {correction_success}, путь: {corrected_file_path}")
-
-                # Повторная проверка отключена по запросу
-                corrected_check_results = None
-
-            except Exception as auto_fix_err:
-                current_app.logger.warning(f"Автоисправление не выполнено: {type(auto_fix_err).__name__}: {str(auto_fix_err)}")
-                corrected_filename = None
-                corrected_file_path = None
-                corrected_check_results = None
-
-            # Генерируем DOCX-отчёт о проверке
-            report_path = None
-            try:
-                current_app.logger.info("Шаг 8: Генерация отчёта о проверке")
-                report_path = doc_processor.generate_report_document(check_results, filename)
-                current_app.logger.info(f"Отчёт сгенерирован: {report_path}")
-            except Exception as report_err:
-                current_app.logger.warning(f"Не удалось сгенерировать отчёт: {type(report_err).__name__}: {str(report_err)}")
-                report_path = None
-
-            # Возвращаем результаты проверки (+ сведения об автоисправлении, если успешно)
-            return jsonify({
-                'success': True,
-                'filename': filename,
-                'temp_path': file_path,
-                'check_results': check_results,
-                'correction_success': correction_success,
-                'corrected_file_path': corrected_filename if correction_success else None,
-                'corrected_check_results': corrected_check_results,
-                'report_path': report_path
-            }), 200
-            
-        except Exception as inner_e:
-            current_app.logger.error(f"Внутренняя ошибка: {type(inner_e).__name__}: {str(inner_e)}")
-            traceback.print_exc(file=sys.stdout)
-            return jsonify({
-                'error': f'Внутренняя ошибка при обработке: {str(inner_e)}',
-                'error_type': str(type(inner_e).__name__)
+        # Получаем ID профиля из запроса
+        profile_id = request.form.get('profile_id')
+        
+        # Используем WorkflowService
+        result = workflow_service.process_document(file_path, filename, profile_id)
+        
+        if not result['success']:
+             return jsonify({
+                'error': 'Ошибка при обработке файла',
+                'details': result['errors']
             }), 500
+
+        return jsonify(result), 200
         
     except Exception as e:
         current_app.logger.error(f"Ошибка при обработке файла: {type(e).__name__}: {str(e)}")
@@ -295,7 +201,61 @@ def upload_document():
         traceback.print_exc(file=sys.stdout)
         return jsonify({
             'error': f'Ошибка при обработке файла: {str(e)}',
-            'error_type': str(type(e).__name__)        }), 500
+            'error_type': str(type(e).__name__)
+        }), 500
+
+
+@bp.route('/upload-batch', methods=['POST'])
+def upload_batch():
+    """
+    Пакетная загрузка и обработка документов
+    """
+    if 'files' not in request.files:
+        return jsonify({'error': 'Файлы не найдены в запросе (ожидается поле "files")'}), 400
+    
+    files = request.files.getlist('files')
+    if not files or files[0].filename == '':
+        return jsonify({'error': 'Не выбраны файлы'}), 400
+        
+    profile_id = request.form.get('profile_id')
+    results = []
+    
+    temp_dir = tempfile.mkdtemp()
+    
+    for file in files:
+        if not allowed_file(file.filename):
+            results.append({
+                'filename': file.filename,
+                'success': False,
+                'error': 'Недопустимый формат файла'
+            })
+            continue
+            
+        try:
+            filename = secure_filename(file.filename)
+            if not filename.lower().endswith('.docx'):
+                filename = os.path.splitext(filename)[0] + '.docx'
+                
+            file_path = os.path.join(temp_dir, filename)
+            file.save(file_path)
+            
+            # Обработка
+            res = workflow_service.process_document(file_path, filename, profile_id)
+            results.append(res)
+            
+        except Exception as e:
+            results.append({
+                'filename': file.filename,
+                'success': False,
+                'error': str(e)
+            })
+            
+    return jsonify({
+        'success': True,
+        'results': results,
+        'total': len(files),
+        'processed': len(results)
+    }), 200
 
 
 @bp.route('/analyze', methods=['POST'])

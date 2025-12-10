@@ -115,76 +115,70 @@ def process_document(
         )
         
         # Импортируем сервисы внутри задачи (избегаем циклических импортов)
-        from app.services.document_processor import DocumentProcessor
-        from app.services.document_corrector import DocumentCorrector
-        from app.services.norm_control_checker import NormControlChecker
+        from app.services.workflow_service import WorkflowService
         
-        # Этап 1: Извлечение данных
+        # Настройка директории для исправлений
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        corrections_dir = os.path.join(base_dir, 'static', 'corrections')
+        
+        # Инициализация сервиса
+        workflow = WorkflowService(corrections_dir)
+        
+        # Этап 1: Обработка через WorkflowService
         self.update_state(
             state='PROCESSING',
-            meta={'stage': 'extract', 'progress': 20}
+            meta={'stage': 'workflow', 'progress': 30}
         )
         
-        processor = DocumentProcessor()
-        document_data = processor.process(file_path)
+        original_filename = os.path.basename(file_path)
+        result = workflow.process_document(
+            file_path=file_path,
+            original_filename=original_filename,
+            profile_id=profile_name
+        )
         
-        # Этап 2: Проверка нормоконтроля
+        if not result['success']:
+            raise Exception(f"Workflow failed: {result.get('errors')}")
+            
         self.update_state(
             state='PROCESSING',
-            meta={'stage': 'check', 'progress': 40}
+            meta={'stage': 'finishing', 'progress': 90}
         )
         
-        checker = NormControlChecker(profile_name)
-        check_result = checker.check(document_data)
+        processing_time = time.time() - start_time
         
-        # Этап 3: Исправление
-        self.update_state(
-            state='PROCESSING',
-            meta={'stage': 'correct', 'progress': 60}
-        )
-        
-        corrector = DocumentCorrector()
-        corrected_path, corrections = corrector.correct(file_path, check_result)
-        
-        # Этап 4: Генерация отчёта
-        self.update_state(
-            state='PROCESSING',
-            meta={'stage': 'report', 'progress': 80}
-        )
-        
-        report_path = None
-        if options.get('generate_report', True):
-            report_path = corrector.generate_report(check_result, corrections)
-        
-        # Этап 5: Отправка email (если указан)
+        # Этап 2: Отправка email (если указан)
         if user_email:
             self.update_state(
                 state='PROCESSING',
-                meta={'stage': 'email', 'progress': 90}
+                meta={'stage': 'email', 'progress': 95}
             )
+            
+            corrected_file_path = None
+            if result.get('corrected_file_path'):
+                corrected_file_path = os.path.join(corrections_dir, result['corrected_file_path'])
+                
             send_email.delay(
                 to_email=user_email,
-                subject='Результаты проверки нормоконтроля',
-                corrected_file=corrected_path,
-                report_file=report_path
+                subject=f'Результаты проверки: {original_filename}',
+                corrected_file=corrected_file_path,
+                report_file=result.get('report_path')
             )
-        
-        processing_time = time.time() - start_time
         
         # Записываем метрики
         try:
             from app.metrics import record_document_processed
-            record_document_processed(len(corrections), processing_time)
+            corrections_count = 1 if result.get('correction_success') else 0
+            record_document_processed(corrections_count, processing_time)
         except ImportError:
             pass
         
         return {
             'success': True,
-            'corrected_file': corrected_path,
-            'report_file': report_path,
-            'corrections_count': len(corrections),
+            'corrected_file': result.get('corrected_file_path'),
+            'report_file': result.get('report_path'),
             'processing_time': round(processing_time, 2),
-            'issues_found': len(check_result.get('issues', [])),
+            'issues_found': len(result.get('check_results', {}).get('issues', [])),
             'profile_used': profile_name
         }
         
