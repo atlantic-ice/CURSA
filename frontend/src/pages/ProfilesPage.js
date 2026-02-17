@@ -339,18 +339,15 @@ export default function ProfilesPage() {
   }
 
   return (
-    <Box sx={{ height: '100vh', bgcolor: 'background.default', color: 'text.primary', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <Box sx={{ pt: 3, px: 0, zIndex: 10, flexShrink: 0 }}>
         <Container maxWidth="xl">
           <Paper
+            className="glass-card"
             elevation={0}
             sx={{
               p: 2,
-              borderRadius: 2,
-              bgcolor: alpha(theme.palette.background.paper, 0.6),
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
@@ -360,9 +357,24 @@ export default function ProfilesPage() {
               <IconButton onClick={() => navigate('/')} size="small" sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 2 }}>
                 <ArrowBackIcon fontSize="small" />
               </IconButton>
-              <Typography variant="h6" fontWeight={800} sx={{ letterSpacing: '-0.02em' }}>
-                Стандарты оформления
-              </Typography>
+              <Box>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    color: alpha(theme.palette.common.white, 0.8),
+                    fontFamily: '"Inter", monospace',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    userSelect: 'none'
+                  }}
+                >
+                  CURSA / PROFILES
+                </Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ display: 'block', mt: 0.5 }}>
+                  Стандарты оформления
+                </Typography>
+              </Box>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -370,13 +382,13 @@ export default function ProfilesPage() {
                   icon={<VerifiedIcon />}
                   label={`${categoryCounts.gost} ГОСТ`}
                   size="small"
-                  sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main' }}
+                  sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main', fontWeight: 600 }}
                 />
                 <Chip
                   icon={<SchoolIcon />}
                   label={`${categoryCounts.university} вузов`}
                   size="small"
-                  sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), color: 'info.main' }}
+                  sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), color: 'info.main', fontWeight: 600 }}
                 />
               </Box>
               <Tooltip title="Сравнить профили">
@@ -430,6 +442,7 @@ export default function ProfilesPage() {
                 startIcon={<AddIcon />}
                 onClick={(e) => { e.stopPropagation(); handleCreateStart(); }}
                 disabled={isCreating}
+                sx={{ borderRadius: 2, fontWeight: 700 }}
               >
                 Создать профиль
               </Button>
@@ -443,15 +456,13 @@ export default function ProfilesPage() {
           {/* Sidebar List */}
           <Grid size={{ xs: 12, md: 3, lg: 2.5 }} sx={{ height: '100%' }}>
             <Paper
+              className="glass-card"
               elevation={0}
               sx={{
                 height: '100%',
-                bgcolor: alpha(theme.palette.background.paper, 0.4),
-                border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                borderRadius: 3,
-                overflow: 'hidden',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                overflow: 'hidden'
               }}
             >
               {/* Category Tabs */}
@@ -462,7 +473,7 @@ export default function ProfilesPage() {
                 sx={{
                   borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                   minHeight: 48,
-                  '& .MuiTab-root': { minHeight: 48, py: 1, fontSize: '0.875rem' }
+                  '& .MuiTab-root': { minHeight: 48, py: 1, fontSize: '0.875rem', fontWeight: 600 }
                 }}
               >
                 <Tab value="all" label={<Badge badgeContent={categoryCounts.all} color="primary" max={99} sx={{ '& .MuiBadge-badge': { right: -8, top: 5 } }}><Box component="span" sx={{ px: 1.5 }}>Все</Box></Badge>} />
@@ -497,7 +508,7 @@ export default function ProfilesPage() {
                           '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
                         },
                         '&:hover': {
-                          bgcolor: alpha(theme.palette.background.paper, 0.8),
+                          bgcolor: alpha(theme.palette.common.white, 0.05),
                           transform: 'translateX(4px)'
                         }
                       }}
@@ -522,6 +533,7 @@ export default function ProfilesPage() {
               </List>
             </Paper>
           </Grid>
+
 
           {/* Main Content */}
           <Grid size={{ xs: 12, md: 9, lg: 9.5 }} sx={{ height: '100%' }}>

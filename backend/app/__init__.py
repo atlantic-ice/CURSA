@@ -90,6 +90,24 @@ def create_app():
     if is_testing:
         app.config['TESTING'] = True
     
+    # === Загрузка конфигурации из config/database.py ===
+    from app.config.database import get_config
+    config_class = get_config()
+    app.config.from_object(config_class)
+    
+    # === Инициализация расширений БД ===
+    from app.extensions import db, migrate, jwt
+    
+    db.init_app(app)
+    migrate.init_app(app, db)
+    jwt.init_app(app)
+    
+    # Импорт моделей для миграций (важно после инициализации db)
+    from app.models import User, Subscription, Document, Payment, APIKey
+    
+    if not is_testing:
+        app.logger.info("База данных инициализирована")
+    
     # === Конфигурация безопасности ===
     app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
     
@@ -165,10 +183,12 @@ def create_app():
     from app.api import profile_routes
     from app.api import health_routes
     from app.api import preview_routes
+    from app.api import auth_routes
     app.register_blueprint(document_routes.bp)
     app.register_blueprint(profile_routes.bp)
     app.register_blueprint(health_routes.bp)
     app.register_blueprint(preview_routes.bp)
+    app.register_blueprint(auth_routes.bp)
     
     # Маршрут для API документации (JSON)
     @app.route('/api/openapi.json')

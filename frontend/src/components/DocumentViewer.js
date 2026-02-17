@@ -28,17 +28,17 @@ const DocumentViewer = ({ originalPath, correctedPath }) => {
             try {
                 const requests = [];
                 if (originalPath) requests.push(axios.post('/api/preview/generate', { path: originalPath }));
-                else requests.push(Promise.resolve({ data: { html: '<p>No original file</p>' } }));
+                else requests.push(Promise.resolve({ data: { html: '<p>Нет исходного файла</p>' } }));
 
                 if (correctedPath) requests.push(axios.post('/api/preview/generate', { path: correctedPath }));
-                else requests.push(Promise.resolve({ data: { html: '<p>No corrected file</p>' } }));
+                else requests.push(Promise.resolve({ data: { html: '<p>Нет исправленного файла</p>' } }));
 
                 const [origRes, corrRes] = await Promise.all(requests);
                 setOriginalHtml(origRes.data.html);
                 setCorrectedHtml(corrRes.data.html);
             } catch (err) {
                 console.error("Error fetching previews:", err);
-                setError("Failed to load document previews. Please ensure the files exist.");
+                setError("Не удалось загрузить предпросмотр документа. Пожалуйста, убедитесь, что файлы существуют.");
             } finally {
                 setLoading(false);
             }
@@ -121,10 +121,10 @@ const DocumentViewer = ({ originalPath, correctedPath }) => {
                     size="small"
                 >
                     <ToggleButton value="split" aria-label="split view">
-                        <ViewQuiltIcon sx={{ mr: 1 }} /> Split View
+                        <ViewQuiltIcon sx={{ mr: 1 }} /> Сравнение
                     </ToggleButton>
                     <ToggleButton value="diff" aria-label="diff view">
-                        <DifferenceIcon sx={{ mr: 1 }} /> Text Diff
+                        <DifferenceIcon sx={{ mr: 1 }} /> Различия
                     </ToggleButton>
                 </ToggleButtonGroup>
             </div>
@@ -133,7 +133,7 @@ const DocumentViewer = ({ originalPath, correctedPath }) => {
                 {mode === 'split' ? (
                     <>
                         <div className="doc-pane">
-                            <div className="doc-pane-header">Original</div>
+                            <div className="doc-pane-header">Оригинал</div>
                             <div 
                                 className="doc-pane-body" 
                                 ref={leftPaneRef}
@@ -142,7 +142,7 @@ const DocumentViewer = ({ originalPath, correctedPath }) => {
                             />
                         </div>
                         <div className="doc-pane">
-                            <div className="doc-pane-header">Corrected</div>
+                            <div className="doc-pane-header">Исправленный</div>
                             <div 
                                 className="doc-pane-body" 
                                 ref={rightPaneRef}
@@ -153,7 +153,7 @@ const DocumentViewer = ({ originalPath, correctedPath }) => {
                     </>
                 ) : (
                     <div className="doc-pane" style={{ width: '100%' }}>
-                        <div className="doc-pane-header">Text Differences</div>
+                        <div className="doc-pane-header">Текстовые различия</div>
                         <div className="doc-pane-body diff-view-container">
                             {diffElements}
                         </div>

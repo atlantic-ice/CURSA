@@ -45,6 +45,8 @@ import VerifiedIcon from '@mui/icons-material/Verified';
 import SchoolIcon from '@mui/icons-material/School';
 import toast, { Toaster } from 'react-hot-toast';
 import StarLogo, { StarLogoPulsing } from '../components/StarLogo';
+import StarBackground from '../components/StarBackground';
+import IdleOverlay from '../components/IdleOverlay';
 import api from '../utils/api';
 
 // В дев-среде используем прокси CRA (пустая база), иначе — REACT_APP_API_BASE или прод-URL
@@ -65,9 +67,47 @@ export default function UploadPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [batchResults, setBatchResults] = useState(null);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
+  const [isIdle, setIsIdle] = useState(false); // For StarBackground
+  const [showEasterEgg, setShowEasterEgg] = useState(false); // For Van Gogh
+  const [logoClicks, setLogoClicks] = useState(0); // Counter for Easter Egg
   
   const navigate = useNavigate();
   const theme = useTheme();
+
+  // Idle timer logic for StarBackground (1 minute)
+  useEffect(() => {
+    let timeoutId;
+    
+    const resetTimer = () => {
+      setIsIdle(false);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setIsIdle(true), 60000); // 60 seconds (1 minute)
+    };
+    
+    // Initial timer
+    resetTimer();
+    
+    // Listeners
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+    
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, []);
+
+  // Logo Click Handler
+  const handleLogoClick = () => {
+    setLogoClicks(prev => {
+        const newCount = prev + 1;
+        if (newCount === 10) {
+            setShowEasterEgg(true);
+            return 0; // Reset after trigger
+        }
+        return newCount;
+    });
+  };
 
   // Load profiles and history
   useEffect(() => {
@@ -123,10 +163,14 @@ export default function UploadPage() {
             
             clearInterval(progressInterval);
             setUploadProgress(100);
-            setStatus('success');
-            setBatchResults(data.results);
-            setShowBatchDialog(true);
-            toast.success(`Обработано ${data.results.length} файлов`);
+            
+            // Wait slightly for smooth transition
+            setTimeout(() => {
+                setStatus('success');
+                setBatchResults(data.results);
+                setShowBatchDialog(true);
+                toast.success(`Обработано ${data.results.length} файлов`);
+            }, 500);
             
             // Add successful uploads to history
             data.results.forEach(res => {
@@ -148,10 +192,11 @@ export default function UploadPage() {
             clearInterval(progressInterval);
             setUploadProgress(100);
             setStatus('success');
+            
             toast.success(`Файл «${file.name}» успешно проверен`);
             addToHistory(file, selectedProfile);
             
-            // Переход на страницу отчета с данными
+            // Navigate to results
             setTimeout(() => {
                 navigate('/report', { 
                 state: { 
@@ -189,16 +234,12 @@ export default function UploadPage() {
     maxSize: 20 * 1024 * 1024,
     onDrop: handleUpload,
     onDropRejected: handleRejected,
-    noClick: true,
-    noKeyboard: true,
     multiple: true
   });
 
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      bgcolor: '#000',
-      color: 'text.primary',
       display: 'flex', 
       flexDirection: 'column',
       alignItems: 'center',
@@ -210,429 +251,224 @@ export default function UploadPage() {
       <Toaster
         position="top-right"
         toastOptions={{
-          style: { background: '#1e293b', color: '#f8fafc', border: '1px solid rgba(148, 163, 184, 0.1)' },
+          style: { background: 'rgba(18, 18, 18, 0.8)', color: '#fff', border: '1px solid rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)' },
         }}
       />
+      
+      <IdleOverlay open={showEasterEgg} onClose={() => setShowEasterEgg(false)} />
+      
+      {/* Stars are always active now, but opacity controlled by isIdle */}
+      <StarBackground active={isIdle} />
+
+      {/* Minimal Top Left Logo */}
+      <Box 
+        onClick={handleLogoClick}
+        sx={{ 
+            position: 'absolute', 
+            top: 32, 
+            left: 40, 
+            zIndex: 10,
+            cursor: 'pointer',
+            userSelect: 'none' 
+        }}
+      >
+        <Typography
+          variant="body1"
+          sx={{
+            fontWeight: 700,
+            color: alpha(theme.palette.common.white, 0.8),
+            fontSize: '1rem',
+            fontFamily: '"Inter", monospace',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            transition: 'all 0.3s',
+            '&:hover': { 
+                color: theme.palette.common.white,
+                textShadow: '0 0 10px rgba(255,255,255,0.5)'
+            }
+          }}
+        >
+          CURSA / UPLOAD
+        </Typography>
+      </Box>
 
       <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
         <Stack spacing={6} alignItems="center">
-          {/* Header */}
-          <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <motion.div initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mb: 2 }}>
-                <StarLogoPulsing 
-                  size={56} 
-                  color={theme.palette.primary.main}
-                  glowColor={theme.palette.primary.main}
-                />
-                <Typography variant="h1" sx={{ 
-                  fontSize: { xs: '3rem', md: '5rem' }, 
-                  fontWeight: 900, 
-                  letterSpacing: '-0.03em',
-                  color: 'text.primary',
-                  lineHeight: 0.9,
-                }}>
-                  CURSA
-                </Typography>
-              </Box>
-            </motion.div>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.3 }}>
-              <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400, maxWidth: 600, mx: 'auto', lineHeight: 1.6, fontSize: '1.1rem' }}>
-                Интеллектуальная система нормоконтроля документов.
-                <br />
-                Загрузите работу для мгновенного анализа соответствия ГОСТ.
-              </Typography>
-            </motion.div>
-          </Box>
-
+          
           {/* Main Card */}
           <motion.div 
-            initial={{ opacity: 0, y: 40 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 50 }}
-            style={{ width: '100%' }}
+            initial={{ opacity: 0, scale: 0.9, y: 40 }} 
+            animate={{ opacity: 1, scale: 1, y: 0 }} 
+            transition={{ duration: 1.5, ease: "easeInOut", delay: 0.5 }} // Delay entry slightly to let stars settle
+            style={{ width: '100%', position: 'relative' }}
           >
+            {/* Ambient Glow Behind Card */}
+            <Box className="glow-effect" sx={{ 
+                position: 'absolute', 
+                top: '50%', 
+                left: '50%', 
+                width: '120%', 
+                height: '120%', 
+                background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.1)} 0%, transparent 60%)`, 
+                zIndex: 0,
+                pointerEvents: 'none'
+            }} />
+
             <Paper
               elevation={0}
+              className="glass-card"
               sx={{
                 p: 0,
-                borderRadius: 3,
-                bgcolor: alpha(theme.palette.background.paper, 0.4),
-                backdropFilter: 'blur(24px)',
-                border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                 overflow: 'hidden',
-                position: 'relative'
+                position: 'relative',
+                zIndex: 2,
               }}
             >
-              {/* Top Bar */}
-              <Box sx={{ 
-                px: 3,
-                py: 2,
-                borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                bgcolor: alpha(theme.palette.background.default, 0.2)
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box sx={{ p: 0.8, borderRadius: 2, bgcolor: alpha(theme.palette.text.primary, 0.05) }}>
-                    <SettingsIcon fontSize="small" color="action" />
-                  </Box>
-                  <Typography variant="subtitle2" fontWeight={700} color="text.secondary">ПАРАМЕТРЫ</Typography>
-                </Box>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <FormControl size="small" sx={{ minWidth: 220 }}>
-                    <Select
-                      value={selectedProfile}
-                      onChange={(e) => setSelectedProfile(e.target.value)}
-                      displayEmpty
-                      variant="standard"
-                      disableUnderline
-                      sx={{ 
-                        fontSize: '0.9rem',
-                        fontWeight: 600,
-                        color: 'text.primary',
-                        '& .MuiSelect-select': { py: 0.5, textAlign: 'right', pr: '24px !important' },
-                        '& .MuiSvgIcon-root': { right: 0 }
-                      }}
-                      renderValue={(value) => {
-                        const profile = profiles.find(p => p.id === value);
-                        if (!profile) return 'Выберите стандарт';
-                        return (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}>
-                            {profile.category === 'gost' && <VerifiedIcon fontSize="small" color="success" />}
-                            {profile.category === 'university' && <SchoolIcon fontSize="small" color="info" />}
-                            {profile.name}
-                          </Box>
-                        );
-                      }}
-                    >
-                      <MenuItem value="" disabled>Выберите стандарт</MenuItem>
-                      
-                      {/* GOST profiles */}
-                      {profiles.filter(p => p.category === 'gost').length > 0 && (
-                        <MenuItem disabled sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'success.main', opacity: '1 !important' }}>
-                          СТАНДАРТЫ ГОСТ
-                        </MenuItem>
-                      )}
-                      {profiles.filter(p => p.category === 'gost').map(p => (
-                        <MenuItem key={p.id} value={p.id} sx={{ display: 'flex', gap: 1 }}>
-                          <VerifiedIcon fontSize="small" color="success" />
-                          {p.name}
-                        </MenuItem>
-                      ))}
-                      
-                      {/* University profiles */}
-                      {profiles.filter(p => p.category === 'university').length > 0 && (
-                        <MenuItem disabled sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'info.main', opacity: '1 !important', mt: 1 }}>
-                          ТРЕБОВАНИЯ ВУЗОВ
-                        </MenuItem>
-                      )}
-                      {profiles.filter(p => p.category === 'university').map(p => (
-                        <MenuItem key={p.id} value={p.id} sx={{ display: 'flex', gap: 1 }}>
-                          <SchoolIcon fontSize="small" color="info" />
-                          {p.name}
-                        </MenuItem>
-                      ))}
-                      
-                      {/* Custom profiles */}
-                      {profiles.filter(p => p.category === 'custom').length > 0 && (
-                        <MenuItem disabled sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.secondary', opacity: '1 !important', mt: 1 }}>
-                          ПОЛЬЗОВАТЕЛЬСКИЕ
-                        </MenuItem>
-                      )}
-                      {profiles.filter(p => p.category === 'custom').map(p => (
-                        <MenuItem key={p.id} value={p.id}>
-                          {p.name}
-                        </MenuItem>
-                      ))}
-                      
-                      {profiles.length === 0 && <MenuItem value="default">ГОСТ 7.32-2017 (Базовый)</MenuItem>}
-                    </Select>
-                  </FormControl>
-                  <IconButton 
-                    size="small" 
-                    onClick={() => navigate('/profiles')}
-                    sx={{ 
-                      border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-                      borderRadius: 2
-                    }}
-                  >
-                    <Tooltip title="Настроить стандарты">
-                      <ArrowForwardIcon fontSize="small" />
-                    </Tooltip>
-                  </IconButton>
-                </Box>
-              </Box>
-
               {/* Dropzone Area */}
               <Box
                 {...getRootProps()}
                 sx={{
-                  p: 8,
-                  minHeight: 360,
+                  p: 0,
+                  minHeight: 500,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                  bgcolor: isDragActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                  bgcolor: isDragActive ? alpha(theme.palette.primary.main, 0.05) : 'transparent',
                   position: 'relative',
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.background.paper, 0.2),
-                    '& .upload-icon': {
-                      transform: 'scale(1.1) translateY(-5px)',
-                      color: theme.palette.primary.main
-                    }
-                  }
                 }}
               >
                 <input {...getInputProps()} />
                 
-                {/* Animated Border for Drag */}
-                <AnimatePresence>
-                  {isDragActive && (
+                {!status || status === 'idle' ? (
+                  <Stack spacing={4} alignItems="center" sx={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      style={{
-                        position: 'absolute',
-                        inset: 20,
-                        border: `2px dashed ${theme.palette.primary.main}`,
-                        borderRadius: 3,
-                        pointerEvents: 'none',
-                        backgroundColor: alpha(theme.palette.primary.main, 0.02)
-                      }}
+                        animate={{ 
+                            scale: isDragActive ? 1.1 : 1,
+                            y: isDragActive ? -10 : 0,
+                            rotate: isDragActive ? 5 : 0
+                        }}
+                        transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
+                    >
+                        <CloudUploadIcon sx={{ fontSize: 80, color: alpha(theme.palette.common.white, 0.8) }} />
+                    </motion.div>
+                    
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Typography 
+                          variant="h3" 
+                          sx={{ 
+                            fontWeight: 700, 
+                            letterSpacing: '-0.02em', 
+                            color: theme.palette.common.white,
+                            fontSize: { xs: '2rem', md: '2.5rem' },
+                            textShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                            mb: 1
+                          }}
+                        >
+                          {isDragActive ? "Отпускайте" : "Загрузить документ"}
+                        </Typography>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            color: alpha(theme.palette.text.secondary, 0.7),
+                            fontWeight: 500
+                          }}
+                        >
+                          Перетащите файл или нажмите для выбора
+                        </Typography>
+                    </Box>
+                    
+                    <Chip 
+                        label="DOCX" 
+                        variant="outlined" 
+                        sx={{ 
+                            borderColor: alpha(theme.palette.common.white, 0.2), 
+                            color: alpha(theme.palette.common.white, 0.5),
+                            fontWeight: 600,
+                            letterSpacing: '0.05em'
+                        }} 
                     />
-                  )}
-                </AnimatePresence>
-
-                <Box sx={{ position: 'relative', mb: 5 }}>
-                  <Box sx={{
-                    position: 'absolute',
-                    inset: -30,
-                    background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.2)} 0%, transparent 70%)`,
-                    filter: 'blur(30px)',
-                    borderRadius: '50%',
-                    zIndex: 0
-                  }} />
-                  <CloudUploadIcon 
-                    className="upload-icon"
-                    sx={{ 
-                      fontSize: 80, 
-                      color: isDragActive ? theme.palette.primary.main : theme.palette.text.secondary, 
-                      position: 'relative', 
-                      zIndex: 1,
-                      transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                    }} 
-                  />
-                </Box>
-
-                <Typography variant="h4" fontWeight={800} gutterBottom sx={{ letterSpacing: '-0.02em' }}>
-                  {isDragActive ? 'Отпускайте!' : 'Загрузить документ'}
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 5, maxWidth: 400, textAlign: 'center', lineHeight: 1.6 }}>
-                  Перетащите файл <strong>.docx</strong> в эту область<br/>или нажмите кнопку для выбора
-                </Typography>
-
-                {status === 'loading' ? (
-                  <Box sx={{ width: '100%', maxWidth: 300 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="caption" fontWeight={600} color="primary">Анализ документа...</Typography>
-                      <Typography variant="caption" fontWeight={600} color="text.secondary">{Math.round(uploadProgress)}%</Typography>
+                  </Stack>
+                ) : status === 'loading' && (
+                  <Box sx={{ width: '100%', maxWidth: 320, zIndex: 2, textAlign: 'center' }}>
+                    <CircularProgress size={60} thickness={2} sx={{ mb: 4, color: 'white' }} />
+                    <Typography variant="h6" fontWeight={600} sx={{ letterSpacing: '0.05em', textTransform: 'uppercase', mb: 1 }}>
+                        Анализируем структуру
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Ищем ошибки оформления и стиля...
+                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, px: 1 }}>
+                      <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ letterSpacing: 1 }}>PROGRESS</Typography>
+                      <Typography variant="caption" fontWeight={700} color="white">{Math.round(uploadProgress)}%</Typography>
                     </Box>
                     <LinearProgress 
                       variant="determinate" 
                       value={uploadProgress} 
                       sx={{ 
-                        height: 8, 
-                        borderRadius: 4,
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        '& .MuiLinearProgress-bar': { borderRadius: 4 }
+                        height: 6, 
+                        borderRadius: 3,
+                        bgcolor: 'rgba(255,255,255,0.05)',
+                        '& .MuiLinearProgress-bar': { 
+                            borderRadius: 3,
+                            background: 'white',
+                            boxShadow: '0 0 15px rgba(255,255,255,0.5)'
+                        }
                       }} 
                     />
                   </Box>
-                ) : (
-                  <Button 
-                    variant="contained" 
-                    size="large"
-                    disabled={status === 'loading'}
-                    onClick={(e) => { e.stopPropagation(); open(); }}
-                    sx={{ 
-                      px: 6, 
-                      py: 1.8, 
-                      borderRadius: 3,
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      textTransform: 'none',
-                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                      '&:hover': {
-                        transform: 'translateY(-2px)'
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    Выбрать файл на компьютере
-                  </Button>
                 )}
               </Box>
             </Paper>
           </motion.div>
-
-          {/* Recent Files */}
-          {recentFiles.length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              transition={{ duration: 0.8, delay: 0.8 }}
-              style={{ width: '100%', maxWidth: 600 }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, px: 1 }}>
-                <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HistoryIcon fontSize="inherit" /> Недавние проверки
-                </Typography>
-                <Button 
-                  size="small" 
-                  onClick={clearHistory}
-                  sx={{ 
-                    minWidth: 0,
-                    p: 0.5,
-                    color: 'text.secondary',
-                    opacity: 0.6, 
-                    fontSize: '0.75rem',
-                    borderRadius: 1,
-                    '&:hover': { opacity: 1, bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main' } 
-                  }}
-                >
-                  <Tooltip title="Очистить историю">
-                    <DeleteOutlineIcon fontSize="small" />
-                  </Tooltip>
-                </Button>
-              </Box>
-              
-              <Stack spacing={1.5}>
-                {recentFiles.map((file, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.9 + (idx * 0.1) }}
-                  >
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 2,
-                        borderRadius: 2.5,
-                        bgcolor: alpha(theme.palette.background.paper, 0.3),
-                        backdropFilter: 'blur(10px)',
-                        border: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        cursor: 'default',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        '&:hover': {
-                          bgcolor: alpha(theme.palette.background.paper, 0.5),
-                          transform: 'translateY(-2px)',
-                          boxShadow: `0 4px 12px -2px ${alpha('#000', 0.2)}`,
-                          borderColor: alpha(theme.palette.primary.main, 0.2),
-                          '& .file-icon': {
-                            transform: 'scale(1.1) rotate(-5deg)',
-                            color: theme.palette.primary.main
-                          }
-                        }
-                      }}
-                    >
-                      <Avatar className="file-icon" sx={{ 
-                        bgcolor: alpha(theme.palette.primary.main, 0.08), 
-                        color: theme.palette.text.secondary, 
-                        mr: 2,
-                        width: 40,
-                        height: 40,
-                        transition: 'all 0.3s ease'
-                      }}>
-                        <DescriptionIcon fontSize="small" />
-                      </Avatar>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="subtitle2" fontWeight={600} sx={{ lineHeight: 1.2, mb: 0.5 }}>{file.name}</Typography>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Chip 
-                            label={new Date(file.date).toLocaleDateString()} 
-                            size="small" 
-                            sx={{ 
-                              height: 20, 
-                              fontSize: '0.65rem', 
-                              bgcolor: alpha(theme.palette.divider, 0.05),
-                              color: 'text.secondary'
-                            }} 
-                          />
-                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                            {(file.size / 1024).toFixed(1)} KB
-                          </Typography>
-                        </Stack>
-                      </Box>
-                      <Tooltip title="Проверено">
-                        <Box sx={{ 
-                          p: 0.5, 
-                          borderRadius: '50%', 
-                          bgcolor: alpha(theme.palette.success.main, 0.1),
-                          color: theme.palette.success.main,
-                          display: 'flex'
-                        }}>
-                          <CheckCircleIcon fontSize="small" />
-                        </Box>
-                      </Tooltip>
-                    </Paper>
-                  </motion.div>
-                ))}
-              </Stack>
-            </motion.div>
-          )}
         </Stack>
       </Container>
 
-      {/* Batch Results Dialog */}
+      {/* Batch Results Dialog - Updated Style */}
       <Dialog 
         open={showBatchDialog} 
         onClose={() => setShowBatchDialog(false)}
         maxWidth="sm"
         fullWidth
         PaperProps={{
-            sx: {
-                bgcolor: '#1e293b',
-                color: '#fff',
-                borderRadius: 3
-            }
+            className: 'glass-card',
+            sx: { bgcolor: 'rgba(10,10,10,0.95)' }
         }}
       >
-        <DialogTitle>Результаты пакетной обработки</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)', fontWeight: 700 }}>
+            Результаты обработки
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
             <List>
                 {batchResults && batchResults.map((res, index) => (
-                    <ListItem key={index} divider>
+                    <ListItem key={index} sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 2 }}>
                         <ListItemIcon>
                             {res.success ? <CheckCircleIcon color="success" /> : <ErrorIcon color="error" />}
                         </ListItemIcon>
                         <ListItemText 
-                            primary={res.filename} 
+                            primary={
+                                <Typography variant="subtitle1" fontWeight={600} color="white">
+                                    {res.filename}
+                                </Typography>
+                            } 
                             secondary={
-                                <Typography variant="caption" color="text.secondary">
-                                    {res.success ? `Ошибок: ${res.check_results?.total_issues_count || 0}` : res.error}
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                    {res.success ? `Найдено ошибок: ${res.check_results?.total_issues_count || 0}` : res.error}
                                 </Typography>
                             }
                         />
                         {res.success && (
                             <Button 
                                 variant="outlined" 
+                                color="inherit"
                                 size="small" 
                                 onClick={() => {
                                     setShowBatchDialog(false);
                                     navigate('/report', { state: { reportData: res, fileName: res.filename } });
                                 }}
+                                sx={{ borderColor: 'rgba(255,255,255,0.2)' }}
                             >
                                 Отчет
                             </Button>
@@ -641,8 +477,8 @@ export default function UploadPage() {
                 ))}
             </List>
         </DialogContent>
-        <DialogActions>
-            <Button onClick={() => setShowBatchDialog(false)}>Закрыть</Button>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <Button onClick={() => setShowBatchDialog(false)} color="inherit">Закрыть</Button>
         </DialogActions>
       </Dialog>
     </Box>

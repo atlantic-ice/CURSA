@@ -16,6 +16,52 @@ class WorkflowService:
         self.corrections_dir = corrections_dir
         os.makedirs(self.corrections_dir, exist_ok=True)
 
+    def analyze_document(self, file_path, original_filename, profile_id=None):
+        """
+        Только анализ документа: извлечение структуры и проверка нормоконтроля.
+        """
+        result = {
+            'success': False,
+            'filename': original_filename,
+            'check_results': None,
+            'structure': None,
+            'formatting': None,
+            'errors': []
+        }
+
+        try:
+            logger.info(f"Analyzing document: {original_filename}")
+            
+            # Шаг 1: Используем process_document для получения данных и структуры
+            proc_result = DocumentProcessor.process_document(file_path)
+            
+            if proc_result.get('status') == 'error':
+                result['errors'].append(proc_result.get('message', 'Unknown error'))
+                return result
+                
+            result['structure'] = proc_result.get('structure')
+            result['formatting'] = proc_result.get('formatting')
+            document_data = proc_result.get('raw_data')
+            
+            if not document_data:
+                result['errors'].append('Не удалось извлечь данные из документа')
+                return result
+
+            # Шаг 2: Проверка нормоконтроля
+            logger.info(f"Using profile: {profile_id or 'default_gost'}")
+            checker = NormControlChecker(profile_id=profile_id)
+            check_results = checker.check_document(document_data)
+            result['check_results'] = check_results
+
+            result['success'] = True
+            return result
+
+        except Exception as e:
+            logger.error(f"Analysis failed: {e}")
+            logger.error(traceback.format_exc())
+            result['errors'].append(f"Критическая ошибка анализа: {str(e)}")
+            return result
+
     def process_document(self, file_path, original_filename, profile_id=None):
         """
         Полный цикл обработки документа: извлечение, проверка, исправление, отчет.

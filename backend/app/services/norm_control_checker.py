@@ -163,7 +163,7 @@ class NormControlChecker:
                 self._apply_profile(profile_data)
         except Exception as e:
             # Если не удалось загрузить, используем базовые правила
-            print(f"Ошибка загрузки профиля {profile_id}: {e}")
+            logger.error(f"Ошибка загрузки профиля {profile_id}: {e}")
     
     def _apply_profile(self, profile_data):
         """Применяет правила из профиля к standard_rules"""

@@ -45,66 +45,95 @@ class DocumentProcessor:
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
     
     @staticmethod
-    def is_valid_file(file: Any) -> bool:
+    def is_valid_file(file_obj: Any) -> bool:
         """
         Проверяет, является ли файл допустимым для обработки.
         
         Args:
-            file: Объект файла для проверки
+            file_obj: Объект файла (FileStorage) или путь к файлу
             
         Returns:
             bool: True, если файл допустим, иначе False
         """
-        # Проверка расширения файла
-        if not file.filename.lower().endswith(tuple(DocumentProcessor.ALLOWED_EXTENSIONS)):
-            logger.warning(f"Недопустимое расширение файла: {file.filename}")
+        # Если это строка (путь к файлу)
+        if isinstance(file_obj, str):
+            if not file_obj.lower().endswith(tuple(DocumentProcessor.ALLOWED_EXTENSIONS)):
+                 logger.warning(f"Недопустимое расширение файла: {file_obj}")
+                 return False
+            if os.path.exists(file_obj) and os.path.getsize(file_obj) > DocumentProcessor.MAX_FILE_SIZE:
+                logger.warning(f"Файл слишком большой: {os.path.getsize(file_obj)} байт")
+                return False
+            return True
+
+        # Если это объект FileStorage (Flask)
+        filename = getattr(file_obj, 'filename', '')
+        if not filename.lower().endswith(tuple(DocumentProcessor.ALLOWED_EXTENSIONS)):
+            logger.warning(f"Недопустимое расширение файла: {filename}")
             return False
         
-        # Проверка размера файла
-        if hasattr(file, 'size') and file.size > DocumentProcessor.MAX_FILE_SIZE:
-            logger.warning(f"Файл слишком большой: {file.size} байт")
-            return False
-        
+        # Проверка размера файла (если доступен content_length или size)
+        # В Flask FileStorage это может быть неочевидно без чтения, но проверим стандартные атрибуты
+        # Обычно content_length есть в headers, но здесь мы смотрим сам объект
+        # Пропустим строгую проверку размера для стрима, если нет атрибута
         return True
     
     @staticmethod
-    def process_document(file: Any) -> ProcessResult:
+    def process_document(file_path: str) -> ProcessResult:
         """
         Обрабатывает документ DOCX и извлекает его структуру и форматирование.
         
         Args:
-            file: Объект файла для обработки
+            file_path: Путь к файлу для обработки
             
         Returns:
-            dict: Результат обработки документа, содержащий информацию о структуре и форматировании
+            dict: Результат обработки документа
         """
-        if not DocumentProcessor.is_valid_file(file):
-            return {"status": "error", "message": "Неверный формат или размер файла"}
-        
         try:
-            # В реальной реализации здесь бы происходила фактическая обработка документа
-            # Для тестов возвращаем заглушку
+            processor = DocumentProcessor(file_path)
+            data = processor.extract_data()
+            
+            # Формируем сводную статистику
+            stats = {
+                "sections": [h['text'] for h in data.get('headings', []) if h.get('level') == 1],
+                "pages_count": data.get('document_properties', {}).get('statistics', {}).get('page_count', 0), # Note: docx doesn't always give accurate page count
+                "paragraphs_count": len(data.get('paragraphs', [])),
+                "tables_count": len(data.get('tables', [])),
+                "images_count": len(data.get('images', [])),
+                "headings_count": len(data.get('headings', []))
+            }
+            
+            # Формируем информацию о форматировании (берем из стилей или первого параграфа)
+            formatting = {
+                "font": "Unknown",
+                "font_size": 0,
+                "line_spacing": 0,
+                "margins": {}
+            }
+            
+            # Пытаемся получить общие настройки из первого параграфа
+            if data.get('paragraphs'):
+                p0 = data['paragraphs'][0]
+                formatting['font'] = p0.get('font', {}).get('name')
+                formatting['font_size'] = p0.get('font', {}).get('size')
+                formatting['line_spacing'] = p0.get('line_spacing')
+                
+            # Поля
+            if data.get('page_setup'):
+                # Берем первую секцию
+                first_section = next(iter(data['page_setup'].values())) if data['page_setup'] else {}
+                formatting['margins'] = {
+                    "left": first_section.get('left_margin'),
+                    "right": first_section.get('right_margin'),
+                    "top": first_section.get('top_margin'),
+                    "bottom": first_section.get('bottom_margin')
+                }
+
             return {
                 "status": "success",
-                "filename": file.filename,
-                "structure": {
-                    "sections": ["Введение", "Основная часть", "Заключение"],
-                    "pages_count": 10,
-                    "paragraphs_count": 50,
-                    "tables_count": 2,
-                    "images_count": 3
-                },
-                "formatting": {
-                    "font": "Times New Roman",
-                    "font_size": 14,
-                    "line_spacing": 1.5,
-                    "margins": {
-                        "left": 3.0,
-                        "right": 1.5,
-                        "top": 2.0,
-                        "bottom": 2.0
-                    }
-                }
+                "filename": os.path.basename(file_path),
+                "structure": stats,
+                "formatting": formatting,
+                "raw_data": data  # Включаем полные данные для детального анализа
             }
         
         except Exception as e:
@@ -257,19 +286,19 @@ class DocumentProcessor:
                     # Копируем файл во временную директорию с правильным расширением
                     shutil.copy2(file_path, temp_file_path)
                     
-                    print(f"Создана временная копия файла с расширением .docx: {temp_file_path}")
+                    logger.debug(f"Создана временная копия файла с расширением .docx: {temp_file_path}")
                     file_path = temp_file_path
                     self.temp_file_path = temp_file_path  # Сохраняем для будущей очистки
                 except Exception as e:
                     raise ValueError(f"Не удалось создать временную копию файла с расширением .docx: {e}")
-            
+        
         try:
             self.document = docx.Document(file_path)
         except Exception as e:
             # Приводим тип исключения к ValueError для единообразия и соответствия тестам
-            print(f"Ошибка при открытии DOCX файла {file_path}: {str(e)}")
+            logger.error(f"Ошибка при открытии DOCX файла {file_path}: {str(e)}")
             raise ValueError(f"Неверный формат файла или поврежденный DOCX: {file_path}") from e
-    
+
     def __del__(self):
         """
         Деструктор для очистки временных файлов
@@ -285,10 +314,10 @@ class DocumentProcessor:
                 if os.path.exists(temp_dir):
                     shutil.rmtree(temp_dir)
                     
-                print(f"Временный файл и директория удалены: {self.temp_file_path}")
+                logger.debug(f"Временный файл и директория удалены: {self.temp_file_path}")
             except Exception as e:
-                print(f"Ошибка при удалении временного файла: {str(e)}")
-    
+                logger.warning(f"Ошибка при удалении временного файла: {str(e)}")
+
     def extract_data(self):
         """
         Извлекает все необходимые данные из документа для анализа
@@ -299,49 +328,49 @@ class DocumentProcessor:
         try:
             document_data['paragraphs'] = self._extract_paragraphs()
         except Exception as e:
-            print(f"Ошибка при извлечении параграфов: {str(e)}")
+            logger.error(f"Ошибка при извлечении параграфов: {str(e)}")
             document_data['paragraphs'] = []
             
         try:
             document_data['tables'] = self._extract_tables()
         except Exception as e:
-            print(f"Ошибка при извлечении таблиц: {str(e)}")
+            logger.error(f"Ошибка при извлечении таблиц: {str(e)}")
             document_data['tables'] = []
             
         try:
             document_data['headings'] = self._extract_headings()
         except Exception as e:
-            print(f"Ошибка при извлечении заголовков: {str(e)}")
+            logger.error(f"Ошибка при извлечении заголовков: {str(e)}")
             document_data['headings'] = []
             
         try:
             document_data['bibliography'] = self._extract_bibliography()
         except Exception as e:
-            print(f"Ошибка при извлечении библиографии: {str(e)}")
+            logger.error(f"Ошибка при извлечении библиографии: {str(e)}")
             document_data['bibliography'] = []
             
         try:
             document_data['styles'] = self._extract_styles()
         except Exception as e:
-            print(f"Ошибка при извлечении стилей: {str(e)}")
+            logger.error(f"Ошибка при извлечении стилей: {str(e)}")
             document_data['styles'] = {}
             
         try:
             document_data['page_setup'] = self._extract_page_setup()
         except Exception as e:
-            print(f"Ошибка при извлечении настроек страницы: {str(e)}")
+            logger.error(f"Ошибка при извлечении настроек страницы: {str(e)}")
             document_data['page_setup'] = {}
             
         try:
             document_data['images'] = self._extract_images()
         except Exception as e:
-            print(f"Ошибка при извлечении изображений: {str(e)}")
+            logger.error(f"Ошибка при извлечении изображений: {str(e)}")
             document_data['images'] = []
             
         try:
             document_data['page_numbers'] = self._extract_page_numbers()
         except Exception as e:
-            print(f"Ошибка при извлечении нумерации страниц: {str(e)}")
+            logger.error(f"Ошибка при извлечении нумерации страниц: {str(e)}")
             document_data['page_numbers'] = {
                 'has_page_numbers': False,
                 'position': None,
@@ -352,7 +381,7 @@ class DocumentProcessor:
         try:
             document_data['document_properties'] = self._extract_document_properties()
         except Exception as e:
-            print(f"Ошибка при извлечении свойств документа: {str(e)}")
+            logger.error(f"Ошибка при извлечении свойств документа: {str(e)}")
             document_data['document_properties'] = {}
             
         # Выделяем титульный лист

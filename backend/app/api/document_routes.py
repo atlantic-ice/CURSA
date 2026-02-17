@@ -261,7 +261,7 @@ def upload_batch():
 @bp.route('/analyze', methods=['POST'])
 def analyze_document():
     """
-    Анализ документа без сохранения (алиас для /upload для совместимости)
+    Анализ документа без сохранения отчета и исправлений
     """
     # Проверяем, есть ли файл в запросе
     if 'file' not in request.files:
@@ -277,11 +277,49 @@ def analyze_document():
     if not allowed_file(file.filename):
         return jsonify({'error': 'Недопустимый формат файла. Разрешены только файлы DOCX.'}), 400
     
-    # Возвращаем результаты анализа
-    return jsonify({
-        'message': 'Анализ выполнен успешно',
-        'status': 'analyzed'
-    }), 200
+    try:
+        # Создаём временную директорию
+        temp_dir = tempfile.mkdtemp()
+        filename = secure_filename(file.filename)
+        
+        if not filename.lower().endswith('.docx'):
+            filename = os.path.splitext(filename)[0] + '.docx'
+            
+        file_path = os.path.join(temp_dir, filename)
+        
+        # Сохраняем файл
+        file.save(file_path)
+        
+        # Получаем ID профиля
+        profile_id = request.form.get('profile_id')
+        
+        # Анализируем
+        result = workflow_service.analyze_document(file_path, filename, profile_id)
+        
+        # Удаляем временный файл (или оставляем, если нужно? DocumentProcessor подчищает свои, но здесь мы создали свой)
+        # WorkflowService не удаляет входной файл.
+        # Лучше удалить.
+        try:
+            os.remove(file_path)
+            os.rmdir(temp_dir)
+        except Exception:
+            pass # Ignore cleanup errors
+            
+        if not result['success']:
+             return jsonify({
+                'error': 'Ошибка при анализе файла',
+                'details': result['errors']
+            }), 500
+
+        return jsonify(result), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Ошибка при анализе файла: {type(e).__name__}: {str(e)}")
+        traceback.print_exc(file=sys.stdout)
+        return jsonify({
+            'error': f'Ошибка при анализе файла: {str(e)}',
+            'error_type': str(type(e).__name__)
+        }), 500
 
 
 @bp.route('/correct', methods=['POST'])

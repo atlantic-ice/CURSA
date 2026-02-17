@@ -1,0 +1,155 @@
+# Pre-commit hooks для автоматической проверки кода
+# Установка: pre-commit install
+# Запуск вручную: pre-commit run --all-files
+
+repos:
+  # Black - форматирование Python кода
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        language_version: python3.11
+        args: [--line-length=100]
+
+  # isort - сортировка imports
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+
+  # Flake8 - линтер Python
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=100, --extend-ignore=E203]
+        exclude: ^(migrations/|venv/|\.venv/)
+
+  # MyPy - type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports, --python-version=3.11]
+        exclude: ^(tests/|migrations/)
+
+  # Pylint - более глубокий линтинг
+  - repo: https://github.com/pycqa/pylint
+    rev: v3.0.3
+    hooks:
+      - id: pylint
+        args: [--max-line-length=100, --disable=C0114,C0115,C0116,R0903]
+        exclude: ^(migrations/|venv/|\.venv/|tests/)
+
+  # Prettier - форматирование JavaScript/CSS/JSON/YAML
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [javascript, jsx, ts, tsx, css, json, yaml, markdown]
+        exclude: ^(package-lock\.json|node_modules/)
+
+  # ESLint - линтер JavaScript
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.0.0-beta.0
+    hooks:
+      - id: eslint
+        files: \.(js|jsx|ts|tsx)$
+        types: [file]
+        additional_dependencies:
+          - eslint@8.56.0
+          - eslint-config-react-app@7.0.1
+
+  # Базовые проверки файлов
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Trailing whitespace
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.txt)$
+      
+      # End of file
+      - id: end-of-file-fixer
+        exclude: ^(.*\.md)$
+      
+      # YAML синтаксис
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      
+      # JSON синтаксис
+      - id: check-json
+      
+      # Merge conflicts
+      - id: check-merge-conflict
+      
+      # Большие файлы
+      - id: check-added-large-files
+        args: [--maxkb=5000]
+      
+      # Python AST
+      - id: check-ast
+      
+      # Builtin shadowing
+      - id: check-builtin-literals
+      
+      # Docstring первой
+      - id: check-docstring-first
+      
+      # Проверка на debug statements
+      - id: debug-statements
+      
+      # Требования
+      - id: requirements-txt-fixer
+
+  # Bandit - проверка безопасности Python
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+        exclude: ^tests/
+
+  # Python docstrings
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: [--convention=google, --add-ignore=D100,D101,D102,D103,D104]
+        exclude: ^(tests/|migrations/)
+
+  # Detect secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: ^(package-lock\.json|.*\.ipynb)$
+
+  # Shellcheck - проверка shell скриптов
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+
+  # Dockerfile lint
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        entry: hadolint
+
+# Конфигурация
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+    
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

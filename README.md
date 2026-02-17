@@ -28,6 +28,24 @@ chmod +x start_app.sh && ./start_app.sh
 
 ---
 
+## 🎯 Доведение до идеала (NEW!)
+
+> **Новая инициатива:** Фокус на качестве кода, производительности и UX
+
+- 📋 [**PERFECTION_PLAN.md**](PERFECTION_PLAN.md) - Полный план улучшений (март 2026)
+- 🚀 [**QUICKSTART_PERFECTION.md**](QUICKSTART_PERFECTION.md) - Быстрый старт для контрибуторов
+- 📅 [**WEEK1_TASKS.md**](WEEK1_TASKS.md) - Задачи первой недели
+- 📊 [**BASELINE_METRICS.md**](BASELINE_METRICS.md) - Текущие метрики проекта
+- ✅ [**CODE_REVIEW_CHECKLIST.md**](.github/CODE_REVIEW_CHECKLIST.md) - Чеклист для review
+
+**Цели на Q1 2026:**
+- ✨ Test Coverage: 50% → 80%+
+- ⚡ Обработка 50 стр: 5 сек → 2 сек
+- 🎨 Lighthouse Score: 75 → 90+
+- 🧩 Рефакторинг: 3000+ строк → <500 строк/файл
+
+---
+
 ## ✨ Возможности
 
 | Функция | Описание |
@@ -260,6 +278,25 @@ MIT License - см. [LICENSE](LICENSE)
 
 ---
 
+## 🗺️ Roadmap и планирование
+
+Подробные планы развития проекта:
+
+| Документ | Описание |
+|----------|----------|
+| [📊 DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) | Полный стратегический план 2026 |
+| [⚡ ROADMAP_BRIEF.md](ROADMAP_BRIEF.md) | Краткий обзор roadmap (1 страница) |
+| [💼 COMMERCIALIZATION_PLAN.md](COMMERCIALIZATION_PLAN.md) | План коммерциализации и монетизации |
+| [🔧 IMPROVEMENTS.md](IMPROVEMENTS.md) | Текущие задачи и backlog |
+| [📈 docs/ROADMAP_VISUAL.md](docs/ROADMAP_VISUAL.md) | Визуальные диаграммы и графики |
+
+**Текущий фокус (Q1 2026):**
+- v1.4.0: PostgreSQL + JWT Authentication
+- v1.5.0: Монетизация (Stripe/Yookassa)
+- Цель: Первые 100 платных пользователей, MRR ≥ ₽50,000
+
+---
+
 ## 🤝 Вклад в проект
 
 1. Fork репозитория
@@ -268,8 +305,11 @@ MIT License - см. [LICENSE](LICENSE)
 4. Push в ветку (`git push origin feature/amazing-feature`)
 5. Откройте Pull Request
 
+Подробнее: [CONTRIBUTING.md](CONTRIBUTING.md)
+
 ---
 
 <p align="center">
-  <b>Вопросы?</b> Создайте <a href="https://github.com/yourusername/cursa/issues">Issue</a>
+  <b>Вопросы?</b> Создайте <a href="https://github.com/yourusername/cursa/issues">Issue</a><br>
+  <b>Roadmap:</b> <a href="DEVELOPMENT_ROADMAP.md">Development Roadmap 2026</a>
 </p>
