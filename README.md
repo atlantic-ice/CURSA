@@ -11,16 +11,19 @@
 ## 🚀 Быстрый запуск
 
 ### Windows (1 клик)
+
 ```cmd
 start_simple.bat
 ```
 
 ### Linux/macOS
+
 ```bash
 chmod +x start_app.sh && ./start_app.sh
 ```
 
 **Что происходит:**
+
 1. ✅ Установка зависимостей (Python + Node.js)
 2. ✅ Запуск Backend на http://localhost:5000
 3. ✅ Запуск Frontend на http://localhost:3000
@@ -39,6 +42,7 @@ chmod +x start_app.sh && ./start_app.sh
 - ✅ [**CODE_REVIEW_CHECKLIST.md**](.github/CODE_REVIEW_CHECKLIST.md) - Чеклист для review
 
 **Цели на Q1 2026:**
+
 - ✨ Test Coverage: 50% → 80%+
 - ⚡ Обработка 50 стр: 5 сек → 2 сек
 - 🎨 Lighthouse Score: 75 → 90+
@@ -48,15 +52,15 @@ chmod +x start_app.sh && ./start_app.sh
 
 ## ✨ Возможности
 
-| Функция | Описание |
-|---------|----------|
-| 📄 **Проверка DOCX** | Анализ 30+ правил нормоконтроля |
-| 🔧 **Автоисправление** | Многопроходная коррекция + XML-редактор |
-| 📊 **Отчёты** | Подробный DOCX-отчёт с рекомендациями |
-| ⚙️ **Профили** | Настраиваемые правила (ГОСТ, БГПУ и др.) |
-| 📖 **API Docs** | Swagger UI на `/api/docs/` |
-| 🛡️ **Безопасность** | Rate limiting, CORS, security headers |
-| ⚡ **Производительность** | LRU-кэш, lazy loading, код-сплиттинг |
+| Функция                   | Описание                                 |
+| ------------------------- | ---------------------------------------- |
+| 📄 **Проверка DOCX**      | Анализ 30+ правил нормоконтроля          |
+| 🔧 **Автоисправление**    | Многопроходная коррекция + XML-редактор  |
+| 📊 **Отчёты**             | Подробный DOCX-отчёт с рекомендациями    |
+| ⚙️ **Профили**            | Настраиваемые правила (ГОСТ, БГПУ и др.) |
+| 📖 **API Docs**           | Swagger UI на `/api/docs/`               |
+| 🛡️ **Безопасность**       | Rate limiting, CORS, security headers    |
+| ⚡ **Производительность** | LRU-кэш, lazy loading, код-сплиттинг     |
 
 ### Проверяемые правила
 
@@ -75,14 +79,14 @@ chmod +x start_app.sh && ./start_app.sh
 
 ### Основные эндпоинты
 
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| `POST` | `/api/document/upload` | Загрузка и анализ DOCX |
-| `POST` | `/api/document/upload-batch` | Пакетная загрузка и обработка |
-| `POST` | `/api/document/correct` | Автоматическое исправление |
-| `POST` | `/api/document/generate-report` | Генерация отчёта |
-| `GET` | `/api/profiles` | Список профилей |
-| `GET` | `/api/health` | Health check |
+| Метод  | Endpoint                        | Описание                      |
+| ------ | ------------------------------- | ----------------------------- |
+| `POST` | `/api/document/upload`          | Загрузка и анализ DOCX        |
+| `POST` | `/api/document/upload-batch`    | Пакетная загрузка и обработка |
+| `POST` | `/api/document/correct`         | Автоматическое исправление    |
+| `POST` | `/api/document/generate-report` | Генерация отчёта              |
+| `GET`  | `/api/profiles`                 | Список профилей               |
+| `GET`  | `/api/health`                   | Health check                  |
 
 ### Swagger UI
 
@@ -132,6 +136,7 @@ npm test
 ```
 
 **Текущее покрытие:**
+
 - 🟢 Backend: 44 теста (unit + integration + functional)
 - 🟢 Frontend: 15 тестов (ErrorBoundary, StarLogo)
 
@@ -180,8 +185,8 @@ CURSA/
   "id": "gost",
   "name": "ГОСТ 7.32-2017",
   "rules": {
-    "font": {"name": "Times New Roman", "size": 14},
-    "margins": {"left": 3.0, "right": 1.0, "top": 2.0, "bottom": 2.0},
+    "font": { "name": "Times New Roman", "size": 14 },
+    "margins": { "left": 3.0, "right": 1.0, "top": 2.0, "bottom": 2.0 },
     "line_spacing": 1.5,
     "first_line_indent": 1.25
   }
@@ -237,12 +242,86 @@ cd frontend && npm start
 
 ## 📋 Требования
 
-| Компонент | Версия |
-|-----------|--------|
-| Python | 3.11+ |
-| Node.js | 18+ |
-| npm | 9+ |
-| ОС | Windows 10+, macOS 10.15+, Linux |
+| Компонент | Версия                           |
+| --------- | -------------------------------- |
+| Python    | 3.11+                            |
+| Node.js   | 18+                              |
+| npm       | 9+                               |
+| ОС        | Windows 10+, macOS 10.15+, Linux |
+
+### Опциональные зависимости
+
+| Компонент  | Назначение                   | Обязательно?            |
+| ---------- | ---------------------------- | ----------------------- |
+| Redis      | Rate limiting, JWT blacklist | ❌ Graceful degradation |
+| PostgreSQL | Production БД                | ❌ SQLite по умолчанию  |
+
+> **Graceful Degradation**: Система работает без Redis, автоматически переключаясь на memory storage для rate limiting. JWT logout/revoke отключается, но основной функционал полностью доступен.
+
+---
+
+## 🔄 Graceful Degradation
+
+CURSA автоматически адаптируется к отсутствующим зависимостям:
+
+### Redis (необязателен)
+
+**Когда доступен:**
+
+- ✅ Rate limiting с распределённым хранилищем
+- ✅ JWT token blacklist (logout/revoke)
+- ✅ Кэш между перезапусками
+
+**Когда недоступен:**
+
+- ⚠️ Rate limiting работает на memory storage (не сохраняется между перезапусками)
+- ⚠️ JWT logout/revoke отключены (токены истекают по таймеру)
+- ✅ Основной функционал полностью работает
+
+**Запуск Redis (опционально):**
+
+```bash
+# Windows (с Chocolatey)
+choco install redis
+redis-server
+
+# Linux/macOS
+sudo apt-get install redis-server  # Debian/Ubuntu
+brew install redis                  # macOS
+redis-server
+
+# Docker
+docker run -d -p 6379:6379 redis:alpine
+```
+
+**Проверка статуса:**
+
+```bash
+curl http://localhost:5000/api/health/detailed
+```
+
+Ответ содержит статус Redis:
+
+```json
+{
+  "components": {
+    "redis": {
+      "status": "healthy|unhealthy|unknown",
+      "url": "redis://localhost:6379/0"
+    }
+  }
+}
+```
+
+### OAuth провайдеры (необязательны)
+
+CURSA поддерживает OAuth2, но работает без него:
+
+- Google OAuth - настройте через Google Cloud Console
+- GitHub OAuth - настройте через GitHub Developer Settings
+- Yandex OAuth - настройте через Yandex OAuth
+
+Без настроенного OAuth доступна обычная аутентификация email/password.
 
 ---
 
@@ -282,15 +361,16 @@ MIT License - см. [LICENSE](LICENSE)
 
 Подробные планы развития проекта:
 
-| Документ | Описание |
-|----------|----------|
-| [📊 DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) | Полный стратегический план 2026 |
-| [⚡ ROADMAP_BRIEF.md](ROADMAP_BRIEF.md) | Краткий обзор roadmap (1 страница) |
+| Документ                                                  | Описание                            |
+| --------------------------------------------------------- | ----------------------------------- |
+| [📊 DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md)       | Полный стратегический план 2026     |
+| [⚡ ROADMAP_BRIEF.md](ROADMAP_BRIEF.md)                   | Краткий обзор roadmap (1 страница)  |
 | [💼 COMMERCIALIZATION_PLAN.md](COMMERCIALIZATION_PLAN.md) | План коммерциализации и монетизации |
-| [🔧 IMPROVEMENTS.md](IMPROVEMENTS.md) | Текущие задачи и backlog |
-| [📈 docs/ROADMAP_VISUAL.md](docs/ROADMAP_VISUAL.md) | Визуальные диаграммы и графики |
+| [🔧 IMPROVEMENTS.md](IMPROVEMENTS.md)                     | Текущие задачи и backlog            |
+| [📈 docs/ROADMAP_VISUAL.md](docs/ROADMAP_VISUAL.md)       | Визуальные диаграммы и графики      |
 
 **Текущий фокус (Q1 2026):**
+
 - v1.4.0: PostgreSQL + JWT Authentication
 - v1.5.0: Монетизация (Stripe/Yookassa)
 - Цель: Первые 100 платных пользователей, MRR ≥ ₽50,000

@@ -45,7 +45,6 @@ if not exist ".env" (
 
 REM --- 3. Intelligent Dependency Check ---
 set "MISSING_DEPS=0"
-if not exist ".venv" set "MISSING_DEPS=1"
 if not exist "frontend\node_modules" set "MISSING_DEPS=1"
 
 if "!MISSING_DEPS!"=="1" (
@@ -65,20 +64,31 @@ goto :LAUNCH
 :INSTALL_ALL
 echo.
 echo [1/2] Setting up Backend Environment...
-if not exist ".venv" (
-    echo        Creating virtual environment...
-    python -m venv .venv
-)
 echo        Installing/Updating Python packages...
-call .venv\Scripts\python.exe -m pip install -q --upgrade pip
-call .venv\Scripts\python.exe -m pip install -q -r backend\requirements.txt
+cd /d "%~dp0"
+python -m pip install -q --upgrade pip setuptools wheel
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to upgrade pip. Trying without -q flag...
+    python -m pip install --upgrade pip setuptools wheel
+)
+python -m pip install -q -r backend\requirements.txt
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to install backend dependencies!
+    pause
+    exit /b 1
+)
 
 echo.
 echo [2/2] Setting up Frontend Environment...
 echo        Installing NPM packages...
-cd frontend
+cd /d "%~dp0frontend"
 call npm install --no-audit --no-fund --loglevel=error
-cd ..
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to install frontend dependencies!
+    pause
+    exit /b 1
+)
+cd /d "%~dp0"
 echo.
 echo [OK] Installation Complete.
 echo.
@@ -87,11 +97,17 @@ echo.
 echo [START] Launching Applications...
 echo -----------------------------------------------------------------
 
-REM Start Backend
-start "CURSA Backend" cmd /k "cd /d %~dp0backend && title CURSA Backend && set PYTHONIOENCODING=utf-8 && ..\.venv\Scripts\python.exe run.py"
+REM We're already in the project root at this point
 
-REM Start Frontend (BROWSER=none prevents duplicate tab)
-start "CURSA Frontend" cmd /k "cd /d %~dp0frontend && title CURSA Frontend && set BROWSER=none && npm start"
+REM Start Backend (launch from backend directory)
+cd /d "%~dp0backend"
+start "CURSA Backend" cmd /k "title CURSA Backend && set PYTHONIOENCODING=utf-8 && python run.py"
+cd /d "%~dp0"
+
+REM Start Frontend (launch from frontend directory)
+cd /d "%~dp0frontend"
+start "CURSA Frontend" cmd /k "title CURSA Frontend && set BROWSER=none && npm start"
+cd /d "%~dp0"
 
 REM Wait for services to spin up
 echo [WAIT] Waiting for services to initialize...

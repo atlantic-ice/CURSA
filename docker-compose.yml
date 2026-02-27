@@ -21,6 +21,8 @@ services:
       - FLASK_ENV=production
       - FRONTEND_ORIGINS=http://localhost:3000,http://localhost,http://frontend
       - RATE_LIMIT_ENABLED=true
+      - REDIS_URL=redis://redis:6379/0
+      - RATELIMIT_STORAGE_URI=redis://redis:6379/0
       - DATABASE_URL=postgresql://${POSTGRES_USER:-cursa_user}:${POSTGRES_PASSWORD:-cursa_password_change_in_production}@postgres:5432/${POSTGRES_DB:-cursa_db}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -42,13 +44,13 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')"]
       interval: 30s
-      postgres:
-        condition: service_healthy
       timeout: 10s
       retries: 3
       start_period: 10s
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - cursa-network

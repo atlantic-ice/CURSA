@@ -1,26 +1,31 @@
-"""
-Сервис отправки email уведомлений.
-Поддерживает SMTP и шаблоны писем.
-"""
+"""Email sending service using SendGrid"""
 
-import os
-import smtplib
+import base64
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-from typing import List, Optional, Dict, Any
+import mimetypes
+import os
 from string import Template
+from typing import Optional, List, Dict, Any
+
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import (
+    Mail,
+    Email,
+    To,
+    Attachment,
+    FileContent,
+    FileName,
+    FileType,
+    Disposition,
+)
 
 logger = logging.getLogger(__name__)
 
 
-# Шаблоны писем
 EMAIL_TEMPLATES = {
-    'default': {
-        'subject': 'CURSA - Результаты проверки нормоконтроля',
-        'body': '''
+    "default": {
+        "subject": "CURSA - Результаты проверки нормоконтроля",
+        "body": """
 Здравствуйте!
 
 Ваш документ был успешно проверен системой CURSA.
@@ -31,36 +36,36 @@ $content
 
 С уважением,
 Система CURSA
-        '''
+        """,
     },
-    'corrections_ready': {
-        'subject': 'CURSA - Документ исправлен',
-        'body': '''
+    "corrections_ready": {
+        "subject": "CURSA - Документ исправлен",
+        "body": """
 Здравствуйте!
 
 Проверка документа "$filename" завершена.
 
-📊 Статистика:
+Статистика:
 - Найдено проблем: $issues_count
 - Исправлено автоматически: $corrections_count
 - Время обработки: $processing_time сек.
 
 $additional_info
 
-Исправленный документ и отчёт прикреплены к письму.
+Исправленный документ и отчет прикреплены к письму.
 
 С уважением,
 Система CURSA
-        '''
+        """,
     },
-    'batch_summary': {
-        'subject': 'CURSA - Пакетная обработка завершена',
-        'body': '''
+    "batch_summary": {
+        "subject": "CURSA - Пакетная обработка завершена",
+        "body": """
 Здравствуйте!
 
 Пакетная обработка документов завершена.
 
-📊 Результаты:
+Результаты:
 - Всего документов: $total
 - Успешно обработано: $successful
 - Ошибок: $failed
@@ -69,103 +74,79 @@ $details
 
 С уважением,
 Система CURSA
-        '''
+        """,
     },
-    'error': {
-        'subject': 'CURSA - Ошибка обработки документа',
-        'body': '''
+    "error": {
+        "subject": "CURSA - Ошибка обработки документа",
+        "body": """
 Здравствуйте!
 
 При обработке документа "$filename" произошла ошибка.
 
-❌ Описание ошибки:
+Описание ошибки:
 $error_message
 
 Пожалуйста, проверьте формат документа и попробуйте снова.
-Если ошибка повторяется, обратитесь в поддержку.
 
 С уважением,
 Система CURSA
-        '''
+        """,
     },
-    'weekly_report': {
-        'subject': 'CURSA - Еженедельный отчёт',
-        'body': '''
-Здравствуйте!
-
-Еженедельный отчёт по использованию системы CURSA.
-
-📈 Статистика за неделю:
-- Обработано документов: $documents_count
-- Общее количество исправлений: $total_corrections
-- Среднее время обработки: $avg_processing_time сек.
-
-🔝 Топ проблем:
-$top_issues
-
-С уважением,
-Система CURSA
-        '''
-    }
 }
 
 
 class EmailService:
-    """
-    Сервис отправки email.
-    
-    Использование:
-        service = EmailService()
-        service.send(
-            to_email='user@example.com',
-            subject='Тема',
-            body='Текст письма',
-            attachments=['/path/to/file.docx']
-        )
-    """
-    
-    def __init__(
-        self,
-        smtp_host: Optional[str] = None,
-        smtp_port: Optional[int] = None,
-        smtp_user: Optional[str] = None,
-        smtp_password: Optional[str] = None,
-        from_email: Optional[str] = None,
-        use_tls: bool = True
-    ):
+    """SendGrid-based email service for transactional emails"""
+
+    def __init__(self, api_key: Optional[str] = None, from_email: Optional[str] = None):
         """
-        Инициализация сервиса.
-        
+        Initialize email service
+
         Args:
-            smtp_host: SMTP сервер (или из SMTP_HOST env)
-            smtp_port: Порт SMTP (или из SMTP_PORT env)
-            smtp_user: Пользователь SMTP (или из SMTP_USER env)
-            smtp_password: Пароль SMTP (или из SMTP_PASSWORD env)
-            from_email: Email отправителя (или из SMTP_FROM env)
-            use_tls: Использовать TLS
+            api_key: SendGrid API key (defaults to SENDGRID_API_KEY env var)
+            from_email: From address (defaults to SENDGRID_FROM_EMAIL env var)
         """
-        self.smtp_host = smtp_host or os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-        self.smtp_port = smtp_port or int(os.environ.get('SMTP_PORT', '587'))
-        self.smtp_user = smtp_user or os.environ.get('SMTP_USER', '')
-        self.smtp_password = smtp_password or os.environ.get('SMTP_PASSWORD', '')
-        self.from_email = from_email or os.environ.get('SMTP_FROM', self.smtp_user)
-        self.use_tls = use_tls
-        
-        # Проверяем конфигурацию
-        self._configured = all([
-            self.smtp_host,
-            self.smtp_port,
-            self.smtp_user,
-            self.smtp_password
-        ])
-        
-        if not self._configured:
-            logger.warning("Email service not fully configured. Set SMTP_* environment variables.")
-    
-    def is_configured(self) -> bool:
-        """Проверяет, настроен ли сервис"""
-        return self._configured
-    
+        self.api_key = api_key or os.getenv("SENDGRID_API_KEY")
+        self.from_email = from_email or os.getenv("SENDGRID_FROM_EMAIL", "noreply@cursa.app")
+
+        if not self.api_key:
+            logger.warning("⚠️  SENDGRID_API_KEY not configured - emails will not be sent")
+            self.sg = None
+            return
+
+        try:
+            self.sg = SendGridAPIClient(self.api_key)
+            logger.info(f"✓ SendGrid connected (from: {self.from_email})")
+        except Exception as e:
+            logger.error(f"✗ SendGrid initialization failed: {str(e)}")
+            self.sg = None
+
+    def _is_configured(self) -> bool:
+        """Check if SendGrid is properly configured"""
+        return self.sg is not None
+
+    def _build_attachments(self, attachments: List[str]) -> List[Attachment]:
+        """Build SendGrid attachment objects"""
+        items = []
+        for file_path in attachments:
+            if not os.path.exists(file_path):
+                logger.warning(f"Attachment not found: {file_path}")
+                continue
+
+            mime_type, _ = mimetypes.guess_type(file_path)
+            mime_type = mime_type or "application/octet-stream"
+            with open(file_path, "rb") as f:
+                encoded = base64.b64encode(f.read()).decode("utf-8")
+
+            attachment = Attachment(
+                FileContent(encoded),
+                FileName(os.path.basename(file_path)),
+                FileType(mime_type),
+                Disposition("attachment"),
+            )
+            items.append(attachment)
+        return items
+
     def send(
         self,
         to_email: str,
@@ -175,229 +156,149 @@ class EmailService:
         template: Optional[str] = None,
         template_vars: Optional[Dict[str, Any]] = None,
         attachments: Optional[List[str]] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """
-        Отправляет email.
-        
-        Args:
-            to_email: Email получателя
-            subject: Тема письма
-            body: Текст письма (plain text)
-            html_body: HTML-версия письма
-            template: Имя шаблона из EMAIL_TEMPLATES
-            template_vars: Переменные для шаблона
-            attachments: Список путей к файлам для прикрепления
-            cc: Список CC-получателей
-            bcc: Список BCC-получателей
-        
-        Returns:
-            Результат отправки с message_id
-        """
-        if not self._configured:
+        """Send a general email with optional templates and attachments"""
+        if not self._is_configured():
             logger.error("Email service not configured")
-            return {
-                'success': False,
-                'error': 'Email service not configured'
-            }
-        
+            return {"success": False, "error": "Email service not configured"}
+
         try:
-            # Создаём сообщение
-            msg = MIMEMultipart('mixed')
-            msg['From'] = self.from_email
-            msg['To'] = to_email
-            msg['Subject'] = subject
-            
-            if cc:
-                msg['Cc'] = ', '.join(cc)
-            
-            # Получаем текст из шаблона, если указан
             if template and template in EMAIL_TEMPLATES:
                 tmpl = EMAIL_TEMPLATES[template]
                 template_vars = template_vars or {}
-                
-                # Используем тему из шаблона, если не переопределена
+
                 if subject == template:
-                    msg.replace_header('Subject', Template(tmpl['subject']).safe_substitute(template_vars))
-                
-                body = Template(tmpl['body']).safe_substitute(template_vars)
-            
-            # Добавляем текстовую часть
-            if body:
-                text_part = MIMEText(body, 'plain', 'utf-8')
-                msg.attach(text_part)
-            
-            # Добавляем HTML-часть
-            if html_body:
-                html_part = MIMEText(html_body, 'html', 'utf-8')
-                msg.attach(html_part)
-            
-            # Добавляем вложения
+                    subject = Template(tmpl["subject"]).safe_substitute(template_vars)
+
+                if not body:
+                    body = Template(tmpl["body"]).safe_substitute(template_vars)
+
+            plain_content = body or ""
+            html_content = html_body
+            if not html_content and plain_content:
+                html_content = "<br>".join(plain_content.splitlines())
+
+            message = Mail(
+                from_email=Email(self.from_email, name="CURSA"),
+                to_emails=To(to_email),
+                subject=subject,
+                plain_text_content=plain_content,
+                html_content=html_content,
+            )
+
             if attachments:
-                for file_path in attachments:
-                    if os.path.exists(file_path):
-                        self._attach_file(msg, file_path)
-                    else:
-                        logger.warning(f"Attachment not found: {file_path}")
-            
-            # Отправляем
-            all_recipients = [to_email]
-            if cc:
-                all_recipients.extend(cc)
-            if bcc:
-                all_recipients.extend(bcc)
-            
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                if self.use_tls:
-                    server.starttls()
-                
-                server.login(self.smtp_user, self.smtp_password)
-                server.sendmail(self.from_email, all_recipients, msg.as_string())
-            
-            logger.info(f"Email sent successfully to {to_email}")
-            
-            return {
-                'success': True,
-                'message_id': msg['Message-ID'],
-                'to': to_email
-            }
-            
-        except smtplib.SMTPAuthenticationError as e:
-            logger.error(f"SMTP authentication failed: {e}")
-            return {'success': False, 'error': 'Authentication failed'}
-            
-        except smtplib.SMTPException as e:
-            logger.error(f"SMTP error: {e}")
-            return {'success': False, 'error': str(e)}
-            
+                message.attachment = self._build_attachments(attachments)
+
+            response = self.sg.send(message)
+            if response.status_code == 202:
+                logger.info(f"✓ Email sent to {to_email}")
+                return {"success": True, "message_id": response.headers.get("X-Message-Id")}
+            return {"success": False, "error": f"SendGrid error {response.status_code}"}
+
         except Exception as e:
-            logger.exception(f"Error sending email: {e}")
-            return {'success': False, 'error': str(e)}
-    
-    def _attach_file(self, msg: MIMEMultipart, file_path: str):
-        """Прикрепляет файл к сообщению"""
-        filename = os.path.basename(file_path)
-        
-        # Определяем MIME-тип
-        if filename.endswith('.docx'):
-            maintype = 'application'
-            subtype = 'vnd.openxmlformats-officedocument.wordprocessingml.document'
-        elif filename.endswith('.pdf'):
-            maintype = 'application'
-            subtype = 'pdf'
-        else:
-            maintype = 'application'
-            subtype = 'octet-stream'
-        
-        with open(file_path, 'rb') as f:
-            part = MIMEBase(maintype, subtype)
-            part.set_payload(f.read())
-        
-        encoders.encode_base64(part)
-        part.add_header(
-            'Content-Disposition',
-            f'attachment; filename="{filename}"'
-        )
-        msg.attach(part)
-    
-    def send_corrections_ready(
-        self,
-        to_email: str,
-        filename: str,
-        issues_count: int,
-        corrections_count: int,
-        processing_time: float,
-        corrected_file: Optional[str] = None,
-        report_file: Optional[str] = None,
-        additional_info: str = ''
-    ) -> Dict[str, Any]:
-        """
-        Отправляет уведомление о готовых исправлениях.
-        
-        Args:
-            to_email: Email получателя
-            filename: Имя исходного файла
-            issues_count: Количество найденных проблем
-            corrections_count: Количество исправлений
-            processing_time: Время обработки в секундах
-            corrected_file: Путь к исправленному файлу
-            report_file: Путь к отчёту
-            additional_info: Дополнительная информация
-        """
-        attachments = []
-        if corrected_file and os.path.exists(corrected_file):
-            attachments.append(corrected_file)
-        if report_file and os.path.exists(report_file):
-            attachments.append(report_file)
-        
-        return self.send(
-            to_email=to_email,
-            subject=f'CURSA - Документ "{filename}" проверен',
-            template='corrections_ready',
-            template_vars={
-                'filename': filename,
-                'issues_count': issues_count,
-                'corrections_count': corrections_count,
-                'processing_time': round(processing_time, 2),
-                'additional_info': additional_info
-            },
-            attachments=attachments
-        )
-    
-    def send_error_notification(
-        self,
-        to_email: str,
-        filename: str,
-        error_message: str
-    ) -> Dict[str, Any]:
-        """
-        Отправляет уведомление об ошибке.
-        
-        Args:
-            to_email: Email получателя
-            filename: Имя файла
-            error_message: Описание ошибки
-        """
-        return self.send(
-            to_email=to_email,
-            subject=f'CURSA - Ошибка при обработке "{filename}"',
-            template='error',
-            template_vars={
-                'filename': filename,
-                'error_message': error_message
-            }
-        )
+            logger.error(f"✗ Error sending email: {str(e)}")
+            return {"success": False, "error": str(e)}
 
+    def send_verification_email(self, to_email: str, verification_token: str) -> bool:
+        """Send email verification link"""
+        if not self._is_configured():
+            logger.warning(f"⚠️  SendGrid not configured - skipping verification email")
+            return True
 
-# Функции для быстрого использования
-def send_notification(
-    to_email: str,
-    subject: str,
-    body: str,
-    attachments: Optional[List[str]] = None
-) -> Dict[str, Any]:
-    """Быстрая отправка уведомления"""
-    service = EmailService()
-    return service.send(to_email, subject, body, attachments=attachments)
+        try:
+            verification_url = f"https://cursa.app/verify?token={verification_token}"
 
+            message = Mail(
+                from_email=Email(self.from_email, name="CURSA"),
+                to_emails=To(to_email),
+                subject="Подтвердите ваш email в CURSA",
+                html_content=f"""
+                <div style="font-family: 'Montserrat', sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #22d3ee;">Добро пожаловать в CURSA! 👋</h2>
+                    <p>Подтвердите ваш email:</p>
+                    <a href="{verification_url}" style="background: #22d3ee; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px;">
+                        Подтвердить email
+                    </a>
+                    <p><small>Ссылка действительна 24 часа</small></p>
+                </div>
+                """,
+            )
 
-def send_document_ready(
-    to_email: str,
-    filename: str,
-    corrected_file: str,
-    report_file: Optional[str] = None,
-    stats: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
-    """Отправка уведомления о готовом документе"""
-    service = EmailService()
-    stats = stats or {}
-    return service.send_corrections_ready(
-        to_email=to_email,
-        filename=filename,
-        issues_count=stats.get('issues_count', 0),
-        corrections_count=stats.get('corrections_count', 0),
-        processing_time=stats.get('processing_time', 0),
-        corrected_file=corrected_file,
-        report_file=report_file
-    )
+            response = self.sg.send(message)
+            if response.status_code == 202:
+                logger.info(f"✓ Verification email sent to {to_email}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"✗ Failed to send verification email: {str(e)}")
+            return False
+
+    def send_password_reset_email(self, to_email: str, reset_token: str) -> bool:
+        """Send password reset link"""
+        if not self._is_configured():
+            logger.warning(f"⚠️  SendGrid not configured - skipping reset email")
+            return True
+
+        try:
+            reset_url = f"https://cursa.app/reset-password?token={reset_token}"
+
+            message = Mail(
+                from_email=Email(self.from_email, name="CURSA"),
+                to_emails=To(to_email),
+                subject="Сброс пароля CURSA",
+                html_content=f"""
+                <div style="font-family: 'Montserrat', sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #22d3ee;">Сброс пароля</h2>
+                    <a href="{reset_url}" style="background: #f97316; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px;">
+                        Сбросить пароль
+                    </a>
+                    <p><small>Ссылка действительна 1 час</small></p>
+                </div>
+                """,
+            )
+
+            response = self.sg.send(message)
+            if response.status_code == 202:
+                logger.info(f"✓ Password reset email sent to {to_email}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"✗ Failed to send reset email: {str(e)}")
+            return False
+
+    def send_welcome_email(self, to_email: str, user_name: str = "") -> bool:
+        """Send welcome email after email verification"""
+        if not self._is_configured():
+            logger.warning(f"⚠️  SendGrid not configured - skipping welcome email")
+            return True
+
+        try:
+            name_part = f", {user_name.split()[0]}" if user_name else ""
+
+            message = Mail(
+                from_email=Email(self.from_email, name="CURSA"),
+                to_emails=To(to_email),
+                subject="Добро пожаловать в CURSA!",
+                html_content=f"""
+                <div style="font-family: 'Montserrat', sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #22d3ee;">Привет{name_part}! 🚀</h2>
+                    <p>Ваш аккаунт готов. Начните проверку документов:</p>
+                    <a href="https://cursa.app/upload" style="background: #22d3ee; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px;">
+                        Загрузить документ
+                    </a>
+                </div>
+                """,
+            )
+
+            response = self.sg.send(message)
+            if response.status_code == 202:
+                logger.info(f"✓ Welcome email sent to {to_email}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"✗ Failed to send welcome email: {str(e)}")
+            return False
+
+    def is_configured(self) -> bool:
+        """Check if email service is properly configured"""
+        return self._is_configured()

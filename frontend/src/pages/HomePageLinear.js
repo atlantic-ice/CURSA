@@ -1,23 +1,23 @@
-import React from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import {
-  Upload as UploadIcon,
-  CheckCircle as CheckIcon,
-  TrendingUp as TrendingIcon,
-  FileText as FileIcon,
-  Clock as ClockIcon,
   ArrowRight as ArrowIcon,
-} from '@mui/icons-material';
+  CheckCircle as CheckIcon,
+  Clock as ClockIcon,
+  FileText as FileIcon,
+  TrendingUp as TrendingIcon,
+  Upload as UploadIcon,
+} from "@mui/icons-material";
+import { Box, IconButton, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import {
-  LinearCard,
-  LinearButton,
-  LinearSectionHeader,
-  LinearGrid,
   LinearBadge,
+  LinearButton,
+  LinearCard,
   LinearEmptyState,
+  LinearGrid,
+  LinearSectionHeader,
   LinearStatusIndicator,
-} from '../components/LinearUI';
+} from "../components/LinearUI";
+import SplineWelcome from "../components/SplineWelcome";
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -26,51 +26,51 @@ const HomePage = () => {
   const recentChecks = [
     {
       id: 1,
-      filename: 'Курсовая_работа_2025.docx',
-      date: '2 ноября 2025',
-      time: '14:30',
-      status: 'success',
-      statusLabel: 'Проверено',
+      filename: "Курсовая_работа_2025.docx",
+      date: "2 ноября 2025",
+      time: "14:30",
+      status: "success",
+      statusLabel: "Проверено",
       issues: 0,
     },
     {
       id: 2,
-      filename: 'Отчет_по_практике.docx',
-      date: '1 ноября 2025',
-      time: '11:20',
-      status: 'warning',
-      statusLabel: 'Есть замечания',
+      filename: "Отчет_по_практике.docx",
+      date: "1 ноября 2025",
+      time: "11:20",
+      status: "warning",
+      statusLabel: "Есть замечания",
       issues: 5,
     },
     {
       id: 3,
-      filename: 'Дипломная_работа.docx',
-      date: '31 октября 2025',
-      time: '16:45',
-      status: 'success',
-      statusLabel: 'Проверено',
+      filename: "Дипломная_работа.docx",
+      date: "31 октября 2025",
+      time: "16:45",
+      status: "success",
+      statusLabel: "Проверено",
       issues: 0,
     },
   ];
 
   const stats = [
     {
-      label: 'Всего проверок',
-      value: '24',
+      label: "Всего проверок",
+      value: "24",
       icon: <FileIcon />,
-      trend: '+12%',
+      trend: "+12%",
     },
     {
-      label: 'Без замечаний',
-      value: '18',
+      label: "Без замечаний",
+      value: "18",
       icon: <CheckIcon />,
-      trend: '+8%',
+      trend: "+8%",
     },
     {
-      label: 'Среднее время',
-      value: '2.4 мин',
+      label: "Среднее время",
+      value: "2.4 мин",
       icon: <ClockIcon />,
-      trend: '-15%',
+      trend: "-15%",
     },
   ];
 
@@ -78,14 +78,17 @@ const HomePage = () => {
     <Box
       sx={{
         flex: 1,
-        overflow: 'auto',
-        backgroundColor: 'background.default',
+        overflow: "auto",
+        backgroundColor: "background.default",
       }}
     >
+      {/* Spline Welcome Animation */}
+      <SplineWelcome />
+
       <Box
         sx={{
           maxWidth: 1400,
-          margin: '0 auto',
+          margin: "0 auto",
           padding: 4,
         }}
       >
@@ -95,9 +98,9 @@ const HomePage = () => {
             variant="h3"
             sx={{
               fontWeight: 700,
-              fontSize: '2.5rem',
+              fontSize: "2.5rem",
               lineHeight: 1.2,
-              letterSpacing: '-0.02em',
+              letterSpacing: "-0.02em",
               mb: 1,
             }}
           >
@@ -106,51 +109,51 @@ const HomePage = () => {
           <Typography
             variant="body1"
             sx={{
-              color: 'text.secondary',
-              fontSize: '1.125rem',
+              color: "text.secondary",
+              fontSize: "1.125rem",
               maxWidth: 600,
             }}
           >
-            Автоматическая проверка документов на соответствие требованиям
-            оформления — быстро, точно и удобно.
+            Автоматическая проверка документов на соответствие требованиям оформления — быстро,
+            точно и удобно.
           </Typography>
         </Box>
 
         {/* Quick Action Card */}
         <LinearCard
           hover
-          onClick={() => navigate('/check')}
+          onClick={() => navigate("/check")}
           sx={{
             mb: 5,
-            cursor: 'pointer',
+            cursor: "pointer",
             background: (theme) =>
-              theme.palette.mode === 'dark'
-                ? 'linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 102, 214, 0.05) 100%)'
-                : 'linear-gradient(135deg, rgba(0, 122, 255, 0.05) 0%, rgba(0, 122, 255, 0.02) 100%)',
-            borderColor: 'primary.main',
+              theme.palette.mode === "dark"
+                ? "linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 102, 214, 0.05) 100%)"
+                : "linear-gradient(135deg, rgba(0, 122, 255, 0.05) 0%, rgba(0, 122, 255, 0.02) 100%)",
+            borderColor: "primary.main",
             borderWidth: 1.5,
           }}
         >
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
               <Box
                 sx={{
                   width: 64,
                   height: 64,
-                  borderRadius: '12px',
-                  backgroundColor: 'primary.main',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  '& svg': {
+                  borderRadius: "12px",
+                  backgroundColor: "primary.main",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  "& svg": {
                     fontSize: 32,
-                    color: 'white',
+                    color: "white",
                   },
                 }}
               >
@@ -169,7 +172,7 @@ const HomePage = () => {
                 <Typography
                   variant="body2"
                   sx={{
-                    color: 'text.secondary',
+                    color: "text.secondary",
                   }}
                 >
                   Загрузите .docx файл для автоматической проверки
@@ -180,13 +183,13 @@ const HomePage = () => {
               sx={{
                 width: 48,
                 height: 48,
-                backgroundColor: 'primary.main',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                  transform: 'translateX(4px)',
+                backgroundColor: "primary.main",
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "primary.dark",
+                  transform: "translateX(4px)",
                 },
-                transition: 'all 0.2s ease',
+                transition: "all 0.2s ease",
               }}
             >
               <ArrowIcon />
@@ -200,9 +203,9 @@ const HomePage = () => {
             <LinearCard key={index}>
               <Box
                 sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
                   mb: 2,
                 }}
               >
@@ -210,14 +213,14 @@ const HomePage = () => {
                   sx={{
                     width: 40,
                     height: 40,
-                    borderRadius: '8px',
-                    backgroundColor: 'action.hover',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    '& svg': {
+                    borderRadius: "8px",
+                    backgroundColor: "action.hover",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    "& svg": {
                       fontSize: 20,
-                      color: 'text.secondary',
+                      color: "text.secondary",
                     },
                   }}
                 >
@@ -226,12 +229,10 @@ const HomePage = () => {
                 <Typography
                   variant="caption"
                   sx={{
-                    color: stat.trend.startsWith('+')
-                      ? 'success.main'
-                      : 'error.main',
+                    color: stat.trend.startsWith("+") ? "success.main" : "error.main",
                     fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
+                    display: "flex",
+                    alignItems: "center",
                     gap: 0.5,
                   }}
                 >
@@ -251,8 +252,8 @@ const HomePage = () => {
               <Typography
                 variant="body2"
                 sx={{
-                  color: 'text.secondary',
-                  fontSize: '0.875rem',
+                  color: "text.secondary",
+                  fontSize: "0.875rem",
                 }}
               >
                 {stat.label}
@@ -268,42 +269,38 @@ const HomePage = () => {
           action={
             <LinearButton
               variant="text"
-              onClick={() => navigate('/history')}
-              sx={{ color: 'text.secondary' }}
+              onClick={() => navigate("/history")}
+              sx={{ color: "text.secondary" }}
             >
               Посмотреть все
             </LinearButton>
           }
         />
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
           {recentChecks.length > 0 ? (
             recentChecks.map((check) => (
-              <LinearCard
-                key={check.id}
-                hover
-                onClick={() => navigate(`/report/${check.id}`)}
-              >
+              <LinearCard key={check.id} hover onClick={() => navigate(`/report/${check.id}`)}>
                 <Box
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <Box
                       sx={{
                         width: 40,
                         height: 40,
-                        borderRadius: '6px',
-                        backgroundColor: 'action.hover',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        '& svg': {
+                        borderRadius: "6px",
+                        backgroundColor: "action.hover",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        "& svg": {
                           fontSize: 20,
-                          color: 'text.secondary',
+                          color: "text.secondary",
                         },
                       }}
                     >
@@ -322,8 +319,8 @@ const HomePage = () => {
                       <Typography
                         variant="caption"
                         sx={{
-                          color: 'text.secondary',
-                          fontSize: '0.8125rem',
+                          color: "text.secondary",
+                          fontSize: "0.8125rem",
                         }}
                       >
                         {check.date} в {check.time}
@@ -332,8 +329,8 @@ const HomePage = () => {
                   </Box>
                   <Box
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
+                      display: "flex",
+                      alignItems: "center",
                       gap: 2,
                     }}
                   >
@@ -344,10 +341,7 @@ const HomePage = () => {
                         size="small"
                       />
                     )}
-                    <LinearStatusIndicator
-                      status={check.status}
-                      label={check.statusLabel}
-                    />
+                    <LinearStatusIndicator status={check.status} label={check.statusLabel} />
                     <IconButton size="small">
                       <ArrowIcon fontSize="small" />
                     </IconButton>
@@ -361,10 +355,7 @@ const HomePage = () => {
               title="Нет проверок"
               description="Загрузите документ для начала проверки"
               action={
-                <LinearButton
-                  variant="contained"
-                  onClick={() => navigate('/check')}
-                >
+                <LinearButton variant="contained" onClick={() => navigate("/check")}>
                   Проверить документ
                 </LinearButton>
               }
