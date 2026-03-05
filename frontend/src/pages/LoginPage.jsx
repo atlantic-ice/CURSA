@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion";
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Spline from "@splinetool/react-spline";
 import { AuthContext, ColorModeContext } from "../App";
 import BrandLogo from "../components/BrandLogo";
 
@@ -100,10 +101,29 @@ const LoginPage = () => {
         justifyContent: "center",
         px: 3,
         position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* Spline 3D Background */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: "100%",
+          height: "100%",
+          zIndex: 1,
+          pointerEvents: "none",
+          opacity: 0.5,
+        }}
+      >
+        <Spline scene="https://prod.spline.design/8qLmMhpulL8Pq5gl/scene.splinecode" />
+      </Box>
+
       {/* Кнопка назад */}
-      <Box sx={{ position: "absolute", top: 20, left: 20 }}>
+      <Box sx={{ position: "absolute", top: 20, left: 20, zIndex: 10 }}>
         <IconButton
           onClick={() => navigate("/")}
           sx={{
@@ -119,7 +139,7 @@ const LoginPage = () => {
         </IconButton>
       </Box>
       {/* Тоггл темы */}
-      <Box sx={{ position: "absolute", top: 20, right: 20 }}>
+      <Box sx={{ position: "absolute", top: 20, right: 20, zIndex: 10 }}>
         <IconButton
           onClick={colorMode.toggleColorMode}
           sx={{
@@ -144,7 +164,7 @@ const LoginPage = () => {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        sx={{ width: "100%", maxWidth: 380 }}
+        sx={{ width: "100%", maxWidth: 380, position: "relative", zIndex: 20 }}
       >
         {/* Logo */}
         {/* Logo - instead of CURSA text */}
