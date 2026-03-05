@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext, CheckHistoryContext, ColorModeContext } from "../App";
 import { documentsApi } from "../api/client";
 import usePageStyles from "../hooks/usePageStyles";
+import BrandLogo from "../components/BrandLogo";
 import type { User, ValidationReport } from "../types";
 
 /**
@@ -323,17 +324,8 @@ const UploadPage: FC<UploadPageProps> = ({ className = "" }) => {
           WebkitBackdropFilter: "blur(20px)",
         }}
       >
-        <Typography
-          sx={{
-            fontSize: "1.05rem",
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            color: textPrimary,
-            fontFamily: "'Wix Madefor Display', sans-serif",
-          }}
-        >
-          CURSA
-        </Typography>
+        {/* Logo instead of CURSA text */}
+        <BrandLogo size="medium" />
 
         {/* Navigation buttons */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

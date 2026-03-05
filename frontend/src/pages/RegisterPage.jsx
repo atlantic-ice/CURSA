@@ -17,6 +17,7 @@ import { motion } from "framer-motion";
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext, ColorModeContext } from "../App";
+import BrandLogo from "../components/BrandLogo";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -178,20 +179,10 @@ const RegisterPage = () => {
         transition={{ duration: 0.5, ease: "easeOut" }}
         sx={{ width: "100%", maxWidth: 420 }}
       >
-        {/* Logo */}
-        <Typography
-          sx={{
-            fontSize: "0.9rem",
-            fontWeight: 700,
-            letterSpacing: "0.15em",
-            color: textPrimary,
-            fontFamily: "'Wix Madefor Display', sans-serif",
-            textAlign: "center",
-            mb: 6,
-          }}
-        >
-          CURSA
-        </Typography>
+        {/* Logo - instead of CURSA text */}
+        <Box sx={{ mb: 6, display: "flex", justifyContent: "center" }}>
+          <BrandLogo size="large" />
+        </Box>
 
         {/* Heading */}
         <Typography

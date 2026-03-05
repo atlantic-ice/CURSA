@@ -1,19 +1,21 @@
 import { Box, BoxProps, useTheme } from "@mui/material";
 import logoIcon from "../assets/logo-icon.svg";
+import logoIconDark from "../assets/logo-icon-dark.svg";
 
 interface BrandLogoProps extends BoxProps {
   size?: "small" | "medium" | "large";
-  variant?: "contained" | "standalone";
+  variant?: "standalone" | "contained";
 }
 
 /**
  * BrandLogo Component
  * Displays the CURSA celestial navigation star logo.
- * Supports different sizes and variants (with/without container).
+ * Automatically adapts to light/dark theme.
+ * Default: standalone (no container)
  */
 const BrandLogo: React.FC<BrandLogoProps> = ({
   size = "medium",
-  variant = "contained",
+  variant = "standalone",
   sx,
   ...props
 }) => {
@@ -36,13 +38,14 @@ const BrandLogo: React.FC<BrandLogoProps> = ({
   };
 
   const config = sizeConfig[size];
+  const logoSrc = isDark ? logoIcon : logoIconDark;
 
-  // Standalone variant - just the logo with no container
+  // Standalone variant - just the logo with no container (DEFAULT)
   if (variant === "standalone") {
     return (
       <Box
         component="img"
-        src={logoIcon}
+        src={logoSrc}
         alt="CURSA"
         sx={{
           width: config.logoSize,
@@ -83,7 +86,7 @@ const BrandLogo: React.FC<BrandLogoProps> = ({
     >
       <Box
         component="img"
-        src={logoIcon}
+        src={logoSrc}
         alt="CURSA"
         sx={{
           width: config.logoSize,
