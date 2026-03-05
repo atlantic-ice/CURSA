@@ -41,7 +41,12 @@ const PreviewPage = () => {
           <IconButton
             onClick={handleBack}
             size="small"
-            sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 2 }}
+            sx={{
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 1,
+              color: "rgba(255,255,255,0.5)",
+              "&:hover": { color: "#fff", borderColor: "rgba(255,255,255,0.3)" },
+            }}
           >
             <ArrowBackIcon fontSize="small" />
           </IconButton>
@@ -61,7 +66,7 @@ const PreviewPage = () => {
               CURSA / PREVIEW
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
-              <InsertDriveFileIcon sx={{ fontSize: 14, color: "primary.main" }} />
+              <InsertDriveFileIcon sx={{ fontSize: 14, color: "rgba(255,255,255,0.35)" }} />
               <Typography variant="caption" color="text.secondary" fontWeight={500}>
                 {filename}
               </Typography>

@@ -46,17 +46,20 @@ python run.py
 ## Поддерживаемые провайдеры
 
 ### Google
+
 - ✅ Полная поддержка профиля пользователя
 - ✅ Email verification через Google
 - ✅ Фотография профиля
 - **Рекомендуемый провайдер**
 
 ### GitHub
+
 - ✅ Интеграция с GitHub аккаунтом
 - ✅ Автоматическое получение email
 - ✅ Публичная информация профиля
 
 ### Yandex
+
 - ✅ Поддержка русскоязычных пользователей
 - ✅ Интеграция с Яндекс аккаунтом
 - ✅ Российская целевая аудитория
@@ -106,6 +109,7 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
 ### 2. Получение credentials
 
 После создания приложения скопируйте:
+
 - Client ID
 - Client Secret
 
@@ -154,10 +158,10 @@ export const LoginPage = () => {
   return (
     <div>
       <h1>Вход в CURSA</h1>
-      
+
       {/* Все провайдеры */}
       <OAuthLogin showAllProviders={true} />
-      
+
       {/* Или отдельный провайдер */}
       <OAuthLogin provider="google" />
     </div>
@@ -168,6 +172,7 @@ export const LoginPage = () => {
 ### Backend - Автоматический обработчик
 
 OAuth endpoints обрабатываются автоматически в:
+
 ```
 POST /api/auth/oauth/google/callback
 POST /api/auth/oauth/github/callback
@@ -324,13 +329,13 @@ User model:
 
 ### Возможные error codes
 
-| Status | Error | Описание |
-|--------|-------|----------|
-| 400 | Missing authorization code | Не передан код авторизации |
-| 400 | Invalid authorization code | Код истек или невалидный |
-| 400 | Failed to retrieve user info | Не удалось получить инфо о пользователе |
-| 503 | OAuth not configured | Провайдер не настроен |
-| 500 | Authentication failed | Неизвестная ошибка |
+| Status | Error                        | Описание                                |
+| ------ | ---------------------------- | --------------------------------------- |
+| 400    | Missing authorization code   | Не передан код авторизации              |
+| 400    | Invalid authorization code   | Код истек или невалидный                |
+| 400    | Failed to retrieve user info | Не удалось получить инфо о пользователе |
+| 503    | OAuth not configured         | Провайдер не настроен                   |
+| 500    | Authentication failed        | Неизвестная ошибка                      |
 
 ## Security Best Practices
 
@@ -367,6 +372,7 @@ CORS_ORIGINS = [
 ### 4. Rate Limiting
 
 OAuth endpoints защищены rate limiting:
+
 - 5 попыток в минуту на IP адрес
 - Защита от brute force атак
 
@@ -375,6 +381,7 @@ OAuth endpoints защищены rate limiting:
 ### "OAuth not configured"
 
 **Решение**: Убедитесь что в `.env` установлены:
+
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 
@@ -383,6 +390,7 @@ OAuth endpoints защищены rate limiting:
 ### "Invalid authorization code"
 
 **Причины**:
+
 - Код истек (обычно на 10 минут)
 - Redirect URI не совпадает с настройками провайдера
 - Неправильный Client Secret
@@ -392,6 +400,7 @@ OAuth endpoints защищены rate limiting:
 ### "Failed to retrieve user info"
 
 **Причины**:
+
 - Сетевая ошибка
 - API провайдера недоступен
 - Недостаточные permissions

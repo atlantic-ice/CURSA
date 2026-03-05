@@ -1,433 +1,697 @@
-import React, { useContext, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Box, 
-  Typography, 
-  Container, 
-  Card, 
-  CardContent, 
-  CardActions, 
-  Button, 
-  Grid,
-  Divider,
-  Chip,
-  IconButton,
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import DeleteIcon from "@mui/icons-material/Delete";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import DownloadIcon from "@mui/icons-material/Download";
+import HighlightOffIcon from "@mui/icons-material/HighlightOff";
+import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
+import NoteAddOutlinedIcon from "@mui/icons-material/NoteAddOutlined";
+import SearchIcon from "@mui/icons-material/Search";
+import SortIcon from "@mui/icons-material/Sort";
+import {
+  Box,
+  Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Tooltip,
-  Paper,
+  IconButton,
   InputBase,
-  Skeleton,
-  Alert,
-  AlertTitle,
-  TableContainer,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  TablePagination
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
-import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import SearchIcon from '@mui/icons-material/Search';
-import SortIcon from '@mui/icons-material/Sort';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
-import DownloadIcon from '@mui/icons-material/Download';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import { CheckHistoryContext } from '../App';
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { motion } from "framer-motion";
+import { useContext, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { CheckHistoryContext } from "../App";
+import usePageStyles from "../hooks/usePageStyles";
 
-const HistoryPage = () => {
+const isLocal =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+const API_BASE = isLocal
+  ? "http://localhost:5000"
+  : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
+};
+
+const rowVariants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+};
+
+export default function HistoryPage() {
   const navigate = useNavigate();
+  const { isDark, textPrimary, textMuted, borderColor, borderColorSubtle, rowHover, inputBg } =
+    usePageStyles();
   const { history, removeFromHistory, clearHistory } = useContext(CheckHistoryContext);
-  
-  // Состояние для поиска и фильтрации
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' или 'desc'
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
-  
-  // Состояние для пагинации
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const rowsPerPage = 20;
 
-  // Фильтрация и сортировка истории
   const filteredHistory = history
-    .filter(item => 
-      item.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      new Date(item.timestamp).toLocaleString('ru-RU').includes(searchQuery)
+    .filter(
+      (item) =>
+        (item.fileName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.profileId || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.reportData?.check_results?.profile?.name || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        new Date(item.timestamp || item.id).toLocaleString("ru-RU").includes(searchQuery),
     )
     .sort((a, b) => {
-      if (sortDirection === 'asc') {
-        return a.timestamp - b.timestamp;
-      } else {
-        return b.timestamp - a.timestamp;
-      }
+      const ta = a.timestamp || a.id || 0;
+      const tb = b.timestamp || b.id || 0;
+      return sortDirection === "asc" ? ta - tb : tb - ta;
     });
 
-  // Обработчики для пагинации
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+  const paged = filteredHistory.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const totalPages = Math.ceil(filteredHistory.length / rowsPerPage);
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  // Обработчик для диалога очистки истории
-  const handleClearHistory = () => {
-    clearHistory();
-    setClearDialogOpen(false);
-  };
-
-  // Обработчик для диалога удаления записи
-  const handleDeleteHistoryItem = () => {
-    if (deleteItemId) {
-      removeFromHistory(deleteItemId);
-      setDeleteItemId(null);
-    }
-    setDeleteDialogOpen(false);
-  };
-
-  // Подтверждение удаления записи
-  const confirmDeleteItem = (id) => {
-    setDeleteItemId(id);
-    setDeleteDialogOpen(true);
-  };
-
-  // Переключение направления сортировки
-  const toggleSortDirection = () => {
-    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-  };
-
-  // Очистка поиска
-  const clearSearch = () => {
-    setSearchQuery('');
-  };
-
-  // Функция для скачивания документа
   const downloadDocument = (filePath, originalName) => {
     if (!filePath) return;
-    
-    const extension = '.docx';
-    const fileName = originalName ? 
-      (originalName.endsWith('.docx') ? originalName : originalName + extension) : 
-      `corrected_document_${Date.now()}${extension}`;
-    
-    // Если путь выглядит как имя файла (без слешей), используем прямой доступ
-    if (filePath.indexOf('/') === -1 && filePath.indexOf('\\') === -1) {
+    const safeName = originalName
+      ? originalName.endsWith(".docx")
+        ? originalName
+        : originalName + ".docx"
+      : `corrected_${Date.now()}.docx`;
+    if (filePath.indexOf("/") === -1 && filePath.indexOf("\\") === -1) {
       window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filePath)}`;
     } else {
-      // Иначе используем стандартный endpoint
-      window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(fileName)}`;
+      window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(safeName)}`;
     }
+  };
+
+  const pluralRecords = (n) => {
+    if (n % 10 === 1 && n !== 11) return "запись";
+    if (n % 10 >= 2 && n % 10 <= 4 && (n < 10 || n > 20)) return "записи";
+    return "записей";
+  };
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paged.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paged.map((i) => i.id)));
+    }
+  };
+
+  const bulkDelete = () => {
+    selectedIds.forEach((id) => removeFromHistory(id));
+    setSelectedIds(new Set());
+    setBulkDeleteOpen(false);
+  };
+
+  const exportCSV = () => {
+    const headers = ["Файл", "Дата", "Профиль", "Замечания", "Балл", "Исправлен"];
+    const rows = filteredHistory.map((item) => {
+      const score = item.score ?? item.reportData?.check_results?.score ?? item.reportData?.score;
+      const issuesCount =
+        item.reportData?.check_results?.total_issues_count ?? item.totalIssues ?? 0;
+      const corrected =
+        item.correctedFilePath || item.reportData?.corrected_file_path ? "Да" : "Нет";
+      const profileLabel =
+        item.reportData?.check_results?.profile?.name || item.profileId || "default_gost";
+      const dateStr = new Date(item.timestamp || item.id).toLocaleString("ru-RU");
+      return [
+        item.fileName || "Без названия",
+        dateStr,
+        profileLabel,
+        issuesCount,
+        score ?? "",
+        corrected,
+      ];
+    });
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "history.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          gutterBottom
-          sx={{ fontWeight: 700, mb: 1 }}
-        >
-          История проверок
-        </Typography>
-        <Typography 
-          variant="subtitle1" 
-          color="text.secondary"
-          sx={{ maxWidth: 700 }}
-        >
-          Здесь вы можете просмотреть результаты ваших предыдущих проверок и продолжить работу с ними
-        </Typography>
-      </Box>
-
-      {/* Панель поиска и фильтрации */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        py: 4,
+        px: { xs: 3, md: 4 },
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
           gap: 2,
-          mb: 3,
-          width: '100%'
         }}
       >
-        <Paper
-          component="form"
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              letterSpacing: "-0.025em",
+              fontFamily: "'Wix Madefor Display', sans-serif",
+              color: textPrimary,
+              mb: 0.5,
+            }}
+          >
+            История проверок
+          </Typography>
+          <Typography sx={{ color: textMuted, fontSize: "0.875rem" }}>
+            {history.length === 0
+              ? "Нет записей"
+              : `${history.length} ${pluralRecords(history.length)}`}
+          </Typography>
+        </motion.div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+          <Button
+            onClick={() => navigate("/")}
+            startIcon={<NoteAddOutlinedIcon />}
+            variant="contained"
+            sx={{
+              borderRadius: 1,
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              textTransform: "none",
+              letterSpacing: "0.03em",
+              px: 2.5,
+              boxShadow: "none",
+            }}
+          >
+            Новая проверка
+          </Button>
+        </motion.div>
+      </Box>
+
+      {/* Toolbar */}
+      <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+        <Box
           sx={{
-            p: '2px 4px',
-            display: 'flex',
-            alignItems: 'center',
-            width: { xs: '100%', sm: 400 },
-            borderRadius: 2
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            px: 1.5,
+            py: 0.75,
+            borderRadius: 1,
+            bgcolor: inputBg,
+            border: "1px solid",
+            borderColor,
+            flex: "1 1 240px",
+            maxWidth: 360,
           }}
         >
-          <SearchIcon sx={{ ml: 1, color: 'action.active' }} />
+          <SearchIcon sx={{ fontSize: 16, color: textMuted }} />
           <InputBase
-            sx={{ ml: 1, flex: 1 }}
-            placeholder="Поиск по имени файла или дате"
-            inputProps={{ 'aria-label': 'поиск истории проверок' }}
+            placeholder="Поиск по названию или дате"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(0);
+            }}
+            sx={{
+              flex: 1,
+              fontSize: "0.875rem",
+              color: textPrimary,
+              "& input::placeholder": { color: textMuted },
+            }}
           />
           {searchQuery && (
-            <IconButton 
-              size="small" 
-              aria-label="очистить поиск" 
-              onClick={clearSearch}
-            >
-              <HighlightOffIcon />
+            <IconButton size="small" onClick={() => setSearchQuery("")} sx={{ p: 0.25 }}>
+              <HighlightOffIcon sx={{ fontSize: 15, color: textMuted }} />
             </IconButton>
           )}
-        </Paper>
-
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title={`Сортировать по ${sortDirection === 'asc' ? 'возрастанию' : 'убыванию'} даты`}>
-            <Button 
-              startIcon={<SortIcon />}
-              variant="outlined"
-              size="medium"
-              onClick={toggleSortDirection}
-              sx={{ borderRadius: 2 }}
+        </Box>
+        <Button
+          size="small"
+          startIcon={<SortIcon sx={{ fontSize: 15 }} />}
+          onClick={() => setSortDirection((d) => (d === "desc" ? "asc" : "desc"))}
+          sx={{
+            borderRadius: 1,
+            color: textMuted,
+            border: "1px solid",
+            borderColor,
+            fontSize: "0.8rem",
+            textTransform: "none",
+            px: 1.5,
+            py: 0.875,
+            "&:hover": { color: textPrimary },
+          }}
+        >
+          {sortDirection === "desc" ? "Сначала новые" : "Сначала старые"}
+        </Button>
+        <Box sx={{ flex: 1 }} />
+        {selectedIds.size > 0 && (
+          <Tooltip title={`Удалить выбранные (${selectedIds.size})`}>
+            <Button
+              size="small"
+              startIcon={<DeleteIcon sx={{ fontSize: 15 }} />}
+              onClick={() => setBulkDeleteOpen(true)}
+              sx={{
+                borderRadius: 1,
+                color: "#e34234",
+                border: "1px solid rgba(227,66,52,0.25)",
+                fontSize: "0.8rem",
+                textTransform: "none",
+                px: 1.5,
+                "&:hover": { bgcolor: "rgba(227,66,52,0.06)" },
+              }}
             >
-              {sortDirection === 'asc' ? 'Сначала старые' : 'Сначала новые'}
+              Удалить ({selectedIds.size})
             </Button>
           </Tooltip>
-
-          <Tooltip title="Очистить историю">
+        )}
+        <Tooltip title="Экспортировать в CSV">
+          <span>
             <Button
-              startIcon={<DeleteSweepIcon />}
-              variant="outlined"
-              color="error"
-              size="medium"
+              size="small"
+              startIcon={<DownloadIcon sx={{ fontSize: 15 }} />}
+              onClick={exportCSV}
+              disabled={filteredHistory.length === 0}
+              sx={{
+                borderRadius: 1,
+                color: textMuted,
+                border: "1px solid",
+                borderColor,
+                fontSize: "0.8rem",
+                textTransform: "none",
+                px: 1.5,
+                "&:hover": { color: textPrimary },
+              }}
+            >
+              CSV
+            </Button>
+          </span>
+        </Tooltip>
+        <Tooltip title="Очистить всю историю">
+          <span>
+            <Button
+              size="small"
+              startIcon={<DeleteSweepIcon sx={{ fontSize: 15 }} />}
               onClick={() => setClearDialogOpen(true)}
               disabled={history.length === 0}
-              sx={{ borderRadius: 2 }}
+              sx={{
+                borderRadius: 1,
+                color: "#e34234",
+                border: "1px solid rgba(227,66,52,0.25)",
+                fontSize: "0.8rem",
+                textTransform: "none",
+                px: 1.5,
+                "&:hover": { bgcolor: "rgba(227,66,52,0.06)" },
+              }}
             >
               Очистить
             </Button>
-          </Tooltip>
-        </Box>
+          </span>
+        </Tooltip>
       </Box>
 
-      {/* Таблица с историей */}
-      {history.length > 0 ? (
-        <>
-          <TableContainer component={Paper} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', width: '100%' }}>
-            <Table sx={{ minWidth: 650, width: '100%' }}>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                  <TableCell>Файл</TableCell>
-                  <TableCell>Дата проверки</TableCell>
-                  <TableCell align="center">Проблем найдено</TableCell>
-                  <TableCell align="center">Исправлено</TableCell>
-                  <TableCell align="right">Действия</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {(rowsPerPage > 0
-                  ? filteredHistory.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  : filteredHistory
-                ).map((item) => {
-                  const issuesCount = item.reportData.check_results?.total_issues_count || 0;
-                  const dateFormatted = new Date(item.timestamp).toLocaleString('ru-RU');
-                  const hasFixedVersion = item.correctedFilePath || item.reportData.corrected_file_path;
-                  
-                  return (
-                    <TableRow 
-                      key={item.id}
-                      hover
-                      sx={{ 
-                        '&:last-child td, &:last-child th': { border: 0 },
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: 'action.hover'
-                        }
+      {/* Content */}
+      <Box sx={{ flex: 1, overflowY: "auto", pr: 0.5 }} className="custom-scrollbar">
+        {history.length === 0 ? (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              height: 300,
+              gap: 2,
+            }}
+          >
+            <InsertDriveFileOutlinedIcon sx={{ fontSize: 48, color: textMuted, opacity: 0.4 }} />
+            <Typography sx={{ color: textMuted, fontSize: "0.9rem" }}>История пуста</Typography>
+            <Button
+              onClick={() => navigate("/")}
+              variant="outlined"
+              size="small"
+              sx={{ borderRadius: 1, textTransform: "none", borderColor, color: textMuted }}
+            >
+              Загрузить первый документ
+            </Button>
+          </Box>
+        ) : filteredHistory.length === 0 ? (
+          <Box
+            sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}
+          >
+            <Typography sx={{ color: textMuted, fontSize: "0.875rem" }}>
+              Ничего не найдено
+            </Typography>
+          </Box>
+        ) : (
+          <>
+            {/* Table header */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "36px minmax(0,1fr) 140px 120px 85px 60px 100px 130px",
+                gap: 1,
+                px: 2,
+                py: 1,
+                borderBottom: "1px solid",
+                borderColor,
+              }}
+            >
+              <Checkbox
+                size="small"
+                checked={paged.length > 0 && selectedIds.size === paged.length}
+                indeterminate={selectedIds.size > 0 && selectedIds.size < paged.length}
+                onChange={toggleSelectAll}
+                sx={{
+                  p: 0,
+                  color: textMuted,
+                  "&.Mui-checked": { color: "primary.main" },
+                  "&.MuiCheckbox-indeterminate": { color: "primary.main" },
+                }}
+              />
+              {["Файл", "Дата", "Профиль", "Проблем", "Балл", "Исправлен", ""].map((h) => (
+                <Typography
+                  key={h}
+                  sx={{
+                    fontSize: "0.7rem",
+                    letterSpacing: "0.08em",
+                    color: textMuted,
+                    textTransform: "uppercase",
+                    fontWeight: 600,
+                  }}
+                >
+                  {h}
+                </Typography>
+              ))}
+            </Box>
+
+            <motion.div variants={containerVariants} initial="hidden" animate="show">
+              {paged.map((item) => {
+                const issuesCount =
+                  item.reportData?.check_results?.total_issues_count ?? item.totalIssues ?? 0;
+                const correctedPath =
+                  item.correctedFilePath || item.reportData?.corrected_file_path;
+                const score = item.score ?? item.reportData?.score;
+                const scoreColor =
+                  score == null
+                    ? textMuted
+                    : score >= 4
+                      ? "#34d399"
+                      : score >= 3
+                        ? "#fbbf24"
+                        : "#f87171";
+                const dateStr = new Date(item.timestamp || item.id).toLocaleString("ru-RU", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+
+                return (
+                  <motion.div key={item.id} variants={rowVariants}>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "36px minmax(0,1fr) 140px 120px 85px 60px 100px 130px",
+                        gap: 1,
+                        px: 2,
+                        py: 1.5,
+                        borderBottom: "1px solid",
+                        borderColor: borderColorSubtle,
+                        cursor: "pointer",
+                        transition: "background 0.15s",
+                        "&:hover": { bgcolor: rowHover },
+                        alignItems: "center",
+                        bgcolor: selectedIds.has(item.id)
+                          ? isDark
+                            ? "rgba(99,102,241,0.06)"
+                            : "rgba(99,102,241,0.04)"
+                          : undefined,
                       }}
-                      onClick={() => navigate('/report', { 
-                        state: { 
-                          reportData: item.reportData,
-                          fileName: item.fileName
-                        }
-                      })}
+                      onClick={() =>
+                        navigate("/report", {
+                          state: {
+                            reportData: item.reportData,
+                            fileName: item.fileName,
+                            profileId: item.profileId,
+                            profileName: item.reportData?.check_results?.profile?.name,
+                          },
+                        })
+                      }
                     >
-                      <TableCell 
-                        component="th" 
-                        scope="row"
-                        sx={{ 
-                          display: 'flex',
-                          alignItems: 'center'
+                      <Checkbox
+                        size="small"
+                        checked={selectedIds.has(item.id)}
+                        onChange={(e) => toggleSelect(item.id, e)}
+                        onClick={(e) => e.stopPropagation()}
+                        sx={{ p: 0, color: textMuted, "&.Mui-checked": { color: "primary.main" } }}
+                      />
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+                        <InsertDriveFileOutlinedIcon
+                          sx={{ fontSize: 16, color: textMuted, flexShrink: 0 }}
+                        />
+                        <Typography
+                          sx={{
+                            fontSize: "0.875rem",
+                            fontWeight: 500,
+                            color: textPrimary,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {item.fileName || "Без названия"}
+                        </Typography>
+                      </Box>
+
+                      <Typography sx={{ fontSize: "0.775rem", color: textMuted }}>
+                        {dateStr}
+                      </Typography>
+
+                      <Typography
+                        sx={{
+                          fontSize: "0.74rem",
+                          color: textMuted,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                         }}
                       >
-                        <InsertDriveFileIcon 
-                          color="primary" 
-                          sx={{ mr: 1, opacity: 0.7 }} 
-                        />
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {item.fileName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            DOCX документ
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">{dateFormatted}</Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          size="small"
-                          label={issuesCount}
-                          color={issuesCount > 0 ? "warning" : "success"}
-                          sx={{ minWidth: 70 }}
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        {hasFixedVersion ? (
-                          <Chip
-                            size="small"
-                            icon={<CheckCircleOutlineIcon />}
-                            label="Да"
-                            color="success"
-                            variant="outlined"
-                            sx={{ minWidth: 70 }}
-                          />
+                        {item.reportData?.check_results?.profile?.name || item.profileId || "—"}
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          px: 1.25,
+                          py: 0.25,
+                          borderRadius: 0.5,
+                          border: "1px solid",
+                          borderColor:
+                            issuesCount > 0 ? "rgba(251,191,36,0.25)" : "rgba(52,211,153,0.25)",
+                          bgcolor:
+                            issuesCount > 0 ? "rgba(251,191,36,0.07)" : "rgba(52,211,153,0.07)",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            color: issuesCount > 0 ? "#fbbf24" : "#34d399",
+                          }}
+                        >
+                          {issuesCount}
+                        </Typography>
+                      </Box>
+
+                      {/* Score */}
+                      <Typography
+                        sx={{
+                          fontSize: "0.78rem",
+                          fontWeight: score != null ? 600 : 400,
+                          color: scoreColor,
+                        }}
+                      >
+                        {score != null
+                          ? typeof score === "number"
+                            ? score.toFixed(1)
+                            : score
+                          : "—"}
+                      </Typography>
+
+                      <Box>
+                        {correctedPath ? (
+                          <Box
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              px: 1.25,
+                              py: 0.25,
+                              borderRadius: 0.5,
+                              border: "1px solid rgba(52,211,153,0.25)",
+                              bgcolor: "rgba(52,211,153,0.07)",
+                            }}
+                          >
+                            <CheckCircleOutlineIcon sx={{ fontSize: 12, color: "#34d399" }} />
+                            <Typography
+                              sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#34d399" }}
+                            >
+                              Да
+                            </Typography>
+                          </Box>
                         ) : (
-                          <Chip
-                            size="small"
-                            label="Нет"
-                            variant="outlined"
-                            sx={{ minWidth: 70 }}
-                          />
+                          <Typography sx={{ fontSize: "0.75rem", color: textMuted }}>—</Typography>
                         )}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <Tooltip title="Открыть отчет">
-                            <Button
+                      </Box>
+
+                      <Box
+                        sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          size="small"
+                          onClick={() =>
+                            navigate("/report", {
+                              state: { reportData: item.reportData, fileName: item.fileName },
+                            })
+                          }
+                          sx={{
+                            borderRadius: 0.5,
+                            fontSize: "0.75rem",
+                            textTransform: "none",
+                            color: textMuted,
+                            py: 0.25,
+                            px: 1,
+                            "&:hover": { color: textPrimary },
+                          }}
+                        >
+                          Открыть
+                        </Button>
+                        {correctedPath && (
+                          <Tooltip title="Скачать исправленный документ">
+                            <IconButton
                               size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate('/report', { 
-                                  state: { 
-                                    reportData: item.reportData,
-                                    fileName: item.fileName
-                                  }
-                                });
-                              }}
+                              onClick={() => downloadDocument(correctedPath, item.fileName)}
+                              sx={{ color: "#34d399", p: 0.5 }}
                             >
-                              Открыть
-                            </Button>
-                          </Tooltip>
-                          
-                          {hasFixedVersion && (
-                            <Tooltip title="Скачать исправленный документ">
-                              <IconButton 
-                                color="success"
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  downloadDocument(
-                                    item.correctedFilePath || item.reportData.corrected_file_path, 
-                                    item.fileName
-                                  );
-                                }}
-                              >
-                                <DownloadIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          
-                          <Tooltip title="Удалить из истории">
-                            <IconButton 
-                              color="error"
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                confirmDeleteItem(item.id);
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
+                              <DownloadIcon sx={{ fontSize: 14 }} />
                             </IconButton>
                           </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                
-                {/* Пустые строки, если данных меньше чем нужно для заполнения страницы */}
-                {rowsPerPage > 0 && filteredHistory.length > 0 && 
-                filteredHistory.length <= rowsPerPage && 
-                Array.from({ length: rowsPerPage - filteredHistory.length }).map((_, index) => (
-                  <TableRow key={`empty-${index}`}>
-                    <TableCell colSpan={5} sx={{ height: 57, border: 0 }} />
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25, { label: 'Все', value: -1 }]}
-            component="div"
-            count={filteredHistory.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            labelRowsPerPage="Строк на странице:"
-            labelDisplayedRows={({ from, to, count }) => 
-              `${from}–${to} из ${count !== -1 ? count : `более чем ${to}`}`
-            }
-            sx={{ width: '100%' }}
-          />
-        </>
-      ) : (
-        <Alert 
-          severity="info" 
-          sx={{ 
-            mt: 2, 
-            borderRadius: 2,
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.08)',
-            width: '100%'
-          }}
-        >
-          <AlertTitle>История пуста</AlertTitle>
-          В истории пока нет проверок. Перейдите на страницу <Button size="small" href="/check">Проверки</Button> чтобы загрузить документ.
-        </Alert>
-      )}
+                        )}
+                        <Tooltip title="Удалить из истории">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setDeleteItemId(item.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                            sx={{ color: textMuted, p: 0.5, "&:hover": { color: "#e34234" } }}
+                          >
+                            <DeleteIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
 
-      {/* Диалог подтверждения очистки истории */}
-      <Dialog
-        open={clearDialogOpen}
-        onClose={() => setClearDialogOpen(false)}
-        aria-labelledby="clear-history-dialog-title"
-        aria-describedby="clear-history-dialog-description"
-      >
-        <DialogTitle id="clear-history-dialog-title">
-          Очистить историю проверок?
-        </DialogTitle>
+            {totalPages > 1 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: 1,
+                  mt: 3,
+                  pb: 2,
+                }}
+              >
+                <Button
+                  size="small"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                  sx={{
+                    borderRadius: 1,
+                    textTransform: "none",
+                    border: "1px solid",
+                    borderColor,
+                    color: textMuted,
+                    minWidth: 36,
+                  }}
+                >
+                  ←
+                </Button>
+                <Typography sx={{ px: 2, fontSize: "0.8rem", color: textMuted }}>
+                  {page + 1} / {totalPages}
+                </Typography>
+                <Button
+                  size="small"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                  sx={{
+                    borderRadius: 1,
+                    textTransform: "none",
+                    border: "1px solid",
+                    borderColor,
+                    color: textMuted,
+                    minWidth: 36,
+                  }}
+                >
+                  →
+                </Button>
+              </Box>
+            )}
+          </>
+        )}
+      </Box>
+
+      <Dialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)}>
+        <DialogTitle>Очистить историю?</DialogTitle>
         <DialogContent>
-          <DialogContentText id="clear-history-dialog-description">
-            Вы действительно хотите удалить все записи из истории проверок? Это действие нельзя отменить.
+          <DialogContentText>
+            Все записи будут удалены. Это действие нельзя отменить.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setClearDialogOpen(false)}>Отмена</Button>
-          <Button 
-            onClick={handleClearHistory} 
+          <Button
+            onClick={() => {
+              clearHistory();
+              setClearDialogOpen(false);
+            }}
             color="error"
             variant="contained"
           >
@@ -436,33 +700,46 @@ const HistoryPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Диалог подтверждения удаления записи */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        aria-labelledby="delete-item-dialog-title"
-        aria-describedby="delete-item-dialog-description"
-      >
-        <DialogTitle id="delete-item-dialog-title">
-          Удалить запись из истории?
-        </DialogTitle>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Удалить запись?</DialogTitle>
         <DialogContent>
-          <DialogContentText id="delete-item-dialog-description">
-            Вы действительно хотите удалить эту запись из истории проверок?
-          </DialogContentText>
+          <DialogContentText>Запись будет удалена из истории проверок.</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
-          <Button 
-            onClick={handleDeleteHistoryItem} 
+          <Button
+            onClick={() => {
+              if (deleteItemId) removeFromHistory(deleteItemId);
+              setDeleteItemId(null);
+              setDeleteDialogOpen(false);
+            }}
             color="error"
           >
             Удалить
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
-  );
-};
 
-export default HistoryPage; 
+      <Dialog open={bulkDeleteOpen} onClose={() => setBulkDeleteOpen(false)}>
+        <DialogTitle>Удалить выбранные записи?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Будет удалено {selectedIds.size}{" "}
+            {selectedIds.size === 1
+              ? "запись"
+              : selectedIds.size >= 2 && selectedIds.size <= 4
+                ? "записи"
+                : "записей"}
+            . Это действие нельзя отменить.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkDeleteOpen(false)}>Отмена</Button>
+          <Button onClick={bulkDelete} color="error" variant="contained">
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

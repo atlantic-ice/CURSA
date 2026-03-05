@@ -1,234 +1,177 @@
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import DescriptionIcon from "@mui/icons-material/Description";
-import ErrorIcon from "@mui/icons-material/Error";
-import HistoryIcon from "@mui/icons-material/History";
-import SettingsIcon from "@mui/icons-material/Settings";
 import {
-  alpha,
+  ArrowForwardRounded,
+  DarkModeRounded,
+  DescriptionRounded,
+  InsertDriveFileRounded,
+  LightModeRounded,
+} from "@mui/icons-material";
+import {
+  Avatar,
   Box,
   Button,
-  Chip,
-  CircularProgress,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
   IconButton,
   LinearProgress,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  MenuItem,
-  Paper,
-  Select,
-  Stack,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
-import axios from "axios";
-import { motion } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import HealthStatusChip from "../components/HealthStatusChip";
-import IdleOverlay from "../components/IdleOverlay";
-import StarBackground from "../components/StarBackground";
-import api from "../utils/api";
+import { AuthContext, CheckHistoryContext, ColorModeContext } from "../App";
+import usePageStyles from "../hooks/usePageStyles";
 
-// В дев-среде используем прокси CRA (пустая база), иначе — REACT_APP_API_BASE или прод-URL
 const isLocal =
   typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-const API_BASE = isLocal ? "" : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
-
-const ACCEPTED_TYPES = {
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-};
+const API_BASE = isLocal
+  ? "http://localhost:5000"
+  : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
 
 export default function UploadPage() {
-  const [fileName, setFileName] = useState("");
-  const [status, setStatus] = useState("idle");
-  const [error, setError] = useState("");
-  const [profiles, setProfiles] = useState([]);
-  const [selectedProfile, setSelectedProfile] = useState("");
-  const [recentFiles, setRecentFiles] = useState([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [batchResults, setBatchResults] = useState(null);
-  const [showBatchDialog, setShowBatchDialog] = useState(false);
-  const [isIdle, setIsIdle] = useState(false); // For StarBackground
-  const [showEasterEgg, setShowEasterEgg] = useState(false); // For Van Gogh
-  const [logoClicks, setLogoClicks] = useState(0); // Counter for Easter Egg
-
-  const navigate = useNavigate();
   const theme = useTheme();
+  const { textMuted: commonTextMuted, textSubtle: commonTextSubtle } = usePageStyles();
+  const colorMode = useContext(ColorModeContext);
+  const { addToHistory } = useContext(CheckHistoryContext);
+  const { user } = useContext(AuthContext);
+  const isDark = theme.palette.mode === "dark";
 
-  // Idle timer logic for StarBackground (1 minute)
-  useEffect(() => {
-    let timeoutId;
-
-    const resetTimer = () => {
-      setIsIdle(false);
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => setIsIdle(true), 60000); // 60 seconds (1 minute)
-    };
-
-    // Initial timer
-    resetTimer();
-
-    // Listeners
-    const events = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
-    events.forEach((event) => window.addEventListener(event, resetTimer));
-
-    return () => {
-      clearTimeout(timeoutId);
-      events.forEach((event) => window.removeEventListener(event, resetTimer));
-    };
-  }, []);
-
-  // Logo Click Handler
-  const handleLogoClick = () => {
-    setLogoClicks((prev) => {
-      const newCount = prev + 1;
-      if (newCount === 10) {
-        setShowEasterEgg(true);
-        return 0; // Reset after trigger
-      }
-      return newCount;
-    });
-  };
-
-  // Load profiles and history
-  useEffect(() => {
-    // Fetch profiles
-    axios
-      .get(`${API_BASE}/api/profiles/`)
-      .then((res) => {
-        setProfiles(res.data);
-        if (res.data.length > 0) setSelectedProfile(res.data[0].id);
-      })
-      .catch((err) => console.error("Failed to load profiles", err));
-
-    // Load history
-    const history = JSON.parse(localStorage.getItem("uploadHistory") || "[]");
-    setRecentFiles(history);
-  }, []);
-
-  const addToHistory = (file, profileId) => {
-    const newEntry = {
-      name: file.name,
-      date: new Date().toISOString(),
-      profile: profileId,
-      size: file.size,
-    };
-    const updated = [newEntry, ...recentFiles.filter((f) => f.name !== file.name)].slice(0, 5);
-    setRecentFiles(updated);
-    localStorage.setItem("uploadHistory", JSON.stringify(updated));
-  };
-
-  const clearHistory = () => {
-    setRecentFiles([]);
-    localStorage.removeItem("uploadHistory");
-  };
-
-  const handleUpload = useCallback(
-    async (acceptedFiles) => {
-      if (!acceptedFiles?.length) return;
-
-      setStatus("loading");
-      setError("");
-      setUploadProgress(0);
-
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) return prev;
-          return prev + Math.random() * 10;
-        });
-      }, 200);
-
-      try {
-        if (acceptedFiles.length > 1) {
-          // Batch Upload
-          const data = await api.uploadBatch(acceptedFiles, selectedProfile);
-
-          clearInterval(progressInterval);
-          setUploadProgress(100);
-
-          // Wait slightly for smooth transition
-          setTimeout(() => {
-            setStatus("success");
-            setBatchResults(data.results);
-            setShowBatchDialog(true);
-            toast.success(`Обработано ${data.results.length} файлов`);
-          }, 500);
-
-          // Add successful uploads to history
-          data.results.forEach((res) => {
-            if (res.success) {
-              const originalFile = acceptedFiles.find((f) => f.name === res.filename);
-              if (originalFile) {
-                addToHistory(originalFile, selectedProfile);
-              }
-            }
-          });
-        } else {
-          // Single Upload
-          const file = acceptedFiles[0];
-          setFileName(file.name);
-
-          const data = await api.uploadDocument(file, selectedProfile);
-
-          clearInterval(progressInterval);
-          setUploadProgress(100);
-          setStatus("success");
-
-          toast.success(`Файл «${file.name}» успешно проверен`);
-          addToHistory(file, selectedProfile);
-
-          // Navigate to results
-          setTimeout(() => {
-            navigate("/report", {
-              state: {
-                reportData: data,
-                fileName: file.name,
-              },
-            });
-          }, 500);
-        }
-      } catch (err) {
-        clearInterval(progressInterval);
-        const message =
-          err?.response?.data?.error || "Не удалось загрузить файл. Попробуйте ещё раз.";
-        setStatus("error");
-        setError(message);
-        toast.error(message);
-      }
-    },
-    [navigate, selectedProfile, recentFiles],
+  const pageBg = isDark ? "#000000" : "#ffffff";
+  const cardBg = isDark ? "#1C1C1E" : "#F2F2F7";
+  const hoverBg = isDark ? "#2C2C2E" : "#EBEBF0";
+  const activeBg = isDark ? "#3A3A3C" : "#E5E5EA";
+  const textPrimary = isDark ? "#ffffff" : "#000000";
+  const textMuted = commonTextMuted;
+  const textSubtle = commonTextSubtle;
+  const subtleBg = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const fileCardInnerBg = isDark ? "#2C2C2E" : "#ffffff";
+  const headerBg = isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.82)";
+  const iconBtnBg = isDark ? "#2C2C2E" : "#F2F2F7";
+  const iconBtnHover = isDark ? "#3A3A3C" : "#E5E5EA";
+  const iconColor = isDark ? "rgba(235,235,245,0.7)" : "rgba(0,0,0,0.5)";
+  const processingBarColor = isDark
+    ? "linear-gradient(90deg, transparent, #ffffff, transparent)"
+    : "linear-gradient(90deg, transparent, #000000, transparent)";
+  const toastStyle = useMemo(
+    () => ({
+      background: isDark ? "#1C1C1E" : "#ffffff",
+      color: textPrimary,
+      border: "none",
+      borderRadius: "14px",
+      boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.4)" : "0 4px 24px rgba(0,0,0,0.08)",
+    }),
+    [isDark, textPrimary],
   );
 
-  const handleRejected = useCallback(() => {
-    setStatus("error");
-    const message = "Поддерживается только .docx до 20 МБ";
-    setError(message);
-    toast.error(message);
+  const [isHovered, setIsHovered] = useState(false);
+  const [file, setFile] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [profiles, setProfiles] = useState([]);
+  const [selectedProfile, setSelectedProfile] = useState("default_gost");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/profiles/`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setProfiles(data);
+          const saved = localStorage.getItem("cursa_profile");
+          if (saved && data.find((p) => p.id === saved)) setSelectedProfile(saved);
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    accept: ACCEPTED_TYPES,
-    maxFiles: 10,
-    maxSize: 20 * 1024 * 1024,
-    onDrop: handleUpload,
-    onDropRejected: handleRejected,
-    multiple: true,
+  const onDrop = useCallback(
+    (acceptedFiles) => {
+      if (acceptedFiles.length === 0) return;
+      const selected = acceptedFiles[0];
+      if (!selected.name.toLowerCase().endsWith(".docx")) {
+        toast.error("Поддерживается только формат .docx", { style: toastStyle });
+        return;
+      }
+      if (selected.size > 20 * 1024 * 1024) {
+        toast.error("Файл слишком велик (макс 20 МБ)", { style: toastStyle });
+        return;
+      }
+      setFile(selected);
+      toast.success("Файл готов к обработке", {
+        icon: "",
+        style: toastStyle,
+      });
+    },
+    [toastStyle],
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+    },
+    maxFiles: 1,
   });
+
+  const handleProcess = async () => {
+    if (!file) return;
+    setIsProcessing(true);
+    setUploadProgress(10);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("profile_id", selectedProfile || "default_gost");
+      localStorage.setItem("cursa_profile", selectedProfile || "default_gost");
+
+      setUploadProgress(30);
+
+      const response = await fetch(`${API_BASE}/api/document/analyze`, {
+        method: "POST",
+        body: formData,
+      });
+
+      setUploadProgress(80);
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Ошибка сервера: ${response.status}`);
+      }
+
+      const reportData = await response.json();
+      setUploadProgress(100);
+
+      // Сохраняем в историю
+      const totalIssues =
+        reportData?.check_results?.total_issues_count ?? reportData?.total_issues_count ?? 0;
+      addToHistory({
+        fileName: file.name,
+        timestamp: Date.now(),
+        totalIssues,
+        score: reportData?.check_results?.score ?? 0,
+        reportData,
+        profileId: selectedProfile || "default_gost",
+      });
+
+      navigate("/report", {
+        state: {
+          reportData,
+          fileName: file.name,
+          profileId: selectedProfile || "default_gost",
+          profileName:
+            profiles.find((p) => p.id === (selectedProfile || "default_gost"))?.university ||
+            profiles.find((p) => p.id === (selectedProfile || "default_gost"))?.name ||
+            "ГОСТ",
+        },
+      });
+    } catch (err) {
+      toast.error(err.message || "Не удалось обработать документ", { style: toastStyle });
+      setIsProcessing(false);
+      setUploadProgress(0);
+    }
+  };
 
   return (
     <Box
@@ -236,448 +179,560 @@ export default function UploadPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        overflow: "hidden",
-        p: 2,
+        bgcolor: pageBg,
+        color: textPrimary,
       }}
     >
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: "rgba(18, 18, 18, 0.8)",
-            color: "#fff",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            backdropFilter: "blur(10px)",
-          },
-        }}
-      />
+      <Toaster position="bottom-center" />
 
-      <IdleOverlay open={showEasterEgg} onClose={() => setShowEasterEgg(false)} />
-
-      {/* Stars are always active now, but opacity controlled by isIdle */}
-      <StarBackground active={isIdle} />
-
-      {/* Minimal Top Left Logo */}
+      {/* Header  iOS frosted, no border */}
       <Box
-        onClick={handleLogoClick}
+        component={motion.div}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
         sx={{
-          position: "absolute",
-          top: 32,
-          left: 40,
+          px: { xs: 3, md: 5 },
+          py: 2.5,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          position: "sticky",
+          top: 0,
           zIndex: 10,
-          cursor: "pointer",
-          userSelect: "none",
+          background: headerBg,
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
         }}
       >
         <Typography
-          variant="body1"
           sx={{
+            fontSize: "1.05rem",
             fontWeight: 700,
-            color: alpha(theme.palette.common.white, 0.8),
-            fontSize: "1rem",
-            fontFamily: '"Wix Madefor Display", "Montserrat", sans-serif',
             letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            transition: "all 0.3s",
-            "&:hover": {
-              color: theme.palette.common.white,
-              textShadow: "0 0 10px rgba(255,255,255,0.5)",
-            },
+            color: textPrimary,
+            fontFamily: "'Wix Madefor Display', sans-serif",
           }}
         >
-          CURSA / UPLOAD
+          CURSA
         </Typography>
-      </Box>
-
-      {/* Top Right Actions */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: 32,
-          right: 40,
-          zIndex: 10,
-          display: "flex",
-          gap: 2,
-          alignItems: "center",
-        }}
-      >
-        <HealthStatusChip />
-        <Button
-          variant="outlined"
-          startIcon={<SettingsIcon />}
-          onClick={() => navigate("/profiles")}
-          sx={{
-            color: alpha(theme.palette.common.white, 0.8),
-            borderColor: alpha(theme.palette.common.white, 0.2),
-            borderRadius: 2,
-            "&:hover": {
-              borderColor: theme.palette.common.white,
-              color: theme.palette.common.white,
-              bgcolor: alpha(theme.palette.common.white, 0.05),
-            },
-          }}
-        >
-          Профили
-        </Button>
-      </Box>
-
-      <Container
-        maxWidth="lg"
-        sx={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          gap: 4,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Stack spacing={6} alignItems="center" sx={{ flex: 1, maxWidth: "md" }}>
-          {/* Main Card */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 1.5, ease: "easeInOut", delay: 0.5 }} // Delay entry slightly to let stars settle
-            style={{ width: "100%", position: "relative" }}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Button
+            onClick={() => window.scrollTo({ top: 400, behavior: "smooth" })}
+            sx={{
+              borderRadius: "20px",
+              color: textMuted,
+              textTransform: "none",
+              fontWeight: 500,
+              fontSize: "0.875rem",
+              px: 1.5,
+              py: 0.75,
+              boxShadow: "none",
+              border: "none",
+              minWidth: 0,
+              display: { xs: "none", sm: "inline-flex" },
+              "&:hover": { bgcolor: iconBtnHover, color: textPrimary, boxShadow: "none" },
+            }}
           >
-            {/* Ambient Glow Behind Card */}
-            <Box
-              className="glow-effect"
+            Проверить
+          </Button>
+          {["Панель", "История"].map((label, i) => (
+            <Button
+              key={label}
+              onClick={() => navigate(i === 0 ? "/dashboard" : "/history")}
               sx={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                width: "120%",
-                height: "120%",
-                background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.1)} 0%, transparent 60%)`,
-                zIndex: 0,
-                pointerEvents: "none",
-              }}
-            />
-
-            <Paper
-              elevation={0}
-              className="glass-card"
-              sx={{
-                p: 0,
-                overflow: "hidden",
-                position: "relative",
-                zIndex: 2,
+                borderRadius: "20px",
+                color: textMuted,
+                textTransform: "none",
+                fontWeight: 500,
+                fontSize: "0.875rem",
+                px: 1.5,
+                py: 0.75,
+                boxShadow: "none",
+                border: "none",
+                minWidth: 0,
+                display: { xs: "none", md: "inline-flex" },
+                "&:hover": { bgcolor: iconBtnHover, color: textPrimary, boxShadow: "none" },
               }}
             >
-              {/* Dropzone Area */}
+              {label}
+            </Button>
+          ))}
+          <IconButton
+            onClick={colorMode.toggleColorMode}
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              bgcolor: iconBtnBg,
+              color: textPrimary,
+              "&:hover": { bgcolor: iconBtnHover },
+            }}
+          >
+            {isDark ? (
+              <LightModeRounded sx={{ fontSize: 18 }} />
+            ) : (
+              <DarkModeRounded sx={{ fontSize: 18 }} />
+            )}
+          </IconButton>
+          {user ? (
+            <Tooltip title={user.first_name || user.email || "Аккаунт"}>
+              <IconButton
+                onClick={() => navigate("/account")}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  p: 0,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    fontSize: "0.875rem",
+                    fontWeight: 700,
+                    bgcolor: iconBtnBg,
+                    color: textPrimary,
+                  }}
+                >
+                  {(user.first_name?.[0] || user.email?.[0] || "U").toUpperCase()}
+                </Avatar>
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Button
+              onClick={() => navigate("/login")}
+              endIcon={<ArrowForwardRounded sx={{ fontSize: "16px !important" }} />}
+              sx={{
+                borderRadius: "20px",
+                bgcolor: iconBtnBg,
+                color: textPrimary,
+                textTransform: "none",
+                fontWeight: 500,
+                fontSize: "0.875rem",
+                px: 2,
+                py: 0.75,
+                boxShadow: "none",
+                border: "none",
+                minWidth: 0,
+                "&:hover": { bgcolor: iconBtnHover, boxShadow: "none" },
+              }}
+            >
+              Войти
+            </Button>
+          )}
+        </Box>
+      </Box>
+
+      {/* Main Content */}
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          px: { xs: 3, md: 4 },
+          py: { xs: 3, md: 4 },
+        }}
+      >
+        {/* Hero text */}
+        <Box
+          component={motion.div}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65 }}
+          sx={{ textAlign: "center", mb: { xs: 3, md: 4 }, maxWidth: 520, mx: "auto" }}
+        >
+          <Typography
+            component="h1"
+            sx={{
+              fontSize: { xs: "2rem", md: "3.5rem" },
+              fontWeight: 700,
+              lineHeight: 1.15,
+              mb: 2.5,
+              letterSpacing: "-0.025em",
+              color: textPrimary,
+              fontFamily: "'Wix Madefor Display', sans-serif",
+            }}
+          >
+            Идеальный нормоконтроль.
+            <br />
+            Мгновенно.
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: "1rem",
+              color: textMuted,
+              maxWidth: 380,
+              mx: "auto",
+              fontWeight: 400,
+              lineHeight: 1.65,
+            }}
+          >
+            Проверка курсовых и дипломных работ на соответствие ГОСТ и методичкам вуза.
+          </Typography>
+        </Box>
+
+        {/* Profile selector */}
+        {profiles.length > 0 && (
+          <Box
+            component={motion.div}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.45, delay: 0.2 }}
+            sx={{ mb: 2, width: "100%", maxWidth: 480, mx: "auto" }}
+          >
+            <Typography
+              sx={{
+                fontSize: "0.7rem",
+                color: textSubtle,
+                fontWeight: 600,
+                mb: 1.25,
+                textAlign: "center",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Профиль проверки
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                overflowX: "auto",
+                flexWrap: "nowrap",
+                justifyContent: "flex-start",
+                scrollbarWidth: "none",
+                "&::-webkit-scrollbar": { display: "none" },
+                pb: 0.5,
+              }}
+            >
+              {profiles.map((p) => {
+                const label = p.university || p.name;
+                const isSelected = selectedProfile === p.id;
+                return (
+                  <Box
+                    key={p.id}
+                    onClick={() => setSelectedProfile(p.id)}
+                    sx={{
+                      px: 1.75,
+                      py: 0.625,
+                      borderRadius: "20px",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      bgcolor: isSelected ? (isDark ? "#ffffff" : "#000000") : subtleBg,
+                      color: isSelected ? (isDark ? "#000000" : "#ffffff") : textMuted,
+                      fontSize: "0.78rem",
+                      fontWeight: isSelected ? 600 : 500,
+                      transition: "all 0.15s ease",
+                      userSelect: "none",
+                      "&:hover": {
+                        bgcolor: isSelected ? (isDark ? "#e8e8e8" : "#1a1a1a") : hoverBg,
+                      },
+                    }}
+                  >
+                    {label}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+        )}
+
+        {/* Drop zone / File ready */}
+        <AnimatePresence mode="wait">
+          {!file ? (
+            <motion.div
+              key="dropzone"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.3 }}
+              style={{ width: "100%", maxWidth: 480 }}
+            >
               <Box
                 {...getRootProps()}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
                 sx={{
-                  p: 0,
-                  minHeight: 500,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  background: isDragActive ? activeBg : isHovered ? hoverBg : cardBg,
+                  borderRadius: "20px",
+                  p: { xs: "40px 28px", md: "52px 40px" },
+                  textAlign: "center",
                   cursor: "pointer",
-                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                  bgcolor: isDragActive ? alpha(theme.palette.primary.main, 0.05) : "transparent",
-                  position: "relative",
+                  transition: "background 0.18s ease, transform 0.18s ease",
+                  transform: isDragActive ? "scale(0.985)" : "scale(1)",
+                  userSelect: "none",
                 }}
               >
                 <input {...getInputProps()} />
 
-                {!status || status === "idle" ? (
-                  <Stack
-                    spacing={4}
-                    alignItems="center"
-                    sx={{ position: "relative", zIndex: 1, pointerEvents: "none" }}
-                  >
+                {/* File icon */}
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    mx: "auto",
+                    mb: 3,
+                    borderRadius: "14px",
+                    background: fileCardInnerBg,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: isDark ? "0 2px 8px rgba(0,0,0,0.3)" : "0 2px 8px rgba(0,0,0,0.07)",
+                    transition: "box-shadow 0.18s ease",
+                  }}
+                >
+                  <InsertDriveFileRounded
+                    sx={{
+                      fontSize: 25,
+                      color: isDragActive ? textPrimary : iconColor,
+                      transition: "color 0.18s ease",
+                    }}
+                  />
+                </Box>
+
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                    mb: 1,
+                    color: textPrimary,
+                    fontFamily: "'Wix Madefor Display', sans-serif",
+                    fontSize: "1.05rem",
+                  }}
+                >
+                  {isDragActive ? "Отпустите файл здесь" : "Загрузите файл .docx"}
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color: textMuted,
+                    fontSize: "0.875rem",
+                    mb: 3.5,
+                    fontWeight: 400,
+                  }}
+                >
+                  Перетащите или нажмите для выбора
+                </Typography>
+
+                <Box
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    px: 2.5,
+                    py: 1,
+                    borderRadius: "20px",
+                    background: subtleBg,
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: textSubtle, fontWeight: 500 }}>
+                    До 20 МБ
+                  </Typography>
+                  <Box
+                    sx={{
+                      width: 3,
+                      height: 3,
+                      borderRadius: "50%",
+                      background: isDark ? "rgba(235,235,245,0.18)" : "rgba(0,0,0,0.18)",
+                    }}
+                  />
+                  <Typography variant="caption" sx={{ color: textSubtle, fontWeight: 500 }}>
+                    Только DOCX
+                  </Typography>
+                </Box>
+              </Box>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="file-ready"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.3 }}
+              style={{ width: "100%", maxWidth: 440 }}
+            >
+              <Box
+                sx={{
+                  background: isDark ? "#1C1C1E" : cardBg,
+                  borderRadius: "20px",
+                  p: { xs: 3, md: 3.5 },
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {isProcessing && (
+                  <>
                     <motion.div
-                      animate={{
-                        scale: isDragActive ? 1.1 : 1,
-                        y: isDragActive ? -10 : 0,
-                        rotate: isDragActive ? 5 : 0,
-                      }}
-                      transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
-                    >
-                      <CloudUploadIcon
-                        sx={{ fontSize: 80, color: alpha(theme.palette.common.white, 0.8) }}
-                      />
-                    </motion.div>
-
-                    <Box sx={{ textAlign: "center" }}>
-                      <Typography
-                        variant="h3"
-                        sx={{
-                          fontWeight: 700,
-                          letterSpacing: "-0.02em",
-                          color: theme.palette.common.white,
-                          fontSize: { xs: "2rem", md: "2.5rem" },
-                          textShadow: "0 4px 20px rgba(0,0,0,0.5)",
-                          mb: 1,
-                        }}
-                      >
-                        {isDragActive ? "Отпускайте" : "Загрузить документ"}
-                      </Typography>
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          color: alpha(theme.palette.text.secondary, 0.7),
-                          fontWeight: 500,
-                        }}
-                      >
-                        Перетащите файл или нажмите для выбора
-                      </Typography>
-                    </Box>
-
-                    <Chip
-                      label="DOCX"
-                      variant="outlined"
-                      sx={{
-                        borderColor: alpha(theme.palette.common.white, 0.2),
-                        color: alpha(theme.palette.common.white, 0.5),
-                        fontWeight: 600,
-                        letterSpacing: "0.05em",
+                      initial={{ x: "-100%" }}
+                      animate={{ x: "100%" }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 2,
+                        background: processingBarColor,
                       }}
                     />
-                  </Stack>
-                ) : (
-                  status === "loading" && (
-                    <Box sx={{ width: "100%", maxWidth: 320, zIndex: 2, textAlign: "center" }}>
-                      <CircularProgress size={60} thickness={2} sx={{ mb: 4, color: "white" }} />
-                      <Typography
-                        variant="h6"
-                        fontWeight={600}
-                        sx={{ letterSpacing: "0.05em", textTransform: "uppercase", mb: 1 }}
-                      >
-                        Анализируем структуру
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Ищем ошибки оформления и стиля...
-                      </Typography>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1, px: 1 }}>
-                        <Typography
-                          variant="caption"
-                          fontWeight={700}
-                          color="text.secondary"
-                          sx={{ letterSpacing: 1 }}
-                        >
-                          PROGRESS
-                        </Typography>
-                        <Typography variant="caption" fontWeight={700} color="white">
-                          {Math.round(uploadProgress)}%
-                        </Typography>
-                      </Box>
+                    {uploadProgress > 0 && uploadProgress < 100 && (
                       <LinearProgress
                         variant="determinate"
                         value={uploadProgress}
                         sx={{
-                          height: 6,
-                          borderRadius: 3,
-                          bgcolor: "rgba(255,255,255,0.05)",
+                          position: "absolute",
+                          top: 2,
+                          left: 0,
+                          right: 0,
+                          height: 2,
+                          bgcolor: "transparent",
                           "& .MuiLinearProgress-bar": {
-                            borderRadius: 3,
-                            background: "white",
-                            boxShadow: "0 0 15px rgba(255,255,255,0.5)",
+                            bgcolor: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)",
                           },
                         }}
                       />
-                    </Box>
-                  )
+                    )}
+                  </>
                 )}
-              </Box>
 
-              {/* Profile Selector */}
-              {(!status || status === "idle") && profiles.length > 0 && (
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                    mb: 2.5,
+                    textAlign: "center",
+                    color: textPrimary,
+                    fontFamily: "'Wix Madefor Display', sans-serif",
+                    fontSize: "1rem",
+                  }}
+                >
+                  Документ готов
+                </Typography>
+
+                {/* File info */}
                 <Box
                   sx={{
-                    p: 2,
-                    borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                    bgcolor: alpha(theme.palette.background.paper, 0.3),
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    gap: 2,
+                    gap: 1.5,
+                    mb: 3,
+                    p: 2,
+                    borderRadius: "14px",
+                    background: fileCardInnerBg,
                   }}
-                  onClick={(e) => e.stopPropagation()} // Prevent triggering dropzone
                 >
-                  <Typography variant="body2" color="text.secondary" fontWeight={600}>
-                    Профиль проверки:
-                  </Typography>
-                  <FormControl size="small" sx={{ minWidth: 200 }}>
-                    <Select
-                      value={selectedProfile}
-                      onChange={(e) => setSelectedProfile(e.target.value)}
-                      displayEmpty
-                      sx={{
-                        borderRadius: 2,
-                        bgcolor: alpha(theme.palette.common.white, 0.05),
-                        color: "white",
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: alpha(theme.palette.common.white, 0.1),
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: alpha(theme.palette.common.white, 0.3),
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: theme.palette.primary.main,
-                        },
-                        "& .MuiSelect-icon": {
-                          color: alpha(theme.palette.common.white, 0.5),
-                        },
-                      }}
-                    >
-                      {profiles.map((p) => (
-                        <MenuItem key={p.id} value={p.id}>
-                          {p.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
-              )}
-            </Paper>
-          </motion.div>
-        </Stack>
-
-        {/* Recent Files Sidebar */}
-        {recentFiles.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, ease: "easeOut", delay: 0.8 }}
-            style={{ width: 320, flexShrink: 0 }}
-          >
-            <Paper
-              elevation={0}
-              className="glass-card"
-              sx={{
-                p: 3,
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                maxHeight: 500,
-                overflowY: "auto",
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                >
-                  <HistoryIcon fontSize="small" />
-                  История
-                </Typography>
-                <Tooltip title="Очистить историю">
-                  <IconButton size="small" onClick={clearHistory} sx={{ color: "text.secondary" }}>
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-
-              <List sx={{ p: 0 }}>
-                {recentFiles.map((file, idx) => (
-                  <ListItem
-                    key={idx}
+                  <Box
                     sx={{
-                      px: 0,
-                      py: 1.5,
-                      borderBottom:
-                        idx < recentFiles.length - 1
-                          ? `1px solid ${alpha(theme.palette.divider, 0.1)}`
-                          : "none",
+                      width: 40,
+                      height: 40,
+                      borderRadius: "10px",
+                      background: cardBg,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
                     }}
                   >
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      <DescriptionIcon sx={{ color: alpha(theme.palette.primary.main, 0.7) }} />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={file.name}
-                      secondary={new Date(file.date).toLocaleDateString("ru-RU", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      primaryTypographyProps={{ variant: "body2", fontWeight: 600, noWrap: true }}
-                      secondaryTypographyProps={{ variant: "caption", color: "text.secondary" }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </motion.div>
-        )}
-      </Container>
-
-      {/* Batch Results Dialog - Updated Style */}
-      <Dialog
-        open={showBatchDialog}
-        onClose={() => setShowBatchDialog(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          className: "glass-card",
-          sx: { bgcolor: "rgba(10,10,10,0.95)" },
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: "1px solid rgba(255,255,255,0.1)", fontWeight: 700 }}>
-          Результаты обработки
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <List>
-            {batchResults &&
-              batchResults.map((res, index) => (
-                <ListItem
-                  key={index}
-                  sx={{ borderBottom: "1px solid rgba(255,255,255,0.05)", py: 2 }}
-                >
-                  <ListItemIcon>
-                    {res.success ? (
-                      <CheckCircleIcon color="success" />
-                    ) : (
-                      <ErrorIcon color="error" />
-                    )}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Typography variant="subtitle1" fontWeight={600} color="white">
-                        {res.filename}
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {res.success
-                          ? `Найдено ошибок: ${res.check_results?.total_issues_count || 0}`
-                          : res.error}
-                      </Typography>
-                    }
-                  />
-                  {res.success && (
-                    <Button
-                      variant="outlined"
-                      color="inherit"
-                      size="small"
-                      onClick={() => {
-                        setShowBatchDialog(false);
-                        navigate("/report", { state: { reportData: res, fileName: res.filename } });
+                    <DescriptionRounded sx={{ color: textPrimary, fontSize: 20 }} />
+                  </Box>
+                  <Box sx={{ flex: 1, overflow: "hidden" }}>
+                    <Typography
+                      sx={{
+                        fontWeight: 500,
+                        color: textPrimary,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        fontSize: "0.9rem",
                       }}
-                      sx={{ borderColor: "rgba(255,255,255,0.2)" }}
                     >
-                      Отчет
-                    </Button>
-                  )}
-                </ListItem>
-              ))}
-          </List>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-          <Button onClick={() => setShowBatchDialog(false)} color="inherit">
-            Закрыть
-          </Button>
-        </DialogActions>
-      </Dialog>
+                      {file.name}
+                    </Typography>
+                    <Typography sx={{ color: textSubtle, fontSize: "0.78rem" }}>
+                      {(file.size / 1024 / 1024).toFixed(2)} МБ DOCX
+                    </Typography>
+                  </Box>
+                  <IconButton
+                    size="small"
+                    onClick={() => !isProcessing && setFile(null)}
+                    disabled={isProcessing}
+                    sx={{
+                      color: isDark ? "rgba(235,235,245,0.28)" : "rgba(0,0,0,0.28)",
+                      "&:hover": {
+                        color: textPrimary,
+                        bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+                      },
+                    }}
+                  ></IconButton>
+                </Box>
+
+                {/* Selected profile row */}
+                {profiles.length > 0 && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 2,
+                      px: 0.5,
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "0.78rem", color: textSubtle, fontWeight: 500 }}>
+                      Профиль
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.78rem", color: textMuted, fontWeight: 600 }}>
+                      {profiles.find((p) => p.id === selectedProfile)?.university ||
+                        profiles.find((p) => p.id === selectedProfile)?.name ||
+                        selectedProfile}
+                    </Typography>
+                  </Box>
+                )}
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={handleProcess}
+                  disabled={isProcessing}
+                  sx={{
+                    py: 1.75,
+                    borderRadius: "14px",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    textTransform: "none",
+                    bgcolor: isDark ? "#ffffff" : "#000000",
+                    color: isDark ? "#000000" : "#ffffff",
+                    boxShadow: "none",
+                    "&:hover": { bgcolor: isDark ? "#e0e0e0" : "#1a1a1a", boxShadow: "none" },
+                    "&:disabled": {
+                      bgcolor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+                      color: isDark ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.28)",
+                    },
+                  }}
+                >
+                  {isProcessing ? "Анализируем файл..." : "Начать проверку"}
+                </Button>
+              </Box>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Box>
+
+      {/* Footer  no border, just text */}
+      <Box sx={{ py: 3, textAlign: "center" }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: isDark ? "rgba(235,235,245,0.22)" : "rgba(0,0,0,0.22)",
+            fontWeight: 400,
+            letterSpacing: 0.3,
+          }}
+        >
+          2026 CURSA
+        </Typography>
+      </Box>
     </Box>
   );
 }

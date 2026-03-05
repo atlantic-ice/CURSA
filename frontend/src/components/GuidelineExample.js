@@ -1,18 +1,11 @@
-import React from 'react';
-import PropTypes from 'prop-types';
-import {
-  Box,
-  Paper,
-  Typography,
-  Grid,
-  useTheme
-} from '@mui/material';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import { Box, Grid, Paper, Typography, useTheme } from "@mui/material";
+import PropTypes from "prop-types";
 
 /**
  * Компонент для отображения примеров правильного и неправильного оформления
- * 
+ *
  * @param {Object} props
  * @param {string} props.title - Заголовок примера
  * @param {string} props.description - Описание правила оформления
@@ -37,49 +30,51 @@ const GuidelineExample = ({
   incorrectExplanation,
   incorrectFormatting = {},
   correctFormatting = {},
-  sx = {}
+  sx = {},
 }) => {
   const theme = useTheme();
-  
+
   // Форматирование по умолчанию
   const defaultIncorrectFormatting = {
     fontFamily: "'Arial', sans-serif",
-    fontSize: '12pt',
-    textAlign: 'left',
-    lineHeight: 1.0
+    fontSize: "12pt",
+    textAlign: "left",
+    lineHeight: 1.0,
   };
-  
+
   const defaultCorrectFormatting = {
     fontFamily: "'Times New Roman', serif",
-    fontSize: '14pt',
-    textAlign: 'justify',
-    lineHeight: 1.5
+    fontSize: "14pt",
+    textAlign: "justify",
+    lineHeight: 1.5,
   };
-  
+
   // Применяем пользовательское форматирование, если оно задано
   const appliedIncorrectFormatting = { ...defaultIncorrectFormatting, ...incorrectFormatting };
   const appliedCorrectFormatting = { ...defaultCorrectFormatting, ...correctFormatting };
-  
+
   return (
-    <Paper 
-      elevation={0} 
-      sx={{ 
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: 'divider',
-        overflow: 'hidden',
+    <Paper
+      elevation={0}
+      sx={{
+        borderRadius: 60,
+        border: "1px solid",
+        borderColor: "divider",
+        overflow: "hidden",
         mb: 3,
-        ...sx
+        ...sx,
       }}
     >
       {/* Заголовок */}
-      <Box sx={{ 
-        px: 3, 
-        py: 2, 
-        bgcolor: 'background.default',
-        borderBottom: '1px solid',
-        borderColor: 'divider'
-      }}>
+      <Box
+        sx={{
+          px: 3,
+          py: 2,
+          bgcolor: "background.default",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
         <Typography variant="subtitle1" fontWeight={600}>
           {title}
         </Typography>
@@ -89,111 +84,132 @@ const GuidelineExample = ({
           </Typography>
         )}
       </Box>
-      
+
       {/* Примеры */}
       <Grid container>
         {/* Неправильный пример */}
-        <Grid item xs={12} md={6} sx={{ 
-          borderRight: { md: '1px solid' }, 
-          borderBottom: { xs: '1px solid', md: 'none' },
-          borderColor: 'divider' 
-        }}>
-          <Box sx={{ 
-            p: 3,
-            height: '100%',
-            position: 'relative',
-            bgcolor: theme.palette.mode === 'light' ? 'rgba(244, 67, 54, 0.03)' : 'rgba(244, 67, 54, 0.1)',
-          }}>
-            <Box sx={{ 
-              display: 'flex',
-              alignItems: 'center',
-              mb: 2 
-            }}>
+        <Grid
+          item
+          xs={12}
+          md={6}
+          sx={{
+            borderRight: { md: "1px solid" },
+            borderBottom: { xs: "1px solid", md: "none" },
+            borderColor: "divider",
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              height: "100%",
+              position: "relative",
+              bgcolor:
+                theme.palette.mode === "light"
+                  ? "rgba(244, 67, 54, 0.03)"
+                  : "rgba(244, 67, 54, 0.1)",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
               <ErrorOutlineIcon color="error" sx={{ mr: 1 }} />
               <Typography variant="body2" fontWeight={500}>
                 Неправильно
               </Typography>
             </Box>
-            
+
             {/* Текстовый пример */}
-            <Box 
-              sx={{ 
-                p: 2, 
-                borderRadius: 1, 
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: theme.palette.mode === 'light' ? 'rgba(244, 67, 54, 0.3)' : 'rgba(244, 67, 54, 0.5)',
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                bgcolor: "background.paper",
+                border: "1px solid",
+                borderColor:
+                  theme.palette.mode === "light"
+                    ? "rgba(244, 67, 54, 0.3)"
+                    : "rgba(244, 67, 54, 0.5)",
                 mb: incorrectExplanation ? 2 : 0,
-                overflow: 'auto',
+                overflow: "auto",
                 maxHeight: 200,
-                ...appliedIncorrectFormatting
+                ...appliedIncorrectFormatting,
               }}
             >
               {incorrectExample}
             </Box>
-            
+
             {/* Изображение примера если есть */}
             {incorrectImage && (
-              <Box sx={{ mt: 2, mb: incorrectExplanation ? 2 : 0 }}>
-                {incorrectImage}
-              </Box>
+              <Box sx={{ mt: 2, mb: incorrectExplanation ? 2 : 0 }}>{incorrectImage}</Box>
             )}
-            
+
             {/* Пояснение если есть */}
             {incorrectExplanation && (
-              <Typography variant="body2" color="error" sx={{ mt: 1, fontSize: '0.8rem' }}>
+              <Typography variant="body2" color="error" sx={{ mt: 1, fontSize: "0.8rem" }}>
                 {incorrectExplanation}
               </Typography>
             )}
           </Box>
         </Grid>
-        
+
         {/* Правильный пример */}
         <Grid item xs={12} md={6}>
-          <Box sx={{ 
-            p: 3,
-            height: '100%',
-            position: 'relative',
-            bgcolor: theme.palette.mode === 'light' ? 'rgba(76, 175, 80, 0.03)' : 'rgba(76, 175, 80, 0.1)'
-          }}>
-            <Box sx={{ 
-              display: 'flex',
-              alignItems: 'center',
-              mb: 2 
-            }}>
+          <Box
+            sx={{
+              p: 3,
+              height: "100%",
+              position: "relative",
+              bgcolor:
+                theme.palette.mode === "light"
+                  ? "rgba(76, 175, 80, 0.03)"
+                  : "rgba(76, 175, 80, 0.1)",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
               <CheckCircleOutlineIcon color="success" sx={{ mr: 1 }} />
               <Typography variant="body2" fontWeight={500}>
                 Правильно
               </Typography>
             </Box>
-            
+
             {/* Текстовый пример */}
-            <Box 
-              sx={{ 
-                p: 2, 
-                borderRadius: 1, 
-                bgcolor: 'background.paper', 
-                border: '1px solid',
-                borderColor: theme.palette.mode === 'light' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.5)',
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                bgcolor: "background.paper",
+                border: "1px solid",
+                borderColor:
+                  theme.palette.mode === "light"
+                    ? "rgba(76, 175, 80, 0.3)"
+                    : "rgba(76, 175, 80, 0.5)",
                 mb: correctExplanation ? 2 : 0,
-                overflow: 'auto',
+                overflow: "auto",
                 maxHeight: 200,
-                ...appliedCorrectFormatting
+                ...appliedCorrectFormatting,
               }}
             >
               {correctExample}
             </Box>
-            
+
             {/* Изображение примера если есть */}
             {correctImage && (
-              <Box sx={{ mt: 2, mb: correctExplanation ? 2 : 0 }}>
-                {correctImage}
-              </Box>
+              <Box sx={{ mt: 2, mb: correctExplanation ? 2 : 0 }}>{correctImage}</Box>
             )}
-            
+
             {/* Пояснение если есть */}
             {correctExplanation && (
-              <Typography variant="body2" color="success.main" sx={{ mt: 1, fontSize: '0.8rem' }}>
+              <Typography variant="body2" color="success.main" sx={{ mt: 1, fontSize: "0.8rem" }}>
                 {correctExplanation}
               </Typography>
             )}
@@ -232,11 +248,11 @@ GuidelineExample.propTypes = {
 GuidelineExample.defaultProps = {
   correctImage: null,
   incorrectImage: null,
-  correctExplanation: '',
-  incorrectExplanation: '',
+  correctExplanation: "",
+  incorrectExplanation: "",
   incorrectFormatting: {},
   correctFormatting: {},
   sx: {},
 };
 
-export default GuidelineExample; 
+export default GuidelineExample;

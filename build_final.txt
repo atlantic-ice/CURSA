@@ -1,0 +1,130 @@
+
+> frontend@0.1.0 build
+> react-scripts build
+
+(node:31704) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Creating an optimized production build...
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Compiled with warnings.
+
+[eslint] 
+src\components\DocumentViewer.js
+  Line 2:15:  'Paper' is defined but never used       no-unused-vars
+  Line 2:22:  'Typography' is defined but never used  no-unused-vars
+
+src\components\MemeWidget.js
+  Line 107:6:  React Hook useEffect has a missing dependency: 'fetchMeme'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\components\NotificationsPanel.js
+  Line 13:3:  'Button' is defined but never used  no-unused-vars
+
+src\components\ProfileComparison.js
+  Line 129:10:  'expandedCategories' is assigned a value but never used  no-unused-vars
+  Line 221:9:   'toggleCategory' is assigned a value but never used      no-unused-vars
+
+src\components\ProfileEditor.js
+  Line 1:27:    'useEffect' is defined but never used       no-unused-vars
+  Line 171:11:  'theme' is assigned a value but never used  no-unused-vars
+
+src\components\ProfileHistory.js
+  Line 72:8:  React Hook useEffect has a missing dependency: 'fetchHistory'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\components\ProfileImportExport.js
+  Line 38:7:   'VALID_FIELDS' is assigned a value but never used      no-unused-vars
+  Line 67:10:  'exportDialogOpen' is assigned a value but never used  no-unused-vars
+  Line 69:10:  'exportFormat' is assigned a value but never used      no-unused-vars
+  Line 69:24:  'setExportFormat' is assigned a value but never used   no-unused-vars
+  Line 72:9:   'handleFileSelect' is assigned a value but never used  no-unused-vars
+
+src\components\ProfileStatistics.js
+  Line 240:6:  React Hook useMemo has an unnecessary dependency: 'theme'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\components\ProfileValidation.js
+  Line 61:8:  React Hook useEffect has a missing dependency: 'validate'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\AdminPage.js
+  Line 417:6:   React Hook useEffect has missing dependencies: 'fetchFiles', 'fetchLogBackups', 'fetchLogs', and 'fetchSystemInfo'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 424:6:   React Hook useEffect has a missing dependency: 'fetchStatistics'. Either include it or remove the dependency array                                                      react-hooks/exhaustive-deps
+  Line 565:6:   React Hook useEffect has a missing dependency: 'fetchAlertsConfig'. Either include it or remove the dependency array                                                    react-hooks/exhaustive-deps
+  Line 772:33:  'color' is assigned a value but never used                                                                                                                              no-unused-vars
+
+src\pages\CheckPage.js
+  Line 45:9:   'theme' is assigned a value but never used             no-unused-vars
+  Line 163:9:  'downloadDocument' is assigned a value but never used  no-unused-vars
+
+src\pages\ProfilesPage.js
+  Line 151:6:  React Hook useEffect has a missing dependency: 'fetchProfiles'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 158:6:  React Hook useEffect has a missing dependency: 'isCreating'. Either include it or remove the dependency array     react-hooks/exhaustive-deps
+
+src\pages\ReportPage.js
+  Line 352:7:   'CustomTooltip' is assigned a value but never used    no-unused-vars
+  Line 482:7:   'CATEGORY_LABELS' is assigned a value but never used  no-unused-vars
+  Line 752:10:  'activeStep' is assigned a value but never used       no-unused-vars
+  Line 752:22:  'setActiveStep' is assigned a value but never used    no-unused-vars
+  Line 930:9:   'profileInfo' is assigned a value but never used      no-unused-vars
+  Line 951:9:   'severityData' is assigned a value but never used     no-unused-vars
+  Line 957:9:   'categoryData' is assigned a value but never used     no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  183.66 kB  build\static\js\main.f6d31af6.js
+  23.97 kB   build\static\js\834.caf756bb.chunk.js
+  19.46 kB   build\static\js\631.11926336.chunk.js
+  19.33 kB   build\static\js\107.53ee6653.chunk.js
+  16.48 kB   build\static\js\789.4b3227a0.chunk.js
+  14.73 kB   build\static\js\722.45713505.chunk.js
+  14.43 kB   build\static\js\924.d8e97ff1.chunk.js
+  13.33 kB   build\static\js\249.6555e033.chunk.js
+  10.98 kB   build\static\js\139.650b8a09.chunk.js
+  10 kB      build\static\js\170.9d19f7a0.chunk.js
+  9.2 kB     build\static\js\698.57c122f8.chunk.js
+  8.29 kB    build\static\js\65.ed057e93.chunk.js
+  7.82 kB    build\static\js\989.8301122c.chunk.js
+  7.43 kB    build\static\js\424.09e0c395.chunk.js
+  6.82 kB    build\static\js\216.5f165769.chunk.js
+  6.42 kB    build\static\js\115.d51f1323.chunk.js
+  4.71 kB    build\static\js\31.131c9882.chunk.js
+  4.48 kB    build\static\js\154.4fd3a83a.chunk.js
+  3.81 kB    build\static\js\211.21881dae.chunk.js
+  3.72 kB    build\static\js\955.87fe8138.chunk.js
+  3.53 kB    build\static\js\316.bef9f8d5.chunk.js
+  3.33 kB    build\static\js\355.bfc73233.chunk.js
+  3.03 kB    build\static\js\759.e85a55e9.chunk.js
+  2.58 kB    build\static\js\422.fba1cf0c.chunk.js
+  2.54 kB    build\static\js\493.3a12e5d4.chunk.js
+  2.5 kB     build\static\js\768.48d39fdd.chunk.js
+  2.36 kB    build\static\js\89.deecbad0.chunk.js
+  2.12 kB    build\static\css\main.930141d9.css
+  2.09 kB    build\static\js\348.4ac4da6d.chunk.js
+  1.77 kB    build\static\js\453.d855a71b.chunk.js
+  878 B      build\static\css\348.ef7834d5.chunk.css
+  214 B      build\static\css\924.75b1c0ed.chunk.css
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  npm install -g serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+

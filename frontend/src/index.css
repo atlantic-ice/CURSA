@@ -1,91 +1,90 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Wix+Madefor+Display:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
 :root {
-  --font-sans:
-    "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial,
-    sans-serif;
-  --font-display: "Wix Madefor Display", "Montserrat", Arial, sans-serif;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  --neon-purple: #ffffff;
+  --neon-indigo: #ffffff;
+  --bg-dark: #000000;
+  --glass: rgba(20, 20, 20, 0.4);
 }
 
 body {
   margin: 0;
-  font-family: var(--font-sans);
+  font-family: "Inter", "Wix Madefor Display", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #07070a;
-  color: #f8fafc;
+  background-color: var(--bg-dark);
+  color: #ffffff;
+  overflow-x: hidden;
 }
 
-/* Custom Scrollbar */
+code,
+pre {
+  font-family:
+    "JetBrains Mono", source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+/* Stunning Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-  transition: background 0.2s ease;
+  background: var(--glass);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(129, 140, 248, 0.5);
 }
 
-/* Firefox Scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+/* Selection */
+::selection {
+  background: rgba(129, 140, 248, 0.4);
+  color: white;
 }
 
-/* Global Utility Classes */
+/* Glassmorphism helpers for arbitrary elements */
+.glass-panel {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
 
-/* Glassmorphism Card */
-.glass-card {
-  background: rgba(18, 18, 18, 0.6) !important;
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+/* Hover glow for MUI Cards and Papers overridden in App.js */
+.MuiPaper-root {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  background: rgba(255, 255, 255, 0.03) !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+.MuiPaper-root:hover {
+  box-shadow:
+    0 10px 40px -10px rgba(129, 140, 248, 0.2),
+    0 0 15px rgba(232, 121, 249, 0.1) !important;
+  border-color: rgba(129, 140, 248, 0.3) !important;
 }
 
-/* Ambient Glow Animation */
-.glow-effect {
-  animation: pulse-glow 4s infinite alternate;
-}
-
-@keyframes pulse-glow {
-  0% {
-    opacity: 0.3;
-    transform: translate(-50%, -50%) scale(1);
-  }
+/* Pulse animation for logos */
+@keyframes neonPulse {
+  0%,
   100% {
-    opacity: 0.6;
-    transform: translate(-50%, -50%) scale(1.1);
+    text-shadow:
+      0 0 10px rgba(255, 255, 255, 0.8),
+      0 0 20px rgba(129, 140, 248, 0.5);
   }
-}
-
-/* Helper for absolute center */
-.absolute-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  50% {
+    text-shadow:
+      0 0 15px rgba(255, 255, 255, 1),
+      0 0 30px rgba(129, 140, 248, 0.8),
+      0 0 40px rgba(232, 121, 249, 0.5);
+  }
 }

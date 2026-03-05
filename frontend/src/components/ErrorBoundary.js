@@ -1,20 +1,20 @@
-import React from 'react';
-import PropTypes from 'prop-types';
-import { Box, Typography, Button, Paper, Container } from '@mui/material';
-import { ErrorOutline, Refresh } from '@mui/icons-material';
-import logger from '../utils/logger';
+import { ErrorOutline, Refresh } from "@mui/icons-material";
+import { Box, Button, Container, Paper, Typography } from "@mui/material";
+import PropTypes from "prop-types";
+import React from "react";
+import logger from "../utils/logger";
 
 /**
  * ErrorBoundary - компонент для глобальной обработки ошибок React.
- * 
+ *
  * Перехватывает JavaScript ошибки в дочерних компонентах,
  * логирует их и отображает fallback UI вместо белого экрана.
- * 
+ *
  * @example
  * <ErrorBoundary>
  *   <App />
  * </ErrorBoundary>
- * 
+ *
  * @example С кастомным fallback
  * <ErrorBoundary fallback={<CustomErrorPage />}>
  *   <App />
@@ -45,7 +45,7 @@ class ErrorBoundary extends React.Component {
    */
   componentDidCatch(error, errorInfo) {
     // Логируем ошибку через централизованный logger
-    logger.error('ErrorBoundary caught an error:', {
+    logger.error("ErrorBoundary caught an error:", {
       error: error?.toString(),
       stack: error?.stack,
       componentStack: errorInfo?.componentStack,
@@ -91,7 +91,7 @@ class ErrorBoundary extends React.Component {
     if (hasError) {
       // Если передан кастомный fallback, используем его
       if (fallback) {
-        return typeof fallback === 'function'
+        return typeof fallback === "function"
           ? fallback({ error, errorInfo, reset: this.handleReset })
           : fallback;
       }
@@ -101,43 +101,36 @@ class ErrorBoundary extends React.Component {
         <Container maxWidth="sm">
           <Box
             sx={{
-              minHeight: '100vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              minHeight: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               py: 4,
             }}
           >
             <Paper
-              elevation={3}
+              elevation={0}
               sx={{
                 p: 4,
-                textAlign: 'center',
-                borderRadius: 2,
-                background: 'linear-gradient(145deg, #1e1e2e 0%, #2d2d44 100%)',
-                border: '1px solid rgba(139, 92, 246, 0.2)',
+                textAlign: "center",
+                borderRadius: 60,
+                background: "rgba(10, 10, 10, 0.8)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
               }}
             >
               <ErrorOutline
                 sx={{
                   fontSize: 64,
-                  color: 'error.main',
+                  color: "error.main",
                   mb: 2,
                 }}
               />
 
-              <Typography
-                variant="h5"
-                gutterBottom
-                sx={{ color: 'text.primary', fontWeight: 600 }}
-              >
+              <Typography variant="h5" gutterBottom sx={{ color: "text.primary", fontWeight: 600 }}>
                 Что-то пошло не так
               </Typography>
 
-              <Typography
-                variant="body1"
-                sx={{ color: 'text.secondary', mb: 3 }}
-              >
+              <Typography variant="body1" sx={{ color: "text.secondary", mb: 3 }}>
                 Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.
               </Typography>
 
@@ -147,28 +140,28 @@ class ErrorBoundary extends React.Component {
                   sx={{
                     p: 2,
                     mb: 3,
-                    bgcolor: 'rgba(255, 0, 0, 0.1)',
-                    borderRadius: 1,
-                    textAlign: 'left',
+                    bgcolor: "rgba(255, 0, 0, 0.1)",
+                    borderRadius: 60,
+                    textAlign: "left",
                     maxHeight: 200,
-                    overflow: 'auto',
+                    overflow: "auto",
                   }}
                 >
                   <Typography
                     variant="caption"
                     component="pre"
                     sx={{
-                      color: 'error.light',
-                      fontFamily: 'monospace',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
+                      color: "error.light",
+                      fontFamily: "monospace",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
                       m: 0,
                     }}
                   >
                     {error.toString()}
                     {errorInfo?.componentStack && (
                       <>
-                        {'\n\nComponent Stack:'}
+                        {"\n\nComponent Stack:"}
                         {errorInfo.componentStack}
                       </>
                     )}
@@ -176,27 +169,25 @@ class ErrorBoundary extends React.Component {
                 </Paper>
               )}
 
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+              <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
                 <Button
                   variant="contained"
-                  color="primary"
                   startIcon={<Refresh />}
                   onClick={this.handleReload}
                   sx={{
-                    background: 'linear-gradient(45deg, #8B5CF6, #06B6D4)',
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #7C3AED, #0891B2)',
+                    background: "#ededed",
+                    color: "#0a0a0a",
+                    fontWeight: 600,
+                    textTransform: "none",
+                    "&:hover": {
+                      background: "#ffffff",
                     },
                   }}
                 >
                   Перезагрузить
                 </Button>
 
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  onClick={this.handleReset}
-                >
+                <Button variant="outlined" color="secondary" onClick={this.handleReset}>
                   Попробовать снова
                 </Button>
               </Box>
@@ -225,7 +216,7 @@ ErrorBoundary.propTypes = {
 
 ErrorBoundary.defaultProps = {
   fallback: null,
-  showDetails: process.env.NODE_ENV === 'development',
+  showDetails: process.env.NODE_ENV === "development",
   onError: null,
   onReset: null,
 };

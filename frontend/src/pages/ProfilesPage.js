@@ -68,7 +68,6 @@ const isLocal =
 const API_BASE = isLocal ? "" : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
 
 const RuleCard = ({ title, icon, children, delay }) => {
-  const theme = useTheme();
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -81,16 +80,14 @@ const RuleCard = ({ title, icon, children, delay }) => {
         sx={{
           p: 3,
           height: "100%",
-          borderRadius: 3,
-          bgcolor: alpha(theme.palette.background.paper, 0.4),
-          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          transition: "all 0.2s",
+          borderRadius: 1,
+          bgcolor: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          transition: "border-color 0.15s ease",
           display: "flex",
           flexDirection: "column",
           "&:hover": {
-            bgcolor: alpha(theme.palette.background.paper, 0.6),
-            borderColor: alpha(theme.palette.primary.main, 0.3),
-            transform: "translateY(-2px)",
+            borderColor: "rgba(255,255,255,0.18)",
           },
         }}
       >
@@ -98,9 +95,9 @@ const RuleCard = ({ title, icon, children, delay }) => {
           <Box
             sx={{
               p: 1,
-              borderRadius: 2,
-              bgcolor: alpha(theme.palette.primary.main, 0.1),
-              color: theme.palette.primary.main,
+              borderRadius: 1,
+              bgcolor: "rgba(255,255,255,0.05)",
+              color: "rgba(255,255,255,0.45)",
               display: "flex",
             }}
           >
@@ -377,7 +374,12 @@ export default function ProfilesPage() {
               <IconButton
                 onClick={() => navigate("/")}
                 size="small"
-                sx={{ border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 2 }}
+                sx={{
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 1,
+                  color: "rgba(255,255,255,0.5)",
+                  "&:hover": { color: "#fff", borderColor: "rgba(255,255,255,0.3)" },
+                }}
               >
                 <ArrowBackIcon fontSize="small" />
               </IconButton>
@@ -412,9 +414,11 @@ export default function ProfilesPage() {
                   label={`${categoryCounts.gost} ГОСТ`}
                   size="small"
                   sx={{
-                    bgcolor: alpha(theme.palette.success.main, 0.1),
-                    color: "success.main",
+                    bgcolor: "rgba(255,255,255,0.05)",
+                    color: "rgba(255,255,255,0.55)",
                     fontWeight: 600,
+                    borderRadius: 0.5,
+                    border: "1px solid rgba(255,255,255,0.1)",
                   }}
                 />
                 <Chip
@@ -422,9 +426,11 @@ export default function ProfilesPage() {
                   label={`${categoryCounts.university} вузов`}
                   size="small"
                   sx={{
-                    bgcolor: alpha(theme.palette.info.main, 0.1),
-                    color: "info.main",
+                    bgcolor: "rgba(255,255,255,0.05)",
+                    color: "rgba(255,255,255,0.55)",
                     fontWeight: 600,
+                    borderRadius: 0.5,
+                    border: "1px solid rgba(255,255,255,0.1)",
                   }}
                 />
               </Box>
@@ -436,10 +442,11 @@ export default function ProfilesPage() {
                     handleShowComparison();
                   }}
                   sx={{
-                    bgcolor: showComparison
-                      ? alpha(theme.palette.primary.main, 0.1)
-                      : "transparent",
-                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                    borderRadius: 1,
+                    bgcolor: showComparison ? "rgba(255,255,255,0.1)" : "transparent",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: showComparison ? "#fff" : "rgba(255,255,255,0.45)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.07)", color: "#fff" },
                   }}
                 >
                   <CompareArrowsIcon />
@@ -452,10 +459,11 @@ export default function ProfilesPage() {
                     handleShowImportExport();
                   }}
                   sx={{
-                    bgcolor: showImportExport
-                      ? alpha(theme.palette.primary.main, 0.1)
-                      : "transparent",
-                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                    borderRadius: 1,
+                    bgcolor: showImportExport ? "rgba(255,255,255,0.1)" : "transparent",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: showImportExport ? "#fff" : "rgba(255,255,255,0.45)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.07)", color: "#fff" },
                   }}
                 >
                   <FileDownloadIcon />
@@ -468,10 +476,11 @@ export default function ProfilesPage() {
                     handleShowStatistics();
                   }}
                   sx={{
-                    bgcolor: showStatistics
-                      ? alpha(theme.palette.primary.main, 0.1)
-                      : "transparent",
-                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                    borderRadius: 1,
+                    bgcolor: showStatistics ? "rgba(255,255,255,0.1)" : "transparent",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: showStatistics ? "#fff" : "rgba(255,255,255,0.45)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.07)", color: "#fff" },
                   }}
                 >
                   <BarChartIcon />
@@ -484,10 +493,11 @@ export default function ProfilesPage() {
                     handleShowBulkOperations();
                   }}
                   sx={{
-                    bgcolor: showBulkOperations
-                      ? alpha(theme.palette.primary.main, 0.1)
-                      : "transparent",
-                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                    borderRadius: 1,
+                    bgcolor: showBulkOperations ? "rgba(255,255,255,0.1)" : "transparent",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: showBulkOperations ? "#fff" : "rgba(255,255,255,0.45)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.07)", color: "#fff" },
                   }}
                 >
                   <PlaylistPlayIcon />
@@ -503,7 +513,13 @@ export default function ProfilesPage() {
                   handleCreateStart();
                 }}
                 disabled={isCreating}
-                sx={{ borderRadius: 2, fontWeight: 700 }}
+                sx={{
+                  borderRadius: 1,
+                  fontWeight: 700,
+                  bgcolor: "#fff",
+                  color: "#000",
+                  "&:hover": { bgcolor: "rgba(255,255,255,0.85)" },
+                }}
               >
                 Создать профиль
               </Button>
@@ -599,20 +615,18 @@ export default function ProfilesPage() {
                         setIsCreating(false);
                       }}
                       sx={{
-                        borderRadius: 2,
+                        borderRadius: 1,
                         mb: 0.5,
                         py: 1,
-                        transition: "all 0.2s",
+                        transition: "all 0.15s",
                         "&.Mui-selected": {
-                          bgcolor: alpha(theme.palette.primary.main, 0.1),
-                          color: "primary.main",
-                          border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`,
-                          "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.15) },
+                          bgcolor: "rgba(255,255,255,0.08)",
+                          color: "#fff",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
                         },
                         "&:hover": {
-                          bgcolor: alpha(theme.palette.common.white, 0.05),
-                          transform: "translateX(4px)",
+                          bgcolor: "rgba(255,255,255,0.04)",
                         },
                       }}
                     >
@@ -621,8 +635,8 @@ export default function ProfilesPage() {
                           minWidth: 32,
                           color:
                             selectedId === profile.id && !isCreating
-                              ? "primary.main"
-                              : "text.secondary",
+                              ? "rgba(255,255,255,0.8)"
+                              : "rgba(255,255,255,0.3)",
                         }}
                       >
                         {getCategoryIcon(profile.category)}
@@ -635,7 +649,10 @@ export default function ProfilesPage() {
                       />
                       {profile.is_system && (
                         <Tooltip title="Системный профиль">
-                          <VerifiedIcon fontSize="small" sx={{ color: "success.main", ml: 0.5 }} />
+                          <VerifiedIcon
+                            fontSize="small"
+                            sx={{ color: "rgba(255,255,255,0.4)", ml: 0.5 }}
+                          />
                         </Tooltip>
                       )}
                     </ListItemButton>
@@ -995,8 +1012,10 @@ export default function ProfilesPage() {
                               label={sec}
                               size="small"
                               sx={{
-                                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                color: "primary.main",
+                                bgcolor: "rgba(255,255,255,0.06)",
+                                color: "rgba(255,255,255,0.55)",
+                                borderRadius: 0.5,
+                                border: "1px solid rgba(255,255,255,0.1)",
                               }}
                             />
                           ))}

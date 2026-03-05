@@ -203,7 +203,60 @@ RATE_LIMIT=100/minute
 
 ---
 
-## 🛡️ Безопасность
+## � Авторизация через OAuth
+
+CURSA поддерживает вход через **Telegram** и **Yandex** для быстрой регистрации без email.
+
+### Быстрая настройка
+
+1. **Скопируйте примеры конфигурации:**
+
+   ```bash
+   # Backend
+   cp backend/.env.example backend/.env
+
+   # Frontend
+   cp frontend/.env.local.example frontend/.env.local
+   ```
+
+2. **Создайте Telegram бота:**
+   - Откройте [@BotFather](https://t.me/botfather) в Telegram
+   - Создайте бота: `/newbot`
+   - Настройте домен: `/setdomain` → `localhost` (БЕЗ порта!)
+   - Скопируйте токен от @BotFather
+
+3. **Настройте переменные окружения:**
+
+   **Backend** (`backend/.env`):
+
+   ```env
+   TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz1234567890
+   TELEGRAM_BOT_USERNAME=your_bot_username
+   ```
+
+   **Frontend** (`frontend/.env.local`):
+
+   ```env
+   REACT_APP_API_URL=http://localhost:5000
+   REACT_APP_TELEGRAM_BOT_TOKEN=1234567890  # только bot_id (число до :)
+   ```
+
+4. **Запустите приложение** и нажмите "Войти через Telegram"
+
+### 📚 Подробная документация
+
+Полная инструкция по настройке Telegram OAuth: **[docs/TELEGRAM_OAUTH_SETUP.md](docs/TELEGRAM_OAUTH_SETUP.md)**
+
+Включает:
+
+- ✅ Пошаговую настройку @BotFather
+- ✅ Production развертывание с HTTPS
+- ✅ Troubleshooting типичных проблем
+- ✅ Безопасность и best practices
+
+---
+
+## �🛡️ Безопасность
 
 - **Rate Limiting**: Защита от DDoS (100 req/min)
 - **CORS**: Настраиваемые origins

@@ -11,7 +11,7 @@
   align-items: center;
   background-color: #0f172a; /* Slate 900 */
   color: #f8fafc; /* Slate 50 */
-  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
   padding: 1rem;
   overflow: hidden;
 }
@@ -80,18 +80,14 @@
   background: rgba(30, 41, 59, 0.6); /* Slate 800 with opacity */
   backdrop-filter: blur(24px);
   border: 1px solid rgba(148, 163, 184, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .upload-card:hover {
   box-shadow: 0 30px 100px rgba(0, 0, 0, 0.3);
   border-color: rgba(148, 163, 184, 0.2);
-}
-
-.glass-card {
-  background-color: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .upload-dropzone {
@@ -247,13 +243,21 @@
 }
 
 @keyframes float {
-  0% { transform: translate(0, 0); }
-  50% { transform: translate(-20px, 20px); }
-  100% { transform: translate(0, 0); }
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-20px, 20px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
@@ -283,7 +287,11 @@
   min-height: 320px;
   top: -10%;
   left: -10%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0) 70%);
+  background: radial-gradient(
+    circle,
+    rgba(99, 102, 241, 0.2) 0%,
+    rgba(99, 102, 241, 0) 70%
+  );
   animation: float 15s ease-in-out infinite;
 }
 
@@ -294,7 +302,11 @@
   min-height: 280px;
   bottom: -5%;
   right: -5%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0) 70%);
+  background: radial-gradient(
+    circle,
+    rgba(56, 189, 248, 0.2) 0%,
+    rgba(56, 189, 248, 0) 70%
+  );
   filter: blur(120px);
   animation: float 18s ease-in-out infinite reverse;
 }

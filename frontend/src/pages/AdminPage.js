@@ -1,97 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Container, 
-  Tab, 
-  Tabs, 
-  Paper, 
-  Card,
-  CardContent,
-  CardActions,
-  CardHeader,
-  Button, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow,
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import ArticleIcon from "@mui/icons-material/Article";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import ComputerIcon from "@mui/icons-material/Computer";
+import DateRangeIcon from "@mui/icons-material/DateRange";
+import DeleteIcon from "@mui/icons-material/Delete";
+import DnsIcon from "@mui/icons-material/Dns";
+import DownloadIcon from "@mui/icons-material/Download";
+import EmailIcon from "@mui/icons-material/Email";
+import ErrorIcon from "@mui/icons-material/Error";
+import InfoIcon from "@mui/icons-material/Info";
+import LayersClearIcon from "@mui/icons-material/LayersClear";
+import MemoryIcon from "@mui/icons-material/Memory";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import PieChartIcon from "@mui/icons-material/PieChart";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import RestoreIcon from "@mui/icons-material/Restore";
+import SaveIcon from "@mui/icons-material/Save";
+import SdStorageIcon from "@mui/icons-material/SdStorage";
+import StorageIcon from "@mui/icons-material/Storage";
+import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
+import TableChartIcon from "@mui/icons-material/TableChart";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import WarningIcon from "@mui/icons-material/Warning";
+import {
   Alert,
   AlertTitle,
-  IconButton,
-  TextField,
+  Box,
+  Button,
+  Card,
+  CardActions,
+  CardContent,
+  CardHeader,
+  Chip,
+  CircularProgress,
+  Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  CircularProgress,
-  Snackbar,
-  Grid,
   Divider,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Grid,
+  IconButton,
+  InputLabel,
+  LinearProgress,
   List,
   ListItem,
+  ListItemIcon,
   ListItemText,
   ListSubheader,
-  ListItemIcon,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Chip,
-  Switch,
-  FormControlLabel,
-  LinearProgress,
+  MenuItem,
+  Paper,
   Radio,
   RadioGroup,
-  MenuItem,
   Select,
-  FormControl,
-  FormLabel,
-  InputLabel,
-  Menu,
-  Tooltip,
-  ToggleButton,
-  ToggleButtonGroup,
-  Stack,
   Skeleton,
-  ListItemSecondaryAction,
-  Slider
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import LayersClearIcon from '@mui/icons-material/LayersClear';
-import StorageIcon from '@mui/icons-material/Storage';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import InfoIcon from '@mui/icons-material/Info';
-import WarningIcon from '@mui/icons-material/Warning';
-import ErrorIcon from '@mui/icons-material/Error';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import DownloadIcon from '@mui/icons-material/Download';
-import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
-import BackupIcon from '@mui/icons-material/Backup';
-import ArticleIcon from '@mui/icons-material/Article';
-import SaveIcon from '@mui/icons-material/Save';
-import RestoreIcon from '@mui/icons-material/Restore';
-import MemoryIcon from '@mui/icons-material/Memory';
-import SdStorageIcon from '@mui/icons-material/SdStorage';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import ComputerIcon from '@mui/icons-material/Computer';
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import PieChartIcon from '@mui/icons-material/PieChart';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import DateRangeIcon from '@mui/icons-material/DateRange';
-import TodayIcon from '@mui/icons-material/Today';
-import TableChartIcon from '@mui/icons-material/TableChart';
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
-import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
-import SettingsIcon from '@mui/icons-material/Settings';
-import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
-import EmailIcon from '@mui/icons-material/Email';
-import DnsIcon from '@mui/icons-material/Dns';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import axios from 'axios';
-import NotificationsPanel from '../components/NotificationsPanel';
+  Slider,
+  Snackbar,
+  Stack,
+  Switch,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tabs,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import NotificationsPanel from "../components/NotificationsPanel";
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -104,16 +90,19 @@ function TabPanel(props) {
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
 
 const AdminPage = () => {
+  const isLocal =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const API_BASE = isLocal
+    ? "http://localhost:5000"
+    : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
+
   const [tabValue, setTabValue] = useState(0);
   const [files, setFiles] = useState([]);
   const [logs, setLogs] = useState([]);
@@ -128,20 +117,20 @@ const AdminPage = () => {
     cleanup: false,
     systemInfo: false,
     restoreLogs: false,
-    deleteLogBackup: false
+    deleteLogBackup: false,
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState(null);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   const [cleanupDays, setCleanupDays] = useState(30);
-  const [alertInfo, setAlertInfo] = useState({ open: false, message: '', severity: 'info' });
+  const [alertInfo, setAlertInfo] = useState({ open: false, message: "", severity: "info" });
   const [logsLines, setLogsLines] = useState(100);
   const [clearLogsAfterBackup, setClearLogsAfterBackup] = useState(false);
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [backupToRestore, setBackupToRestore] = useState(null);
   const [restoreOptions, setRestoreOptions] = useState({
-    mode: 'append',
-    backup_current: true
+    mode: "append",
+    backup_current: true,
   });
   const [deleteBackupDialogOpen, setDeleteBackupDialogOpen] = useState(false);
   const [backupToDelete, setBackupToDelete] = useState(null);
@@ -151,249 +140,277 @@ const AdminPage = () => {
   const [alertsConfig, setAlertsConfig] = useState(null);
   const [alertsConfigLoading, setAlertsConfigLoading] = useState(false);
   const [alertsConfigUpdating, setAlertsConfigUpdating] = useState(false);
-  
+
   // Загрузка списка файлов
   const fetchFiles = async () => {
     setLoading({ ...loading, files: true });
     try {
-      const response = await axios.get('http://localhost:5000/api/document/list-corrections');
+      const response = await axios.get(`${API_BASE}/api/document/list-corrections`);
       setFiles(response.data.files || []);
     } catch (error) {
-      console.error('Ошибка при получении списка файлов:', error);
-      showAlert('Ошибка при получении списка файлов', 'error');
+      console.error("Ошибка при получении списка файлов:", error);
+      showAlert("Ошибка при получении списка файлов", "error");
     } finally {
       setLoading({ ...loading, files: false });
     }
   };
-  
+
   // Загрузка логов
   const fetchLogs = async () => {
     setLoading({ ...loading, logs: true });
     try {
-      const response = await axios.get(`http://localhost:5000/api/document/admin/logs?lines=${logsLines}`);
+      const response = await axios.get(`${API_BASE}/api/document/admin/logs?lines=${logsLines}`);
       setLogs(response.data.logs || []);
     } catch (error) {
-      console.error('Ошибка при получении логов:', error);
-      showAlert('Ошибка при получении логов', 'error');
+      console.error("Ошибка при получении логов:", error);
+      showAlert("Ошибка при получении логов", "error");
     } finally {
       setLoading({ ...loading, logs: false });
     }
   };
-  
+
   // Загрузка резервных копий логов
   const fetchLogBackups = async () => {
     setLoading({ ...loading, logBackups: true });
     try {
-      const response = await axios.get('http://localhost:5000/api/document/admin/backup/logs');
+      const response = await axios.get(`${API_BASE}/api/document/admin/backup/logs`);
       setLogBackups(response.data.backups || []);
     } catch (error) {
-      console.error('Ошибка при получении резервных копий логов:', error);
-      showAlert('Ошибка при получении резервных копий логов', 'error');
+      console.error("Ошибка при получении резервных копий логов:", error);
+      showAlert("Ошибка при получении резервных копий логов", "error");
     } finally {
       setLoading({ ...loading, logBackups: false });
     }
   };
-  
+
   // Загрузка системной информации
   const fetchSystemInfo = async () => {
     setLoading({ ...loading, systemInfo: true });
     try {
-      const response = await axios.get('http://localhost:5000/api/document/admin/system-info');
+      const response = await axios.get(`${API_BASE}/api/document/admin/system-info`);
       if (response.data.success) {
         setSystemInfo(response.data);
       } else {
-        showAlert('Ошибка при получении системной информации', 'error');
+        showAlert("Ошибка при получении системной информации", "error");
       }
     } catch (error) {
-      console.error('Ошибка при получении системной информации:', error);
-      showAlert('Ошибка при получении системной информации', 'error');
+      console.error("Ошибка при получении системной информации:", error);
+      showAlert("Ошибка при получении системной информации", "error");
     } finally {
       setLoading({ ...loading, systemInfo: false });
     }
   };
-  
+
   // Удаление файла
   const deleteFile = async (filename) => {
     setLoading({ ...loading, deleteFile: true });
     try {
-      const response = await axios.delete(`http://localhost:5000/api/document/admin/files/${filename}`);
+      const response = await axios.delete(`${API_BASE}/api/document/admin/files/${filename}`);
       if (response.data.success) {
-        showAlert(`Файл ${filename} успешно удален`, 'success');
+        showAlert(`Файл ${filename} успешно удален`, "success");
         fetchFiles(); // Обновляем список файлов
       } else {
-        showAlert('Ошибка при удалении файла', 'error');
+        showAlert("Ошибка при удалении файла", "error");
       }
     } catch (error) {
-      console.error('Ошибка при удалении файла:', error);
-      showAlert(`Ошибка при удалении файла: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при удалении файла:", error);
+      showAlert(
+        `Ошибка при удалении файла: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     } finally {
       setLoading({ ...loading, deleteFile: false });
       setDeleteDialogOpen(false);
     }
   };
-  
+
   // Очистка старых файлов
   const cleanupFiles = async () => {
     setLoading({ ...loading, cleanup: true });
     try {
-      const response = await axios.post('http://localhost:5000/api/document/admin/cleanup', {
-        days: cleanupDays
+      const response = await axios.post(`${API_BASE}/api/document/admin/cleanup`, {
+        days: cleanupDays,
       });
-      
+
       if (response.data.success) {
         const { deleted_count, kept_count } = response.data;
-        showAlert(`Очистка завершена. Удалено: ${deleted_count}, Сохранено: ${kept_count}`, 'success');
+        showAlert(
+          `Очистка завершена. Удалено: ${deleted_count}, Сохранено: ${kept_count}`,
+          "success",
+        );
         fetchFiles(); // Обновляем список файлов
       } else {
-        showAlert('Ошибка при очистке файлов', 'error');
+        showAlert("Ошибка при очистке файлов", "error");
       }
     } catch (error) {
-      console.error('Ошибка при очистке файлов:', error);
-      showAlert(`Ошибка при очистке файлов: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при очистке файлов:", error);
+      showAlert(
+        `Ошибка при очистке файлов: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     } finally {
       setLoading({ ...loading, cleanup: false });
       setCleanupDialogOpen(false);
     }
   };
-  
+
   // Создание резервной копии логов
   const backupLogs = async () => {
     setLoading({ ...loading, backupLogs: true });
     try {
-      const response = await axios.post('http://localhost:5000/api/document/admin/backup/logs', {
-        clear_after_backup: clearLogsAfterBackup
+      const response = await axios.post(`${API_BASE}/api/document/admin/backup/logs`, {
+        clear_after_backup: clearLogsAfterBackup,
       });
-      
+
       if (response.data.success) {
-        showAlert('Резервная копия логов успешно создана', 'success');
+        showAlert("Резервная копия логов успешно создана", "success");
         fetchLogBackups(); // Обновляем список резервных копий
         if (clearLogsAfterBackup) {
           fetchLogs(); // Обновляем логи, если они были очищены
         }
       } else {
-        showAlert('Ошибка при создании резервной копии логов', 'error');
+        showAlert("Ошибка при создании резервной копии логов", "error");
       }
     } catch (error) {
-      console.error('Ошибка при создании резервной копии логов:', error);
-      showAlert(`Ошибка при создании резервной копии логов: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при создании резервной копии логов:", error);
+      showAlert(
+        `Ошибка при создании резервной копии логов: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     } finally {
       setLoading({ ...loading, backupLogs: false });
     }
   };
-  
+
   // Восстановление логов из резервной копии
   const restoreLogs = async () => {
     setLoading({ ...loading, restoreLogs: true });
     try {
-      const response = await axios.post(`http://localhost:5000/api/document/admin/backup/logs/restore/${backupToRestore}`, restoreOptions);
-      
+      const response = await axios.post(
+        `${API_BASE}/api/document/admin/backup/logs/restore/${backupToRestore}`,
+        restoreOptions,
+      );
+
       if (response.data.success) {
-        showAlert(`Логи успешно восстановлены из ${backupToRestore}`, 'success');
+        showAlert(`Логи успешно восстановлены из ${backupToRestore}`, "success");
         fetchLogs(); // Обновляем логи
         fetchLogBackups(); // Обновляем список резервных копий
       } else {
-        showAlert('Ошибка при восстановлении логов', 'error');
+        showAlert("Ошибка при восстановлении логов", "error");
       }
     } catch (error) {
-      console.error('Ошибка при восстановлении логов:', error);
-      showAlert(`Ошибка при восстановлении логов: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при восстановлении логов:", error);
+      showAlert(
+        `Ошибка при восстановлении логов: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     } finally {
       setLoading({ ...loading, restoreLogs: false });
       setRestoreDialogOpen(false);
     }
   };
-  
+
   // Удаление резервной копии логов
   const deleteLogBackup = async () => {
     setLoading({ ...loading, deleteLogBackup: true });
     try {
-      const response = await axios.delete(`http://localhost:5000/api/document/admin/backup/logs/${backupToDelete}`);
-      
+      const response = await axios.delete(
+        `${API_BASE}/api/document/admin/backup/logs/${backupToDelete}`,
+      );
+
       if (response.data.success) {
-        showAlert(`Резервная копия логов ${backupToDelete} успешно удалена`, 'success');
+        showAlert(`Резервная копия логов ${backupToDelete} успешно удалена`, "success");
         fetchLogBackups(); // Обновляем список резервных копий
       } else {
-        showAlert('Ошибка при удалении резервной копии логов', 'error');
+        showAlert("Ошибка при удалении резервной копии логов", "error");
       }
     } catch (error) {
-      console.error('Ошибка при удалении резервной копии логов:', error);
-      showAlert(`Ошибка при удалении резервной копии: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при удалении резервной копии логов:", error);
+      showAlert(
+        `Ошибка при удалении резервной копии: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     } finally {
       setLoading({ ...loading, deleteLogBackup: false });
       setDeleteBackupDialogOpen(false);
     }
   };
-  
+
   // Загрузка статистики
   const fetchStatistics = async () => {
     setStatisticsLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/document/admin/statistics?days=${statisticsPeriod}`);
+      const response = await axios.get(
+        `${API_BASE}/api/document/admin/statistics?days=${statisticsPeriod}`,
+      );
       if (response.data.success) {
         setStatistics(response.data.statistics);
       } else {
-        showAlert('Ошибка при получении статистики', 'error');
+        showAlert("Ошибка при получении статистики", "error");
       }
     } catch (error) {
-      console.error('Ошибка при получении статистики:', error);
-      showAlert(`Ошибка при получении статистики: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при получении статистики:", error);
+      showAlert(
+        `Ошибка при получении статистики: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     } finally {
       setStatisticsLoading(false);
     }
   };
-  
+
   // Экспорт системной информации
-  const exportSystemInfo = (format = 'txt') => {
-    window.location.href = `http://localhost:5000/api/document/admin/system-info/export?format=${format}`;
+  const exportSystemInfo = (format = "txt") => {
+    window.location.href = `${API_BASE}/api/document/admin/system-info/export?format=${format}`;
   };
-  
+
   // Экспорт статистики
-  const exportStatistics = (format = 'txt') => {
-    window.location.href = `http://localhost:5000/api/document/admin/statistics/export?days=${statisticsPeriod}&format=${format}`;
+  const exportStatistics = (format = "txt") => {
+    window.location.href = `${API_BASE}/api/document/admin/statistics/export?days=${statisticsPeriod}&format=${format}`;
   };
-  
+
   // Изменение периода статистики
   const handlePeriodChange = (event) => {
     setStatisticsPeriod(parseInt(event.target.value));
   };
-  
+
   // Отображение уведомления
-  const showAlert = (message, severity = 'info') => {
+  const showAlert = (message, severity = "info") => {
     setAlertInfo({ open: true, message, severity });
   };
-  
+
   // Скачивание файла
   const downloadFile = (filename) => {
-    window.location.href = `http://localhost:5000/corrections/${encodeURIComponent(filename)}`;
+    window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filename)}`;
   };
-  
+
   // Скачивание резервной копии логов
   const downloadLogBackup = (filename) => {
-    window.location.href = `http://localhost:5000/api/document/admin/backup/logs/download/${encodeURIComponent(filename)}`;
+    window.location.href = `${API_BASE}/api/document/admin/backup/logs/download/${encodeURIComponent(filename)}`;
   };
-  
+
   // Обработка смены вкладки
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
-  
+
   // Форматирование байтов в удобочитаемый формат
   const formatBytes = (bytes, decimals = 2) => {
-    if (bytes === 0) return '0 Байт';
-    
+    if (bytes === 0) return "0 Байт";
+
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Байт', 'КБ', 'МБ', 'ГБ', 'ТБ'];
-    
+    const sizes = ["Байт", "КБ", "МБ", "ГБ", "ТБ"];
+
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
   };
-  
+
   // Инициализация при загрузке страницы
   useEffect(() => {
     fetchFiles();
-    
+
     if (tabValue === 1) {
       fetchLogs();
       fetchLogBackups();
@@ -401,185 +418,195 @@ const AdminPage = () => {
       fetchSystemInfo();
     }
   }, [tabValue]);
-  
+
   // Загрузка статистики при изменении периода
   useEffect(() => {
     if (tabValue === 2) {
       fetchStatistics();
     }
   }, [statisticsPeriod, tabValue]);
-  
+
   // Функция для форматирования лога
   const formatLogLine = (logLine) => {
     // Определяем тип лога по содержимому
     let icon = <InfoIcon color="info" />;
-    let color = 'info.main';
-    
-    if (logLine.toLowerCase().includes('error')) {
+    let color = "info.main";
+
+    if (logLine.toLowerCase().includes("error")) {
       icon = <ErrorIcon color="error" />;
-      color = 'error.main';
-    } else if (logLine.toLowerCase().includes('warning')) {
+      color = "error.main";
+    } else if (logLine.toLowerCase().includes("warning")) {
       icon = <WarningIcon color="warning" />;
-      color = 'warning.main';
+      color = "warning.main";
     }
-    
+
     return { icon, color, text: logLine };
   };
-  
+
   // Закрытие уведомления
   const handleCloseAlert = () => {
     setAlertInfo({ ...alertInfo, open: false });
   };
-  
+
   // Изменение опций восстановления
   const handleRestoreOptionChange = (event) => {
     setRestoreOptions({
       ...restoreOptions,
-      [event.target.name]: 
-        event.target.type === 'checkbox' 
-          ? event.target.checked 
-          : event.target.value
+      [event.target.name]:
+        event.target.type === "checkbox" ? event.target.checked : event.target.value,
     });
   };
-  
+
   // Форматирование размера файла для статистики
   const formatStatSize = (size) => {
-    if (size === 0) return '0 байт';
-    
+    if (size === 0) return "0 байт";
+
     const k = 1024;
-    const sizes = ['байт', 'КБ', 'МБ', 'ГБ'];
+    const sizes = ["байт", "КБ", "МБ", "ГБ"];
     const i = Math.floor(Math.log(size) / Math.log(k));
-    
+
     return `${parseFloat((size / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
-  
+
   // Загрузка конфигурации оповещений
   const fetchAlertsConfig = async () => {
     setAlertsConfigLoading(true);
     try {
-      const response = await axios.get('http://localhost:5000/api/document/admin/alerts/config');
+      const response = await axios.get(`${API_BASE}/api/document/admin/alerts/config`);
       if (response.data.success) {
         setAlertsConfig(response.data.config);
       } else {
-        showAlert('Ошибка при получении настроек оповещений', 'error');
+        showAlert("Ошибка при получении настроек оповещений", "error");
       }
     } catch (error) {
-      console.error('Ошибка при получении настроек оповещений:', error);
-      showAlert(`Ошибка при получении настроек оповещений: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при получении настроек оповещений:", error);
+      showAlert(
+        `Ошибка при получении настроек оповещений: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     } finally {
       setAlertsConfigLoading(false);
     }
   };
-  
+
   // Обновление конфигурации оповещений
   const updateAlertsConfig = async (newConfig) => {
     setAlertsConfigUpdating(true);
     try {
-      const response = await axios.post('http://localhost:5000/api/document/admin/alerts/config', newConfig);
+      const response = await axios.post(`${API_BASE}/api/document/admin/alerts/config`, newConfig);
       if (response.data.success) {
-        showAlert('Настройки оповещений успешно обновлены', 'success');
+        showAlert("Настройки оповещений успешно обновлены", "success");
         fetchAlertsConfig(); // Обновляем настройки
       } else {
-        showAlert('Ошибка при обновлении настроек оповещений', 'error');
+        showAlert("Ошибка при обновлении настроек оповещений", "error");
       }
     } catch (error) {
-      console.error('Ошибка при обновлении настроек оповещений:', error);
-      showAlert(`Ошибка при обновлении настроек оповещений: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при обновлении настроек оповещений:", error);
+      showAlert(
+        `Ошибка при обновлении настроек оповещений: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     } finally {
       setAlertsConfigUpdating(false);
     }
   };
-  
+
   // Запуск проверки системы на проблемы
   const checkSystem = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/document/admin/alerts/check');
+      const response = await axios.post(`${API_BASE}/api/document/admin/alerts/check`);
       if (response.data.success) {
         const alertsTriggered = response.data.alerts_triggered;
         if (alertsTriggered.length > 0) {
-          showAlert(`Обнаружены проблемы: ${alertsTriggered.length}. Проверьте уведомления.`, 'warning');
+          showAlert(
+            `Обнаружены проблемы: ${alertsTriggered.length}. Проверьте уведомления.`,
+            "warning",
+          );
         } else {
-          showAlert('Проверка системы завершена. Проблем не обнаружено.', 'success');
+          showAlert("Проверка системы завершена. Проблем не обнаружено.", "success");
         }
       } else {
-        showAlert('Ошибка при проверке системы', 'error');
+        showAlert("Ошибка при проверке системы", "error");
       }
     } catch (error) {
-      console.error('Ошибка при проверке системы:', error);
-      showAlert(`Ошибка при проверке системы: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при проверке системы:", error);
+      showAlert(
+        `Ошибка при проверке системы: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     }
   };
-  
+
   // Тестирование системы оповещений
-  const testAlerts = async (type = 'web') => {
+  const testAlerts = async (type = "web") => {
     try {
-      const response = await axios.post('http://localhost:5000/api/document/admin/alerts/test', { type });
+      const response = await axios.post(`${API_BASE}/api/document/admin/alerts/test`, {
+        type,
+      });
       if (response.data.success) {
-        showAlert(`Тестовое оповещение типа "${type}" успешно отправлено`, 'success');
+        showAlert(`Тестовое оповещение типа "${type}" успешно отправлено`, "success");
       } else {
-        showAlert(`Ошибка при отправке тестового оповещения: ${response.data.error}`, 'error');
+        showAlert(`Ошибка при отправке тестового оповещения: ${response.data.error}`, "error");
       }
     } catch (error) {
-      console.error('Ошибка при тестировании оповещений:', error);
-      showAlert(`Ошибка при тестировании оповещений: ${error.response?.data?.error || error.message}`, 'error');
+      console.error("Ошибка при тестировании оповещений:", error);
+      showAlert(
+        `Ошибка при тестировании оповещений: ${error.response?.data?.error || error.message}`,
+        "error",
+      );
     }
   };
-  
+
   // Загрузка настроек оповещений при переключении на вкладку
   useEffect(() => {
     if (tabValue === 3) {
       fetchAlertsConfig();
     }
   }, [tabValue]);
-  
+
   // Обработчик изменения настроек оповещений
   const handleAlertConfigChange = (category, setting, value) => {
     if (!alertsConfig) return;
-    
+
     const newConfig = { ...alertsConfig };
-    
+
     // Для вложенных настроек (email, web)
-    if (category === 'notifications') {
-      const [subCategory, subSetting] = setting.split('.');
+    if (category === "notifications") {
+      const [subCategory, subSetting] = setting.split(".");
       newConfig[category][subCategory][subSetting] = value;
     } else {
       newConfig[category][setting] = value;
     }
-    
+
     setAlertsConfig(newConfig);
   };
-  
+
   // Сохранение настроек оповещений
   const saveAlertsConfig = () => {
     if (!alertsConfig) return;
-    
+
     // Создаем объект только с настройками, без истории уведомлений и других данных
     const configToSave = {
       disk_space: alertsConfig.disk_space,
       error_rate: alertsConfig.error_rate,
       system_load: alertsConfig.system_load,
       memory_usage: alertsConfig.memory_usage,
-      notifications: alertsConfig.notifications
+      notifications: alertsConfig.notifications,
     };
-    
+
     updateAlertsConfig(configToSave);
   };
-  
+
   return (
     <Container maxWidth="lg">
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          gutterBottom
-          sx={{ fontWeight: 700, mb: 1 }}
-        >
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, mb: 1 }}>
           Панель администратора
         </Typography>
         <NotificationsPanel onNotificationRead={fetchAlertsConfig} />
       </Box>
-      
-      <Paper sx={{ width: '100%', mb: 4 }}>
+
+      <Paper sx={{ width: "100%", mb: 4 }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
@@ -592,24 +619,24 @@ const AdminPage = () => {
           <Tab label="Обслуживание" />
           <Tab label="Оповещения" />
         </Tabs>
-        
+
         {/* Вкладка управления файлами */}
         <TabPanel value={tabValue} index={0}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h6" component="h2">
               Исправленные документы
             </Typography>
             <Box>
-              <Button 
-                startIcon={<RefreshIcon />} 
+              <Button
+                startIcon={<RefreshIcon />}
                 onClick={fetchFiles}
                 disabled={loading.files}
                 sx={{ mr: 1 }}
               >
                 Обновить
               </Button>
-              <Button 
-                startIcon={<LayersClearIcon />} 
+              <Button
+                startIcon={<LayersClearIcon />}
                 color="warning"
                 onClick={() => setCleanupDialogOpen(true)}
                 disabled={loading.cleanup || files.length === 0}
@@ -618,9 +645,9 @@ const AdminPage = () => {
               </Button>
             </Box>
           </Box>
-          
+
           {loading.files ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
               <CircularProgress />
             </Box>
           ) : files.length > 0 ? (
@@ -638,15 +665,15 @@ const AdminPage = () => {
                   {files.map((file) => (
                     <TableRow key={file.name}>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <ArticleIcon sx={{ mr: 1, color: 'primary.main' }} />
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          <ArticleIcon sx={{ mr: 1, color: "primary.main" }} />
                           {file.name}
                         </Box>
                       </TableCell>
                       <TableCell>{file.size_formatted}</TableCell>
                       <TableCell>{file.date}</TableCell>
                       <TableCell align="right">
-                        <IconButton 
+                        <IconButton
                           onClick={() => downloadFile(file.name)}
                           color="primary"
                           size="small"
@@ -654,7 +681,7 @@ const AdminPage = () => {
                         >
                           <DownloadIcon />
                         </IconButton>
-                        <IconButton 
+                        <IconButton
                           onClick={() => {
                             setFileToDelete(file.name);
                             setDeleteDialogOpen(true);
@@ -672,19 +699,18 @@ const AdminPage = () => {
             </TableContainer>
           ) : (
             <Alert severity="info">
-              <AlertTitle>Нет файлов</AlertTitle>
-              В директории исправлений пока нет файлов
+              <AlertTitle>Нет файлов</AlertTitle>В директории исправлений пока нет файлов
             </Alert>
           )}
         </TabPanel>
-        
+
         {/* Вкладка журналов */}
         <TabPanel value={tabValue} index={1}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h6" component="h2">
               Журналы системы
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
               <TextField
                 label="Количество строк"
                 type="number"
@@ -693,16 +719,16 @@ const AdminPage = () => {
                 onChange={(e) => setLogsLines(parseInt(e.target.value) || 100)}
                 sx={{ width: 150, mr: 2 }}
               />
-              <Button 
-                startIcon={<RefreshIcon />} 
+              <Button
+                startIcon={<RefreshIcon />}
                 onClick={fetchLogs}
                 disabled={loading.logs}
                 sx={{ mr: 1 }}
               >
                 Обновить
               </Button>
-              <Button 
-                startIcon={<SaveIcon />} 
+              <Button
+                startIcon={<SaveIcon />}
                 color="primary"
                 onClick={backupLogs}
                 disabled={loading.backupLogs}
@@ -711,9 +737,9 @@ const AdminPage = () => {
               </Button>
             </Box>
           </Box>
-          
+
           {/* Опция очистки при резервном копировании */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
             <FormControlLabel
               control={
                 <Switch
@@ -725,20 +751,20 @@ const AdminPage = () => {
               label="Очистить логи после создания резервной копии"
             />
           </Box>
-          
+
           {loading.logs ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
               <CircularProgress />
             </Box>
           ) : logs.length > 0 ? (
-            <Paper 
-              variant="outlined" 
-              sx={{ 
-                p: 0, 
-                maxHeight: 400, 
-                overflow: 'auto',
-                bgcolor: 'background.default',
-                mb: 4
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 0,
+                maxHeight: 400,
+                overflow: "auto",
+                bgcolor: "background.default",
+                mb: 4,
               }}
             >
               <List dense>
@@ -746,18 +772,16 @@ const AdminPage = () => {
                   const { icon, color, text } = formatLogLine(logLine);
                   return (
                     <ListItem key={index} divider>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        {icon}
-                      </ListItemIcon>
+                      <ListItemIcon sx={{ minWidth: 36 }}>{icon}</ListItemIcon>
                       <ListItemText
                         primary={
-                          <Typography 
-                            variant="body2" 
-                            component="pre" 
-                            sx={{ 
-                              fontFamily: 'monospace',
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-all'
+                          <Typography
+                            variant="body2"
+                            component="pre"
+                            sx={{
+                              fontFamily: "monospace",
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-all",
                             }}
                           >
                             {text}
@@ -771,19 +795,18 @@ const AdminPage = () => {
             </Paper>
           ) : (
             <Alert severity="info" sx={{ mb: 4 }}>
-              <AlertTitle>Нет записей</AlertTitle>
-              В журнале пока нет записей
+              <AlertTitle>Нет записей</AlertTitle>В журнале пока нет записей
             </Alert>
           )}
-          
+
           {/* Секция резервных копий логов */}
           <Typography variant="h6" component="h3" sx={{ mt: 4, mb: 2 }}>
             Резервные копии журналов
           </Typography>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-            <Button 
-              startIcon={<RefreshIcon />} 
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+            <Button
+              startIcon={<RefreshIcon />}
               onClick={fetchLogBackups}
               disabled={loading.logBackups}
               size="small"
@@ -791,9 +814,9 @@ const AdminPage = () => {
               Обновить список
             </Button>
           </Box>
-          
+
           {loading.logBackups ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
               <CircularProgress />
             </Box>
           ) : logBackups.length > 0 ? (
@@ -811,15 +834,15 @@ const AdminPage = () => {
                   {logBackups.map((backup) => (
                     <TableRow key={backup.name}>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <SaveIcon sx={{ mr: 1, color: 'primary.main', fontSize: 16 }} />
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          <SaveIcon sx={{ mr: 1, color: "primary.main", fontSize: 16 }} />
                           {backup.name}
                         </Box>
                       </TableCell>
                       <TableCell>{backup.size_formatted}</TableCell>
                       <TableCell>{backup.date}</TableCell>
                       <TableCell align="right">
-                        <IconButton 
+                        <IconButton
                           size="small"
                           onClick={() => downloadLogBackup(backup.name)}
                           color="secondary"
@@ -828,7 +851,7 @@ const AdminPage = () => {
                         >
                           <DownloadIcon fontSize="small" />
                         </IconButton>
-                        <IconButton 
+                        <IconButton
                           size="small"
                           onClick={() => {
                             setBackupToRestore(backup.name);
@@ -840,7 +863,7 @@ const AdminPage = () => {
                         >
                           <RestoreIcon fontSize="small" />
                         </IconButton>
-                        <IconButton 
+                        <IconButton
                           size="small"
                           onClick={() => {
                             setBackupToDelete(backup.name);
@@ -864,16 +887,16 @@ const AdminPage = () => {
             </Alert>
           )}
         </TabPanel>
-        
+
         {/* Вкладка обслуживания системы */}
         <TabPanel value={tabValue} index={2}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h6" component="h2">
               Инструменты обслуживания
             </Typography>
             <Box>
-              <Button 
-                startIcon={<RefreshIcon />} 
+              <Button
+                startIcon={<RefreshIcon />}
                 onClick={() => {
                   fetchSystemInfo();
                   fetchStatistics();
@@ -884,7 +907,7 @@ const AdminPage = () => {
               </Button>
             </Box>
           </Box>
-          
+
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <Card variant="outlined">
@@ -904,8 +927,8 @@ const AdminPage = () => {
                   />
                 </CardContent>
                 <CardActions>
-                  <Button 
-                    startIcon={<LayersClearIcon />} 
+                  <Button
+                    startIcon={<LayersClearIcon />}
                     color="warning"
                     onClick={() => setCleanupDialogOpen(true)}
                     disabled={loading.cleanup}
@@ -915,7 +938,7 @@ const AdminPage = () => {
                 </CardActions>
               </Card>
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <Card variant="outlined">
                 <CardHeader
@@ -925,16 +948,26 @@ const AdminPage = () => {
                 />
                 <CardContent>
                   <Stack spacing={2}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <Typography variant="subtitle1">Системная информация</Typography>
                       <Box>
                         <Tooltip title="Экспорт в TXT">
-                          <IconButton onClick={() => exportSystemInfo('txt')} size="small" sx={{ mr: 1 }}>
+                          <IconButton
+                            onClick={() => exportSystemInfo("txt")}
+                            size="small"
+                            sx={{ mr: 1 }}
+                          >
                             <ArticleIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Экспорт в CSV">
-                          <IconButton onClick={() => exportSystemInfo('csv')} size="small">
+                          <IconButton onClick={() => exportSystemInfo("csv")} size="small">
                             <TableChartIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -957,16 +990,26 @@ const AdminPage = () => {
                           <MenuItem value={365}>Последний год</MenuItem>
                         </Select>
                       </FormControl>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <Typography variant="subtitle1">Статистика использования</Typography>
                         <Box>
                           <Tooltip title="Экспорт в TXT">
-                            <IconButton onClick={() => exportStatistics('txt')} size="small" sx={{ mr: 1 }}>
+                            <IconButton
+                              onClick={() => exportStatistics("txt")}
+                              size="small"
+                              sx={{ mr: 1 }}
+                            >
                               <ArticleIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Экспорт в CSV">
-                            <IconButton onClick={() => exportStatistics('csv')} size="small">
+                            <IconButton onClick={() => exportStatistics("csv")} size="small">
                               <TableChartIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -977,7 +1020,7 @@ const AdminPage = () => {
                 </CardContent>
               </Card>
             </Grid>
-            
+
             {systemInfo && (
               <Grid item xs={12}>
                 <Card variant="outlined">
@@ -995,70 +1038,74 @@ const AdminPage = () => {
                           <ListItemIcon>
                             <ComputerIcon fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText 
-                            primary="Платформа" 
-                            secondary={systemInfo.system.platform} 
+                          <ListItemText
+                            primary="Платформа"
+                            secondary={systemInfo.system.platform}
                           />
                         </ListItem>
                         <ListItem>
                           <ListItemIcon>
                             <MemoryIcon fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText 
-                            primary="Процессор" 
-                            secondary={`${systemInfo.system.processor} (${systemInfo.system.cpu_physical} ядра, ${systemInfo.system.cpu_count} потоков)`} 
+                          <ListItemText
+                            primary="Процессор"
+                            secondary={`${systemInfo.system.processor} (${systemInfo.system.cpu_physical} ядра, ${systemInfo.system.cpu_count} потоков)`}
                           />
                         </ListItem>
                         <ListItem>
                           <ListItemIcon>
                             <SdStorageIcon fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText 
-                            primary="Память" 
+                          <ListItemText
+                            primary="Память"
                             secondary={
                               <Box>
                                 <Typography variant="body2">
-                                  {formatBytes(systemInfo.system.memory_used)} из {formatBytes(systemInfo.system.memory_total)} 
-                                  ({systemInfo.system.memory_percent}%)
+                                  {formatBytes(systemInfo.system.memory_used)} из{" "}
+                                  {formatBytes(systemInfo.system.memory_total)}(
+                                  {systemInfo.system.memory_percent}%)
                                 </Typography>
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={systemInfo.system.memory_percent} 
-                                  sx={{ mt: 1, height: 4, borderRadius: 2 }}
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={systemInfo.system.memory_percent}
+                                  sx={{ mt: 1, height: 4, borderRadius: 16 }}
                                   color={
-                                    systemInfo.system.memory_percent > 80 ? "error" :
-                                    systemInfo.system.memory_percent > 60 ? "warning" : "success"
+                                    systemInfo.system.memory_percent > 80
+                                      ? "error"
+                                      : systemInfo.system.memory_percent > 60
+                                        ? "warning"
+                                        : "success"
                                   }
                                 />
                               </Box>
-                            } 
+                            }
                           />
                         </ListItem>
                         <ListItem>
                           <ListItemIcon>
                             <AccessTimeIcon fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText 
-                            primary="Время работы" 
-                            secondary={systemInfo.system.server_uptime.formatted} 
+                          <ListItemText
+                            primary="Время работы"
+                            secondary={systemInfo.system.server_uptime.formatted}
                           />
                         </ListItem>
                         <ListItem>
                           <ListItemIcon>
                             <ArticleIcon fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText 
-                            primary="Файлы исправлений" 
-                            secondary={`${systemInfo.app.corrections_count} файлов (${formatBytes(systemInfo.app.corrections_size)})`} 
+                          <ListItemText
+                            primary="Файлы исправлений"
+                            secondary={`${systemInfo.app.corrections_count} файлов (${formatBytes(systemInfo.app.corrections_size)})`}
                           />
                         </ListItem>
                         <ListItem>
                           <ListItemIcon>
                             <SaveIcon fontSize="small" />
                           </ListItemIcon>
-                          <ListItemText 
-                            primary="Журналы и резервные копии" 
-                            secondary={`Журнал: ${formatBytes(systemInfo.app.log_size)}, Копии: ${systemInfo.app.log_backups_count} (${formatBytes(systemInfo.app.log_backups_size)})`} 
+                          <ListItemText
+                            primary="Журналы и резервные копии"
+                            secondary={`Журнал: ${formatBytes(systemInfo.app.log_size)}, Копии: ${systemInfo.app.log_backups_count} (${formatBytes(systemInfo.app.log_backups_size)})`}
                           />
                         </ListItem>
                       </List>
@@ -1069,7 +1116,7 @@ const AdminPage = () => {
                     )}
                   </CardContent>
                   {systemInfo && (
-                    <CardActions sx={{ justifyContent: 'flex-end' }}>
+                    <CardActions sx={{ justifyContent: "flex-end" }}>
                       <Typography variant="caption" color="text.secondary">
                         Обновлено: {systemInfo.timestamp}
                       </Typography>
@@ -1078,7 +1125,7 @@ const AdminPage = () => {
                 </Card>
               </Grid>
             )}
-            
+
             {systemInfo && (
               <Grid item xs={12}>
                 <Card variant="outlined">
@@ -1097,29 +1144,41 @@ const AdminPage = () => {
                             </Typography>
                             <Box sx={{ mb: 1 }}>
                               <Typography variant="body2">
-                                {formatBytes(usage.used)} из {formatBytes(usage.total)} ({usage.percent}%)
+                                {formatBytes(usage.used)} из {formatBytes(usage.total)} (
+                                {usage.percent}%)
                               </Typography>
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={usage.percent} 
-                                sx={{ mt: 1, height: 6, borderRadius: 2 }}
+                              <LinearProgress
+                                variant="determinate"
+                                value={usage.percent}
+                                sx={{ mt: 1, height: 6, borderRadius: 16 }}
                                 color={
-                                  usage.percent > 90 ? "error" :
-                                  usage.percent > 70 ? "warning" : "success"
+                                  usage.percent > 90
+                                    ? "error"
+                                    : usage.percent > 70
+                                      ? "warning"
+                                      : "success"
                                 }
                               />
                             </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                               <Typography variant="caption" color="text.secondary">
                                 Свободно: {formatBytes(usage.free)}
                               </Typography>
-                              <Chip 
-                                label={usage.percent > 90 ? "Критически мало" : 
-                                       usage.percent > 70 ? "Заканчивается" : "Достаточно"} 
-                                size="small" 
+                              <Chip
+                                label={
+                                  usage.percent > 90
+                                    ? "Критически мало"
+                                    : usage.percent > 70
+                                      ? "Заканчивается"
+                                      : "Достаточно"
+                                }
+                                size="small"
                                 color={
-                                  usage.percent > 90 ? "error" :
-                                  usage.percent > 70 ? "warning" : "success"
+                                  usage.percent > 90
+                                    ? "error"
+                                    : usage.percent > 70
+                                      ? "warning"
+                                      : "success"
                                 }
                                 variant="outlined"
                               />
@@ -1132,13 +1191,13 @@ const AdminPage = () => {
                 </Card>
               </Grid>
             )}
-            
+
             {/* Статистика по файлам */}
             <Grid item xs={12}>
               <Typography variant="h6" component="h3" sx={{ mb: 2, mt: 2 }}>
                 Статистика использования системы
               </Typography>
-              
+
               {statisticsLoading ? (
                 <Box sx={{ mb: 4 }}>
                   <Skeleton variant="rectangular" height={200} />
@@ -1148,8 +1207,8 @@ const AdminPage = () => {
                   {/* Общая статистика файлов */}
                   <Grid item xs={12} md={6}>
                     <Card variant="outlined">
-                      <CardHeader 
-                        title="Статистика файлов" 
+                      <CardHeader
+                        title="Статистика файлов"
                         subheader={`За период: ${statistics.period.start_date} - ${statistics.period.end_date}`}
                         avatar={<BarChartIcon />}
                       />
@@ -1159,8 +1218,8 @@ const AdminPage = () => {
                             <ListItemIcon>
                               <ArticleIcon fontSize="small" />
                             </ListItemIcon>
-                            <ListItemText 
-                              primary="Общее количество файлов" 
+                            <ListItemText
+                              primary="Общее количество файлов"
                               secondary={statistics.files.total_count}
                             />
                           </ListItem>
@@ -1168,8 +1227,8 @@ const AdminPage = () => {
                             <ListItemIcon>
                               <SdStorageIcon fontSize="small" />
                             </ListItemIcon>
-                            <ListItemText 
-                              primary="Общий размер файлов" 
+                            <ListItemText
+                              primary="Общий размер файлов"
                               secondary={formatStatSize(statistics.files.total_size)}
                             />
                           </ListItem>
@@ -1177,19 +1236,19 @@ const AdminPage = () => {
                             <ListItemIcon>
                               <TrendingUpIcon fontSize="small" />
                             </ListItemIcon>
-                            <ListItemText 
-                              primary="Средний размер файла" 
+                            <ListItemText
+                              primary="Средний размер файла"
                               secondary={formatStatSize(statistics.files.avg_size)}
                             />
                           </ListItem>
-                          
+
                           <Divider sx={{ my: 1 }} />
-                          
+
                           <ListSubheader>Типы файлов:</ListSubheader>
                           {Object.entries(statistics.files.file_types).map(([type, data]) => (
                             <ListItem key={type}>
-                              <ListItemText 
-                                primary={type} 
+                              <ListItemText
+                                primary={type}
                                 secondary={`${data.count} файлов, ${formatStatSize(data.size)}`}
                               />
                             </ListItem>
@@ -1198,12 +1257,12 @@ const AdminPage = () => {
                       </CardContent>
                     </Card>
                   </Grid>
-                  
+
                   {/* Статистика логов */}
                   <Grid item xs={12} md={6}>
                     <Card variant="outlined">
-                      <CardHeader 
-                        title="Статистика журналов" 
+                      <CardHeader
+                        title="Статистика журналов"
                         subheader={`За период: ${statistics.period.start_date} - ${statistics.period.end_date}`}
                         avatar={<PieChartIcon />}
                       />
@@ -1213,8 +1272,8 @@ const AdminPage = () => {
                             <ListItemIcon>
                               <InfoIcon fontSize="small" />
                             </ListItemIcon>
-                            <ListItemText 
-                              primary="Всего записей" 
+                            <ListItemText
+                              primary="Всего записей"
                               secondary={statistics.logs.total_entries}
                             />
                           </ListItem>
@@ -1222,8 +1281,8 @@ const AdminPage = () => {
                             <ListItemIcon>
                               <ErrorIcon fontSize="small" color="error" />
                             </ListItemIcon>
-                            <ListItemText 
-                              primary="Ошибки" 
+                            <ListItemText
+                              primary="Ошибки"
                               secondary={statistics.logs.error_count}
                             />
                           </ListItem>
@@ -1231,8 +1290,8 @@ const AdminPage = () => {
                             <ListItemIcon>
                               <WarningIcon fontSize="small" color="warning" />
                             </ListItemIcon>
-                            <ListItemText 
-                              primary="Предупреждения" 
+                            <ListItemText
+                              primary="Предупреждения"
                               secondary={statistics.logs.warning_count}
                             />
                           </ListItem>
@@ -1240,8 +1299,8 @@ const AdminPage = () => {
                             <ListItemIcon>
                               <InfoIcon fontSize="small" color="info" />
                             </ListItemIcon>
-                            <ListItemText 
-                              primary="Информационные сообщения" 
+                            <ListItemText
+                              primary="Информационные сообщения"
                               secondary={statistics.logs.info_count}
                             />
                           </ListItem>
@@ -1249,12 +1308,12 @@ const AdminPage = () => {
                       </CardContent>
                     </Card>
                   </Grid>
-                  
+
                   {/* Активность по дням недели */}
                   <Grid item xs={12}>
                     <Card variant="outlined">
-                      <CardHeader 
-                        title="Активность по дням недели" 
+                      <CardHeader
+                        title="Активность по дням недели"
                         subheader="Распределение использования системы по дням недели"
                         avatar={<DateRangeIcon />}
                       />
@@ -1273,12 +1332,14 @@ const AdminPage = () => {
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                  {Object.entries(statistics.weekday_stats.files_by_weekday).map(([day, count]) => (
-                                    <TableRow key={day}>
-                                      <TableCell>{day}</TableCell>
-                                      <TableCell align="right">{count}</TableCell>
-                                    </TableRow>
-                                  ))}
+                                  {Object.entries(statistics.weekday_stats.files_by_weekday).map(
+                                    ([day, count]) => (
+                                      <TableRow key={day}>
+                                        <TableCell>{day}</TableCell>
+                                        <TableCell align="right">{count}</TableCell>
+                                      </TableRow>
+                                    ),
+                                  )}
                                 </TableBody>
                               </Table>
                             </TableContainer>
@@ -1296,12 +1357,14 @@ const AdminPage = () => {
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                  {Object.entries(statistics.weekday_stats.logs_by_weekday).map(([day, count]) => (
-                                    <TableRow key={day}>
-                                      <TableCell>{day}</TableCell>
-                                      <TableCell align="right">{count}</TableCell>
-                                    </TableRow>
-                                  ))}
+                                  {Object.entries(statistics.weekday_stats.logs_by_weekday).map(
+                                    ([day, count]) => (
+                                      <TableRow key={day}>
+                                        <TableCell>{day}</TableCell>
+                                        <TableCell align="right">{count}</TableCell>
+                                      </TableRow>
+                                    ),
+                                  )}
                                 </TableBody>
                               </Table>
                             </TableContainer>
@@ -1320,34 +1383,30 @@ const AdminPage = () => {
             </Grid>
           </Grid>
         </TabPanel>
-        
+
         {/* Вкладка настроек оповещений */}
         <TabPanel value={tabValue} index={3}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h6" component="h2">
               Настройки оповещений
             </Typography>
             <Box>
-              <Button 
-                startIcon={<RefreshIcon />} 
+              <Button
+                startIcon={<RefreshIcon />}
                 onClick={fetchAlertsConfig}
                 disabled={alertsConfigLoading}
                 sx={{ mr: 1 }}
               >
                 Обновить
               </Button>
-              <Button 
-                startIcon={<SystemUpdateAltIcon />} 
-                onClick={checkSystem}
-                color="secondary"
-              >
+              <Button startIcon={<SystemUpdateAltIcon />} onClick={checkSystem} color="secondary">
                 Проверить систему
               </Button>
             </Box>
           </Box>
-          
+
           {alertsConfigLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
               <CircularProgress />
             </Box>
           ) : alertsConfig ? (
@@ -1362,8 +1421,10 @@ const AdminPage = () => {
                     action={
                       <Switch
                         checked={alertsConfig.disk_space.enabled}
-                        onChange={(e) => handleAlertConfigChange('disk_space', 'enabled', e.target.checked)}
-                        inputProps={{ 'aria-label': 'Включить оповещения о дисковом пространстве' }}
+                        onChange={(e) =>
+                          handleAlertConfigChange("disk_space", "enabled", e.target.checked)
+                        }
+                        inputProps={{ "aria-label": "Включить оповещения о дисковом пространстве" }}
                       />
                     }
                   />
@@ -1374,7 +1435,9 @@ const AdminPage = () => {
                       </Typography>
                       <Slider
                         value={alertsConfig.disk_space.warning_threshold}
-                        onChange={(e, newValue) => handleAlertConfigChange('disk_space', 'warning_threshold', newValue)}
+                        onChange={(e, newValue) =>
+                          handleAlertConfigChange("disk_space", "warning_threshold", newValue)
+                        }
                         disabled={!alertsConfig.disk_space.enabled}
                         valueLabelDisplay="auto"
                         step={5}
@@ -1382,13 +1445,15 @@ const AdminPage = () => {
                         min={50}
                         max={95}
                       />
-                      
+
                       <Typography gutterBottom sx={{ mt: 2 }}>
                         Критический порог: {alertsConfig.disk_space.critical_threshold}%
                       </Typography>
                       <Slider
                         value={alertsConfig.disk_space.critical_threshold}
-                        onChange={(e, newValue) => handleAlertConfigChange('disk_space', 'critical_threshold', newValue)}
+                        onChange={(e, newValue) =>
+                          handleAlertConfigChange("disk_space", "critical_threshold", newValue)
+                        }
                         disabled={!alertsConfig.disk_space.enabled}
                         valueLabelDisplay="auto"
                         step={5}
@@ -1396,12 +1461,14 @@ const AdminPage = () => {
                         min={60}
                         max={99}
                       />
-                      
+
                       <FormControl fullWidth sx={{ mt: 2 }}>
                         <InputLabel>Интервал проверки</InputLabel>
                         <Select
                           value={alertsConfig.disk_space.check_interval}
-                          onChange={(e) => handleAlertConfigChange('disk_space', 'check_interval', e.target.value)}
+                          onChange={(e) =>
+                            handleAlertConfigChange("disk_space", "check_interval", e.target.value)
+                          }
                           label="Интервал проверки"
                           disabled={!alertsConfig.disk_space.enabled}
                         >
@@ -1419,7 +1486,7 @@ const AdminPage = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               {/* Настройки оповещений о памяти */}
               <Grid item xs={12} md={6}>
                 <Card variant="outlined">
@@ -1430,8 +1497,10 @@ const AdminPage = () => {
                     action={
                       <Switch
                         checked={alertsConfig.memory_usage.enabled}
-                        onChange={(e) => handleAlertConfigChange('memory_usage', 'enabled', e.target.checked)}
-                        inputProps={{ 'aria-label': 'Включить оповещения о памяти' }}
+                        onChange={(e) =>
+                          handleAlertConfigChange("memory_usage", "enabled", e.target.checked)
+                        }
+                        inputProps={{ "aria-label": "Включить оповещения о памяти" }}
                       />
                     }
                   />
@@ -1442,7 +1511,9 @@ const AdminPage = () => {
                       </Typography>
                       <Slider
                         value={alertsConfig.memory_usage.warning_threshold}
-                        onChange={(e, newValue) => handleAlertConfigChange('memory_usage', 'warning_threshold', newValue)}
+                        onChange={(e, newValue) =>
+                          handleAlertConfigChange("memory_usage", "warning_threshold", newValue)
+                        }
                         disabled={!alertsConfig.memory_usage.enabled}
                         valueLabelDisplay="auto"
                         step={5}
@@ -1450,13 +1521,15 @@ const AdminPage = () => {
                         min={50}
                         max={95}
                       />
-                      
+
                       <Typography gutterBottom sx={{ mt: 2 }}>
                         Критический порог: {alertsConfig.memory_usage.critical_threshold}%
                       </Typography>
                       <Slider
                         value={alertsConfig.memory_usage.critical_threshold}
-                        onChange={(e, newValue) => handleAlertConfigChange('memory_usage', 'critical_threshold', newValue)}
+                        onChange={(e, newValue) =>
+                          handleAlertConfigChange("memory_usage", "critical_threshold", newValue)
+                        }
                         disabled={!alertsConfig.memory_usage.enabled}
                         valueLabelDisplay="auto"
                         step={5}
@@ -1464,12 +1537,18 @@ const AdminPage = () => {
                         min={60}
                         max={99}
                       />
-                      
+
                       <FormControl fullWidth sx={{ mt: 2 }}>
                         <InputLabel>Интервал проверки</InputLabel>
                         <Select
                           value={alertsConfig.memory_usage.check_interval}
-                          onChange={(e) => handleAlertConfigChange('memory_usage', 'check_interval', e.target.value)}
+                          onChange={(e) =>
+                            handleAlertConfigChange(
+                              "memory_usage",
+                              "check_interval",
+                              e.target.value,
+                            )
+                          }
                           label="Интервал проверки"
                           disabled={!alertsConfig.memory_usage.enabled}
                         >
@@ -1484,7 +1563,7 @@ const AdminPage = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               {/* Настройки оповещений о нагрузке системы */}
               <Grid item xs={12} md={6}>
                 <Card variant="outlined">
@@ -1495,8 +1574,10 @@ const AdminPage = () => {
                     action={
                       <Switch
                         checked={alertsConfig.system_load.enabled}
-                        onChange={(e) => handleAlertConfigChange('system_load', 'enabled', e.target.checked)}
-                        inputProps={{ 'aria-label': 'Включить оповещения о нагрузке системы' }}
+                        onChange={(e) =>
+                          handleAlertConfigChange("system_load", "enabled", e.target.checked)
+                        }
+                        inputProps={{ "aria-label": "Включить оповещения о нагрузке системы" }}
                       />
                     }
                   />
@@ -1507,7 +1588,9 @@ const AdminPage = () => {
                       </Typography>
                       <Slider
                         value={alertsConfig.system_load.threshold}
-                        onChange={(e, newValue) => handleAlertConfigChange('system_load', 'threshold', newValue)}
+                        onChange={(e, newValue) =>
+                          handleAlertConfigChange("system_load", "threshold", newValue)
+                        }
                         disabled={!alertsConfig.system_load.enabled}
                         valueLabelDisplay="auto"
                         step={5}
@@ -1515,12 +1598,14 @@ const AdminPage = () => {
                         min={50}
                         max={95}
                       />
-                      
+
                       <FormControl fullWidth sx={{ mt: 2 }}>
                         <InputLabel>Интервал проверки</InputLabel>
                         <Select
                           value={alertsConfig.system_load.check_interval}
-                          onChange={(e) => handleAlertConfigChange('system_load', 'check_interval', e.target.value)}
+                          onChange={(e) =>
+                            handleAlertConfigChange("system_load", "check_interval", e.target.value)
+                          }
                           label="Интервал проверки"
                           disabled={!alertsConfig.system_load.enabled}
                         >
@@ -1534,7 +1619,7 @@ const AdminPage = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               {/* Настройки оповещений о частоте ошибок */}
               <Grid item xs={12} md={6}>
                 <Card variant="outlined">
@@ -1545,8 +1630,10 @@ const AdminPage = () => {
                     action={
                       <Switch
                         checked={alertsConfig.error_rate.enabled}
-                        onChange={(e) => handleAlertConfigChange('error_rate', 'enabled', e.target.checked)}
-                        inputProps={{ 'aria-label': 'Включить оповещения о частоте ошибок' }}
+                        onChange={(e) =>
+                          handleAlertConfigChange("error_rate", "enabled", e.target.checked)
+                        }
+                        inputProps={{ "aria-label": "Включить оповещения о частоте ошибок" }}
                       />
                     }
                   />
@@ -1557,7 +1644,9 @@ const AdminPage = () => {
                       </Typography>
                       <Slider
                         value={alertsConfig.error_rate.threshold}
-                        onChange={(e, newValue) => handleAlertConfigChange('error_rate', 'threshold', newValue)}
+                        onChange={(e, newValue) =>
+                          handleAlertConfigChange("error_rate", "threshold", newValue)
+                        }
                         disabled={!alertsConfig.error_rate.enabled}
                         valueLabelDisplay="auto"
                         step={1}
@@ -1565,12 +1654,14 @@ const AdminPage = () => {
                         min={1}
                         max={50}
                       />
-                      
+
                       <FormControl fullWidth sx={{ mt: 2 }}>
                         <InputLabel>Период времени</InputLabel>
                         <Select
                           value={alertsConfig.error_rate.window}
-                          onChange={(e) => handleAlertConfigChange('error_rate', 'window', e.target.value)}
+                          onChange={(e) =>
+                            handleAlertConfigChange("error_rate", "window", e.target.value)
+                          }
                           label="Период времени"
                           disabled={!alertsConfig.error_rate.enabled}
                         >
@@ -1586,7 +1677,7 @@ const AdminPage = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               {/* Настройки уведомлений в веб-интерфейсе */}
               <Grid item xs={12} md={6}>
                 <Card variant="outlined">
@@ -1597,19 +1688,28 @@ const AdminPage = () => {
                     action={
                       <Switch
                         checked={alertsConfig.notifications.web.enabled}
-                        onChange={(e) => handleAlertConfigChange('notifications', 'web.enabled', e.target.checked)}
-                        inputProps={{ 'aria-label': 'Включить уведомления в интерфейсе' }}
+                        onChange={(e) =>
+                          handleAlertConfigChange("notifications", "web.enabled", e.target.checked)
+                        }
+                        inputProps={{ "aria-label": "Включить уведомления в интерфейсе" }}
                       />
                     }
                   />
                   <CardContent>
                     <Box sx={{ opacity: alertsConfig.notifications.web.enabled ? 1 : 0.5 }}>
                       <Typography gutterBottom>
-                        Максимальное количество хранимых уведомлений: {alertsConfig.notifications.web.max_notifications}
+                        Максимальное количество хранимых уведомлений:{" "}
+                        {alertsConfig.notifications.web.max_notifications}
                       </Typography>
                       <Slider
                         value={alertsConfig.notifications.web.max_notifications}
-                        onChange={(e, newValue) => handleAlertConfigChange('notifications', 'web.max_notifications', newValue)}
+                        onChange={(e, newValue) =>
+                          handleAlertConfigChange(
+                            "notifications",
+                            "web.max_notifications",
+                            newValue,
+                          )
+                        }
                         disabled={!alertsConfig.notifications.web.enabled}
                         valueLabelDisplay="auto"
                         step={10}
@@ -1617,11 +1717,11 @@ const AdminPage = () => {
                         min={10}
                         max={200}
                       />
-                      
-                      <Button 
-                        variant="outlined" 
+
+                      <Button
+                        variant="outlined"
                         startIcon={<NotificationsIcon />}
-                        onClick={() => testAlerts('web')}
+                        onClick={() => testAlerts("web")}
                         disabled={!alertsConfig.notifications.web.enabled}
                         sx={{ mt: 2 }}
                         fullWidth
@@ -1632,7 +1732,7 @@ const AdminPage = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               {/* Настройки email уведомлений */}
               <Grid item xs={12} md={6}>
                 <Card variant="outlined">
@@ -1643,8 +1743,14 @@ const AdminPage = () => {
                     action={
                       <Switch
                         checked={alertsConfig.notifications.email.enabled}
-                        onChange={(e) => handleAlertConfigChange('notifications', 'email.enabled', e.target.checked)}
-                        inputProps={{ 'aria-label': 'Включить email уведомления' }}
+                        onChange={(e) =>
+                          handleAlertConfigChange(
+                            "notifications",
+                            "email.enabled",
+                            e.target.checked,
+                          )
+                        }
+                        inputProps={{ "aria-label": "Включить email уведомления" }}
                       />
                     }
                   />
@@ -1655,65 +1761,94 @@ const AdminPage = () => {
                         fullWidth
                         margin="normal"
                         value={alertsConfig.notifications.email.smtp_server}
-                        onChange={(e) => handleAlertConfigChange('notifications', 'email.smtp_server', e.target.value)}
+                        onChange={(e) =>
+                          handleAlertConfigChange(
+                            "notifications",
+                            "email.smtp_server",
+                            e.target.value,
+                          )
+                        }
                         disabled={!alertsConfig.notifications.email.enabled}
                       />
-                      
+
                       <TextField
                         label="SMTP порт"
                         type="number"
                         fullWidth
                         margin="normal"
                         value={alertsConfig.notifications.email.smtp_port}
-                        onChange={(e) => handleAlertConfigChange('notifications', 'email.smtp_port', parseInt(e.target.value) || 587)}
+                        onChange={(e) =>
+                          handleAlertConfigChange(
+                            "notifications",
+                            "email.smtp_port",
+                            parseInt(e.target.value) || 587,
+                          )
+                        }
                         disabled={!alertsConfig.notifications.email.enabled}
                       />
-                      
+
                       <TextField
                         label="SMTP пользователь"
                         fullWidth
                         margin="normal"
                         value={alertsConfig.notifications.email.smtp_user}
-                        onChange={(e) => handleAlertConfigChange('notifications', 'email.smtp_user', e.target.value)}
+                        onChange={(e) =>
+                          handleAlertConfigChange(
+                            "notifications",
+                            "email.smtp_user",
+                            e.target.value,
+                          )
+                        }
                         disabled={!alertsConfig.notifications.email.enabled}
                       />
-                      
+
                       <TextField
                         label="SMTP пароль"
                         type="password"
                         fullWidth
                         margin="normal"
                         value={alertsConfig.notifications.email.smtp_password}
-                        onChange={(e) => handleAlertConfigChange('notifications', 'email.smtp_password', e.target.value)}
+                        onChange={(e) =>
+                          handleAlertConfigChange(
+                            "notifications",
+                            "email.smtp_password",
+                            e.target.value,
+                          )
+                        }
                         disabled={!alertsConfig.notifications.email.enabled}
                       />
-                      
+
                       <TextField
                         label="Email отправителя"
                         fullWidth
                         margin="normal"
                         value={alertsConfig.notifications.email.sender}
-                        onChange={(e) => handleAlertConfigChange('notifications', 'email.sender', e.target.value)}
+                        onChange={(e) =>
+                          handleAlertConfigChange("notifications", "email.sender", e.target.value)
+                        }
                         disabled={!alertsConfig.notifications.email.enabled}
                       />
-                      
+
                       <TextField
                         label="Email получателей"
                         fullWidth
                         margin="normal"
                         helperText="Разделите адреса запятыми"
-                        value={alertsConfig.notifications.email.recipients.join(', ')}
+                        value={alertsConfig.notifications.email.recipients.join(", ")}
                         onChange={(e) => {
-                          const emails = e.target.value.split(',').map(email => email.trim()).filter(email => email);
-                          handleAlertConfigChange('notifications', 'email.recipients', emails);
+                          const emails = e.target.value
+                            .split(",")
+                            .map((email) => email.trim())
+                            .filter((email) => email);
+                          handleAlertConfigChange("notifications", "email.recipients", emails);
                         }}
                         disabled={!alertsConfig.notifications.email.enabled}
                       />
-                      
-                      <Button 
-                        variant="outlined" 
+
+                      <Button
+                        variant="outlined"
                         startIcon={<EmailIcon />}
-                        onClick={() => testAlerts('email')}
+                        onClick={() => testAlerts("email")}
                         disabled={!alertsConfig.notifications.email.enabled}
                         sx={{ mt: 2 }}
                         fullWidth
@@ -1724,12 +1859,12 @@ const AdminPage = () => {
                   </CardContent>
                 </Card>
               </Grid>
-              
+
               {/* Сохранение настроек */}
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                  <Button 
-                    variant="contained" 
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+                  <Button
+                    variant="contained"
                     color="primary"
                     onClick={saveAlertsConfig}
                     disabled={alertsConfigUpdating}
@@ -1748,12 +1883,9 @@ const AdminPage = () => {
           )}
         </TabPanel>
       </Paper>
-      
+
       {/* Диалог подтверждения удаления файла */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Подтверждение удаления</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -1762,8 +1894,8 @@ const AdminPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
-          <Button 
-            onClick={() => deleteFile(fileToDelete)} 
+          <Button
+            onClick={() => deleteFile(fileToDelete)}
             color="error"
             disabled={loading.deleteFile}
             startIcon={loading.deleteFile ? <CircularProgress size={20} /> : <DeleteIcon />}
@@ -1772,22 +1904,20 @@ const AdminPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Диалог подтверждения очистки файлов */}
-      <Dialog
-        open={cleanupDialogOpen}
-        onClose={() => setCleanupDialogOpen(false)}
-      >
+      <Dialog open={cleanupDialogOpen} onClose={() => setCleanupDialogOpen(false)}>
         <DialogTitle>Подтверждение очистки</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Вы действительно хотите удалить все файлы старше {cleanupDays} дней? Это действие нельзя отменить.
+            Вы действительно хотите удалить все файлы старше {cleanupDays} дней? Это действие нельзя
+            отменить.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCleanupDialogOpen(false)}>Отмена</Button>
-          <Button 
-            onClick={cleanupFiles} 
+          <Button
+            onClick={cleanupFiles}
             color="warning"
             disabled={loading.cleanup}
             startIcon={loading.cleanup ? <CircularProgress size={20} /> : <LayersClearIcon />}
@@ -1796,19 +1926,16 @@ const AdminPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Диалог подтверждения восстановления логов */}
-      <Dialog
-        open={restoreDialogOpen}
-        onClose={() => setRestoreDialogOpen(false)}
-      >
+      <Dialog open={restoreDialogOpen} onClose={() => setRestoreDialogOpen(false)}>
         <DialogTitle>Восстановление логов</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Вы собираетесь восстановить логи из резервной копии "{backupToRestore}". 
-            Выберите настройки восстановления:
+            Вы собираетесь восстановить логи из резервной копии "{backupToRestore}". Выберите
+            настройки восстановления:
           </DialogContentText>
-          
+
           <FormControl component="fieldset" sx={{ mb: 2 }}>
             <FormLabel component="legend">Режим восстановления</FormLabel>
             <RadioGroup
@@ -1816,19 +1943,19 @@ const AdminPage = () => {
               value={restoreOptions.mode}
               onChange={handleRestoreOptionChange}
             >
-              <FormControlLabel 
-                value="append" 
-                control={<Radio />} 
-                label="Добавить логи из резервной копии к текущим (в конец файла)" 
+              <FormControlLabel
+                value="append"
+                control={<Radio />}
+                label="Добавить логи из резервной копии к текущим (в конец файла)"
               />
-              <FormControlLabel 
-                value="overwrite" 
-                control={<Radio />} 
-                label="Заменить текущие логи данными из резервной копии" 
+              <FormControlLabel
+                value="overwrite"
+                control={<Radio />}
+                label="Заменить текущие логи данными из резервной копии"
               />
             </RadioGroup>
           </FormControl>
-          
+
           <FormControlLabel
             control={
               <Switch
@@ -1843,8 +1970,8 @@ const AdminPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRestoreDialogOpen(false)}>Отмена</Button>
-          <Button 
-            onClick={restoreLogs} 
+          <Button
+            onClick={restoreLogs}
             color="primary"
             disabled={loading.restoreLogs}
             startIcon={loading.restoreLogs ? <CircularProgress size={20} /> : <RestoreIcon />}
@@ -1853,22 +1980,20 @@ const AdminPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Диалог подтверждения удаления резервной копии логов */}
-      <Dialog
-        open={deleteBackupDialogOpen}
-        onClose={() => setDeleteBackupDialogOpen(false)}
-      >
+      <Dialog open={deleteBackupDialogOpen} onClose={() => setDeleteBackupDialogOpen(false)}>
         <DialogTitle>Подтверждение удаления</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Вы действительно хотите удалить резервную копию логов "{backupToDelete}"? Это действие нельзя отменить.
+            Вы действительно хотите удалить резервную копию логов "{backupToDelete}"? Это действие
+            нельзя отменить.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteBackupDialogOpen(false)}>Отмена</Button>
-          <Button 
-            onClick={deleteLogBackup} 
+          <Button
+            onClick={deleteLogBackup}
             color="error"
             disabled={loading.deleteLogBackup}
             startIcon={loading.deleteLogBackup ? <CircularProgress size={20} /> : <DeleteIcon />}
@@ -1877,13 +2002,9 @@ const AdminPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Уведомление об операциях */}
-      <Snackbar
-        open={alertInfo.open}
-        autoHideDuration={6000}
-        onClose={handleCloseAlert}
-      >
+      <Snackbar open={alertInfo.open} autoHideDuration={6000} onClose={handleCloseAlert}>
         <Alert onClose={handleCloseAlert} severity={alertInfo.severity}>
           {alertInfo.message}
         </Alert>
@@ -1892,4 +2013,4 @@ const AdminPage = () => {
   );
 };
 
-export default AdminPage; 
+export default AdminPage;

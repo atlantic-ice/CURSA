@@ -123,7 +123,7 @@ const ResourcesPage = () => {
                 letterSpacing: 1.5,
                 fontSize: { xs: 28, md: 38 },
                 background: theme => theme.palette.mode === 'dark'
-                  ? 'linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%)'
+                  ? 'linear-gradient(90deg, #ffffff 0%, #ffffff 100%)'
                   : 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',

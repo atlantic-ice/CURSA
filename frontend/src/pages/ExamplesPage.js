@@ -1,22 +1,13 @@
-import React, { useState } from 'react';
-import {
-  Container,
-  Typography,
-  Box,
-  Tabs,
-  Tab,
-  Paper,
-  useTheme
-} from '@mui/material';
-import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
-import TextFormatIcon from '@mui/icons-material/TextFormat';
-import BorderStyleIcon from '@mui/icons-material/BorderStyle';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import TableChartIcon from '@mui/icons-material/TableChart';
-import GuidelineExample from '../components/GuidelineExample';
-import RelatedLinksCard from '../components/RelatedLinksCard';
-import { motion } from 'framer-motion';
+import BorderStyleIcon from "@mui/icons-material/BorderStyle";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import TableChartIcon from "@mui/icons-material/TableChart";
+import TextFormatIcon from "@mui/icons-material/TextFormat";
+import { Box, Container, Paper, Tab, Tabs, Typography, useTheme } from "@mui/material";
+import { motion } from "framer-motion";
+import { useState } from "react";
+import GuidelineExample from "../components/GuidelineExample";
 
 // TabPanel компонент для вкладок
 function TabPanel(props) {
@@ -30,9 +21,7 @@ function TabPanel(props) {
       aria-labelledby={`examples-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ py: 3 }}>{children}</Box>
-      )}
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
     </div>
   );
 }
@@ -41,7 +30,7 @@ function TabPanel(props) {
 function a11yProps(index) {
   return {
     id: `examples-tab-${index}`,
-    'aria-controls': `examples-tabpanel-${index}`,
+    "aria-controls": `examples-tabpanel-${index}`,
   };
 }
 
@@ -56,28 +45,28 @@ const ExamplesPage = () => {
   // Ссылки на связанные разделы
   const relatedLinks = [
     {
-      title: 'Рекомендации по оформлению',
-      description: 'Подробные требования и рекомендации по оформлению курсовых работ',
-      path: '/guidelines',
-      icon: <MenuBookIcon color="primary" />
-    }
+      title: "Рекомендации по оформлению",
+      description: "Подробные требования и рекомендации по оформлению курсовых работ",
+      path: "/guidelines",
+      icon: <MenuBookIcon color="primary" />,
+    },
   ];
 
   return (
-    <Box sx={{ position: 'relative', minHeight: '100vh', pb: 8 }}>
-      {/* WOW-шапка с градиентом */}
-      <Box sx={{
-        position: 'relative',
-        overflow: 'hidden',
-        bgcolor: theme.palette.mode === 'dark'
-          ? 'linear-gradient(120deg, #23272f 0%, #1a1d23 100%)'
-          : 'linear-gradient(120deg, #f8fafc 0%, #e3eafc 100%)',
-        pt: { xs: 7, md: 10 },
-        pb: { xs: 5, md: 7 },
-        mb: 4,
-        borderRadius: { xs: 0, md: 6 },
-      }}>
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+    <Box sx={{ position: "relative", minHeight: "100vh", pb: 8 }}>
+      {/* WOW-шапка */}
+      <Box
+        sx={{
+          position: "relative",
+          overflow: "hidden",
+          bgcolor: "transparent",
+          pt: { xs: 7, md: 10 },
+          pb: { xs: 5, md: 7 },
+          mb: 4,
+          borderRadius: { xs: 0, md: 16 },
+        }}
+      >
+        <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -89,23 +78,14 @@ const ExamplesPage = () => {
               align="center"
               sx={{
                 mb: 2,
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 gap: 1.5,
-                letterSpacing: 1.5,
+                letterSpacing: 0,
                 fontSize: { xs: 28, md: 38 },
-                background: theme => theme.palette.mode === 'dark'
-                  ? 'linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%)'
-                  : 'linear-gradient(90deg, #2563eb 0%, #4f46e5 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                textFillColor: 'transparent',
-                textShadow: theme => theme.palette.mode === 'dark'
-                  ? '0 2px 16px #6366f1cc'
-                  : '0 2px 8px #2563eb33',
+                color: "#ededed",
               }}
             >
               <MenuBookOutlinedIcon sx={{ fontSize: { xs: 28, md: 38 } }} />
@@ -116,31 +96,35 @@ const ExamplesPage = () => {
               color="text.secondary"
               sx={{
                 maxWidth: 800,
-                mx: 'auto',
+                mx: "auto",
                 mb: 1,
                 fontWeight: 500,
                 fontSize: { xs: 16, md: 20 },
                 opacity: 0.92,
               }}
             >
-              Наглядные примеры правильного и неправильного оформления различных элементов курсовой работы.
+              Наглядные примеры правильного и неправильного оформления различных элементов курсовой
+              работы.
             </Typography>
           </motion.div>
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
+      <Container maxWidth="lg" sx={{ position: "relative", zIndex: 2 }}>
         {/* Sticky-tabs с WOW-стилем */}
-        <Paper elevation={0} sx={{
-          borderRadius: 4,
-          border: '1.5px solid',
-          borderColor: 'divider',
-          mb: 4,
-          position: 'sticky',
-          top: { xs: 0, md: 16 },
-          zIndex: 10,
-          bgcolor: theme.palette.background.paper,
-        }}>
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 16,
+            border: "1.5px solid",
+            borderColor: "divider",
+            mb: 4,
+            position: "sticky",
+            top: { xs: 0, md: 16 },
+            zIndex: 10,
+            bgcolor: theme.palette.background.paper,
+          }}
+        >
           <Tabs
             value={tabValue}
             onChange={handleTabChange}
@@ -149,44 +133,65 @@ const ExamplesPage = () => {
             sx={{
               px: 2,
               pt: 1,
-              borderBottom: '1.5px solid',
-              borderColor: 'divider',
-              '& .MuiTab-root': {
-                textTransform: 'none',
+              borderBottom: "1.5px solid",
+              borderColor: "divider",
+              "& .MuiTab-root": {
+                textTransform: "none",
                 fontWeight: 600,
                 fontSize: 18,
-                borderRadius: 3,
+                borderRadius: 60,
                 minHeight: 56,
-                transition: 'all 0.2s',
+                transition: "all 0.2s",
                 mx: 0.5,
                 py: 1.2,
                 px: 2.5,
                 color: theme.palette.text.secondary,
-                '&.Mui-selected': {
-                  color: theme.palette.primary.main,
-                  background: theme.palette.mode === 'dark'
-                    ? 'linear-gradient(90deg,#23272f,#2563eb22)'
-                    : 'linear-gradient(90deg,#e3eafc,#2563eb11)',
+                "&.Mui-selected": {
+                  color: "#ededed",
+                  background: "rgba(255,255,255,0.05)",
                 },
-                '&:hover': {
-                  background: theme.palette.mode === 'dark'
-                    ? 'linear-gradient(90deg,#23272f,#2563eb11)'
-                    : 'linear-gradient(90deg,#f8fafc,#2563eb07)',
-                  color: theme.palette.primary.main,
-                }
+                "&:hover": {
+                  background: "rgba(255,255,255,0.03)",
+                  color: "#ededed",
+                },
               },
-              '& .MuiTabs-indicator': {
+              "& .MuiTabs-indicator": {
                 height: 4,
                 borderRadius: 2,
-                background: 'linear-gradient(90deg,#2563eb,#6366f1)',
-              }
+                background: "linear-gradient(90deg,#2563eb,#6366f1)",
+              },
             }}
           >
-            <Tab icon={<TextFormatIcon />} iconPosition="start" label="Текстовое оформление" {...a11yProps(0)} />
-            <Tab icon={<BorderStyleIcon />} iconPosition="start" label="Заголовки" {...a11yProps(1)} />
-            <Tab icon={<FormatListBulletedIcon />} iconPosition="start" label="Списки" {...a11yProps(2)} />
-            <Tab icon={<MenuBookIcon />} iconPosition="start" label="Библиография" {...a11yProps(3)} />
-            <Tab icon={<TableChartIcon />} iconPosition="start" label="Таблицы и рисунки" {...a11yProps(4)} />
+            <Tab
+              icon={<TextFormatIcon />}
+              iconPosition="start"
+              label="Текстовое оформление"
+              {...a11yProps(0)}
+            />
+            <Tab
+              icon={<BorderStyleIcon />}
+              iconPosition="start"
+              label="Заголовки"
+              {...a11yProps(1)}
+            />
+            <Tab
+              icon={<FormatListBulletedIcon />}
+              iconPosition="start"
+              label="Списки"
+              {...a11yProps(2)}
+            />
+            <Tab
+              icon={<MenuBookIcon />}
+              iconPosition="start"
+              label="Библиография"
+              {...a11yProps(3)}
+            />
+            <Tab
+              icon={<TableChartIcon />}
+              iconPosition="start"
+              label="Таблицы и рисунки"
+              {...a11yProps(4)}
+            />
           </Tabs>
         </Paper>
 
@@ -203,7 +208,8 @@ const ExamplesPage = () => {
                 Примеры оформления основного текста
               </Typography>
               <Typography variant="body1" paragraph>
-                Ниже приведены примеры правильного и неправильного форматирования текста в курсовых работах.
+                Ниже приведены примеры правильного и неправильного форматирования текста в курсовых
+                работах.
               </Typography>
 
               <GuidelineExample
@@ -215,13 +221,13 @@ const ExamplesPage = () => {
                 correctExplanation="Корректный шрифт Times New Roman размером 14 пт с правильным выравниванием."
                 incorrectFormatting={{
                   fontFamily: "'Arial', sans-serif",
-                  fontSize: '12pt',
-                  textAlign: 'left',
+                  fontSize: "12pt",
+                  textAlign: "left",
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'justify',
+                  fontSize: "14pt",
+                  textAlign: "justify",
                 }}
               />
 
@@ -239,12 +245,12 @@ const ExamplesPage = () => {
                 incorrectFormatting={{
                   lineHeight: 1.0,
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
+                  fontSize: "14pt",
                 }}
                 correctFormatting={{
                   lineHeight: 1.5,
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
+                  fontSize: "14pt",
                 }}
               />
 
@@ -260,13 +266,13 @@ const ExamplesPage = () => {
                 incorrectFormatting={{
                   textIndent: 0,
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
+                  fontSize: "14pt",
                   lineHeight: 1.5,
                 }}
                 correctFormatting={{
-                  textIndent: '1.25cm',
+                  textIndent: "1.25cm",
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
+                  fontSize: "14pt",
                   lineHeight: 1.5,
                 }}
               />
@@ -283,15 +289,15 @@ const ExamplesPage = () => {
 Это правильное форматирование для основного текста курсовой работы.`}
                 correctExplanation="Правильное выравнивание текста по ширине страницы."
                 incorrectFormatting={{
-                  textAlign: 'left',
+                  textAlign: "left",
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
+                  fontSize: "14pt",
                   lineHeight: 1.5,
                 }}
                 correctFormatting={{
-                  textAlign: 'justify',
+                  textAlign: "justify",
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
+                  fontSize: "14pt",
                   lineHeight: 1.5,
                 }}
               />
@@ -305,9 +311,10 @@ const ExamplesPage = () => {
                 Примеры оформления заголовков
               </Typography>
               <Typography variant="body1" paragraph>
-                Правильное оформление заголовков различных уровней обеспечивает структурированность работы.
+                Правильное оформление заголовков различных уровней обеспечивает структурированность
+                работы.
               </Typography>
-              
+
               <GuidelineExample
                 title="Заголовок первого уровня"
                 description="Заголовки первого уровня должны быть выровнены по центру, набраны полужирным шрифтом, без точки в конце."
@@ -317,18 +324,18 @@ const ExamplesPage = () => {
                 correctExplanation="Заголовок оформлен правильно: выравнивание по центру, полужирный шрифт, без точки в конце."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  fontWeight: 'bold',
-                  textAlign: 'center',
+                  fontSize: "14pt",
+                  fontWeight: "bold",
+                  textAlign: "center",
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  fontWeight: 'bold',
-                  textAlign: 'center',
+                  fontSize: "14pt",
+                  fontWeight: "bold",
+                  textAlign: "center",
                 }}
               />
-              
+
               <GuidelineExample
                 title="Заголовок второго уровня"
                 description="Заголовки второго уровня должны начинаться с абзацного отступа, набраны полужирным шрифтом, без точки в конце."
@@ -338,20 +345,20 @@ const ExamplesPage = () => {
                 correctExplanation="Заголовок оформлен правильно: с абзацного отступа, есть точка после номера, нет точки в конце заголовка."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  fontWeight: 'bold',
-                  textAlign: 'left',
-                  textIndent: '1.25cm',
+                  fontSize: "14pt",
+                  fontWeight: "bold",
+                  textAlign: "left",
+                  textIndent: "1.25cm",
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  fontWeight: 'bold',
-                  textAlign: 'left',
-                  textIndent: '1.25cm',
+                  fontSize: "14pt",
+                  fontWeight: "bold",
+                  textAlign: "left",
+                  textIndent: "1.25cm",
                 }}
               />
-              
+
               <GuidelineExample
                 title="Нумерация заголовков"
                 description="Заголовки должны иметь последовательную и логичную нумерацию, отражающую иерархию."
@@ -373,15 +380,15 @@ const ExamplesPage = () => {
                 correctExplanation="Правильная последовательная нумерация заголовков."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  fontWeight: 'bold',
-                  whiteSpace: 'pre-line',
+                  fontSize: "14pt",
+                  fontWeight: "bold",
+                  whiteSpace: "pre-line",
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  fontWeight: 'bold',
-                  whiteSpace: 'pre-line',
+                  fontSize: "14pt",
+                  fontWeight: "bold",
+                  whiteSpace: "pre-line",
                 }}
               />
             </Box>
@@ -394,9 +401,10 @@ const ExamplesPage = () => {
                 Примеры оформления списков
               </Typography>
               <Typography variant="body1" paragraph>
-                В курсовой работе могут использоваться нумерованные и маркированные списки, которые должны быть оформлены единообразно.
+                В курсовой работе могут использоваться нумерованные и маркированные списки, которые
+                должны быть оформлены единообразно.
               </Typography>
-              
+
               <GuidelineExample
                 title="Маркированный список"
                 description="Маркированные списки используются для перечисления однородных элементов без указания порядка или приоритета."
@@ -412,18 +420,18 @@ const ExamplesPage = () => {
                 correctExplanation="Правильно: все элементы списка имеют одинаковые маркеры."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  whiteSpace: 'pre-line',
+                  fontSize: "14pt",
+                  whiteSpace: "pre-line",
                   lineHeight: 1.5,
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  whiteSpace: 'pre-line',
+                  fontSize: "14pt",
+                  whiteSpace: "pre-line",
                   lineHeight: 1.5,
                 }}
               />
-              
+
               <GuidelineExample
                 title="Нумерованный список"
                 description="Нумерованные списки используются, когда важен порядок или последовательность элементов."
@@ -441,18 +449,18 @@ const ExamplesPage = () => {
                 correctExplanation="Правильно: все элементы списка имеют одинаковый формат нумерации."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  whiteSpace: 'pre-line',
+                  fontSize: "14pt",
+                  whiteSpace: "pre-line",
                   lineHeight: 1.5,
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  whiteSpace: 'pre-line',
+                  fontSize: "14pt",
+                  whiteSpace: "pre-line",
                   lineHeight: 1.5,
                 }}
               />
-              
+
               <GuidelineExample
                 title="Вложенные списки"
                 description="При использовании вложенных списков каждый уровень должен иметь свой тип маркера или нумерации."
@@ -474,14 +482,14 @@ const ExamplesPage = () => {
                 correctExplanation="Правильно: разные уровни вложенности имеют разный тип нумерации."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  whiteSpace: 'pre-line',
+                  fontSize: "14pt",
+                  whiteSpace: "pre-line",
                   lineHeight: 1.5,
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  whiteSpace: 'pre-line',
+                  fontSize: "14pt",
+                  whiteSpace: "pre-line",
                   lineHeight: 1.5,
                 }}
               />
@@ -495,9 +503,10 @@ const ExamplesPage = () => {
                 Примеры оформления библиографии
               </Typography>
               <Typography variant="body1" paragraph>
-                Список использованной литературы должен быть оформлен в соответствии с ГОСТ 7.1-2003.
+                Список использованной литературы должен быть оформлен в соответствии с ГОСТ
+                7.1-2003.
               </Typography>
-              
+
               <GuidelineExample
                 title="Книга (один автор)"
                 description="Правила оформления книги с одним автором в списке литературы."
@@ -507,18 +516,18 @@ const ExamplesPage = () => {
                 correctExplanation="Соблюдены все правила оформления по ГОСТ 7.1-2003."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'left',
+                  fontSize: "14pt",
+                  textAlign: "left",
                   lineHeight: 1.5,
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'left',
+                  fontSize: "14pt",
+                  textAlign: "left",
                   lineHeight: 1.5,
                 }}
               />
-              
+
               <GuidelineExample
                 title="Статья в журнале"
                 description="Правила оформления статьи из периодического издания."
@@ -528,18 +537,18 @@ const ExamplesPage = () => {
                 correctExplanation="Правильное оформление с двойной косой чертой, тире и всеми необходимыми знаками препинания."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'left',
+                  fontSize: "14pt",
+                  textAlign: "left",
                   lineHeight: 1.5,
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'left',
+                  fontSize: "14pt",
+                  textAlign: "left",
                   lineHeight: 1.5,
                 }}
               />
-              
+
               <GuidelineExample
                 title="Электронный ресурс"
                 description="Правила оформления источника из интернета."
@@ -549,14 +558,14 @@ const ExamplesPage = () => {
                 correctExplanation="Правильное оформление с указанием типа ресурса, источника и даты обращения."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'left',
+                  fontSize: "14pt",
+                  textAlign: "left",
                   lineHeight: 1.5,
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'left',
+                  fontSize: "14pt",
+                  textAlign: "left",
                   lineHeight: 1.5,
                 }}
               />
@@ -570,9 +579,10 @@ const ExamplesPage = () => {
                 Примеры оформления таблиц и рисунков
               </Typography>
               <Typography variant="body1" paragraph>
-                Таблицы и рисунки должны быть оформлены единообразно и иметь соответствующие подписи.
+                Таблицы и рисунки должны быть оформлены единообразно и иметь соответствующие
+                подписи.
               </Typography>
-              
+
               <GuidelineExample
                 title="Оформление таблицы"
                 description="Таблицы должны иметь номер и название над таблицей."
@@ -591,15 +601,15 @@ const ExamplesPage = () => {
                 correctExplanation="Правильно: номер и название таблицы расположены над таблицей, название указано после номера через тире."
                 incorrectFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'left',
-                  whiteSpace: 'pre-line'
+                  fontSize: "14pt",
+                  textAlign: "left",
+                  whiteSpace: "pre-line",
                 }}
                 correctFormatting={{
                   fontFamily: "'Times New Roman', serif",
-                  fontSize: '14pt',
-                  textAlign: 'center',
-                  whiteSpace: 'pre-line'
+                  fontSize: "14pt",
+                  textAlign: "center",
+                  whiteSpace: "pre-line",
                 }}
               />
             </Box>

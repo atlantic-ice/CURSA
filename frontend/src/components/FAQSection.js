@@ -1,20 +1,18 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import {
-  Box,
-  Typography,
   Accordion,
-  AccordionSummary,
   AccordionDetails,
+  AccordionSummary,
+  Box,
   Paper,
-  Container
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+  Typography,
+} from "@mui/material";
+import PropTypes from "prop-types";
 
 /**
  * Компонент для отображения секции часто задаваемых вопросов
- * 
+ *
  * @param {Object} props
  * @param {Array<Object>} props.questions - Массив объектов с вопросами и ответами
  * @param {string} props.title - Заголовок секции
@@ -23,59 +21,59 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 const FAQSection = ({ questions = [], title = "Часто задаваемые вопросы", sx = {} }) => {
   return (
     <Box sx={{ ...sx }}>
-      <Box sx={{ mb: 3, textAlign: 'center' }}>
-        <Typography 
-          variant="h5" 
-          component="h2" 
-          sx={{ 
-            mb: 1.5, 
+      <Box sx={{ mb: 3, textAlign: "center" }}>
+        <Typography
+          variant="h5"
+          component="h2"
+          sx={{
+            mb: 1.5,
             fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             gap: 1,
           }}
         >
           <HelpOutlineIcon />
           {title}
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto' }}>
+        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 700, mx: "auto" }}>
           Ответы на самые распространенные вопросы о нормоконтроле и оформлении курсовых работ
         </Typography>
       </Box>
 
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          borderRadius: 2, 
-          border: '1px solid', 
-          borderColor: 'divider',
-          overflow: 'hidden'
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 60,
+          border: "1px solid",
+          borderColor: "divider",
+          overflow: "hidden",
         }}
       >
         {questions.map((question, index) => (
-          <Accordion 
+          <Accordion
             key={index}
             elevation={0}
             disableGutters
             defaultExpanded={index === 0}
-            sx={{ 
-              '&:not(:last-child)': { 
-                borderBottom: '1px solid', 
-                borderColor: 'divider' 
+            sx={{
+              "&:not(:last-child)": {
+                borderBottom: "1px solid",
+                borderColor: "divider",
               },
-              '&:before': {
-                display: 'none',
+              "&:before": {
+                display: "none",
               },
             }}
           >
-            <AccordionSummary 
+            <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
-              sx={{ 
+              sx={{
                 px: 3,
-                '&.Mui-expanded': {
-                  bgcolor: 'background.default',
-                }
+                "&.Mui-expanded": {
+                  bgcolor: "background.default",
+                },
               }}
             >
               <Typography variant="subtitle1" fontWeight={500}>
@@ -83,9 +81,7 @@ const FAQSection = ({ questions = [], title = "Часто задаваемые �
               </Typography>
             </AccordionSummary>
             <AccordionDetails sx={{ px: 3, pb: 3 }}>
-              <Typography variant="body1">
-                {question.answer}
-              </Typography>
+              <Typography variant="body1">{question.answer}</Typography>
             </AccordionDetails>
           </Accordion>
         ))}
@@ -100,7 +96,7 @@ FAQSection.propTypes = {
     PropTypes.shape({
       question: PropTypes.string.isRequired,
       answer: PropTypes.string.isRequired,
-    })
+    }),
   ),
   /** Заголовок секции */
   title: PropTypes.string,
@@ -114,4 +110,4 @@ FAQSection.defaultProps = {
   sx: {},
 };
 
-export default FAQSection; 
+export default FAQSection;

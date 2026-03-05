@@ -349,47 +349,6 @@ const getGuideForIssueType = (issueType) => {
 
 // --- Components ---
 
-const CustomTooltip = ({ active, payload, label }) => {
-  const theme = useTheme();
-  if (active && payload && payload.length) {
-    return (
-      <Paper
-        elevation={0}
-        sx={{
-          p: 1.5,
-          bgcolor: alpha("#121212", 0.9),
-          backdropFilter: "blur(10px)",
-          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          borderRadius: 2,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-        }}
-      >
-        <Typography
-          variant="caption"
-          fontWeight={700}
-          sx={{ mb: 0.5, display: "block", color: "text.secondary" }}
-        >
-          {label || payload[0].name}
-        </Typography>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Box
-            sx={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              bgcolor: payload[0].payload.color || payload[0].color,
-            }}
-          />
-          <Typography variant="body2" fontWeight={700} color="white">
-            {payload[0].value}
-          </Typography>
-        </Box>
-      </Paper>
-    );
-  }
-  return null;
-};
-
 const AnimatedNumber = ({ value }) => {
   const [displayValue, setDisplayValue] = useState(0);
 
@@ -447,11 +406,11 @@ const ScoreCircle = ({ score, grade }) => {
           cy={radius}
         />
         <circle
-          stroke={theme.palette[grade.color].main}
+          stroke="rgba(255,255,255,0.6)"
           strokeWidth={stroke}
           strokeDasharray={circumference + " " + circumference}
           style={{ strokeDashoffset, transition: "stroke-dashoffset 1.5s ease-out" }}
-          strokeLinecap="round"
+          strokeLinecap="butt"
           fill="transparent"
           r={normalizedRadius}
           cx={radius}
@@ -465,10 +424,11 @@ const ScoreCircle = ({ score, grade }) => {
         <Typography
           variant="caption"
           sx={{
-            color: theme.palette[grade.color].main,
-            fontWeight: 700,
+            color: "rgba(255,255,255,0.45)",
+            fontWeight: 600,
             textTransform: "uppercase",
-            letterSpacing: 1,
+            letterSpacing: "0.1em",
+            fontSize: "0.65rem",
           }}
         >
           {grade.label}
@@ -476,27 +436,6 @@ const ScoreCircle = ({ score, grade }) => {
       </Box>
     </Box>
   );
-};
-
-const CATEGORY_LABELS = {
-  structure: "Структура",
-  font: "Шрифт",
-  margins: "Поля",
-  line: "Интервалы",
-  paragraph: "Отступы",
-  bibliography: "Литература",
-  figure: "Рисунки",
-  table: "Таблицы",
-  page: "Нумерация",
-  heading: "Заголовки",
-  toc: "Содержание",
-  title: "Титульный",
-  topic: "Тема",
-  section: "Разделы",
-  image: "Изображения",
-  link: "Ссылки",
-  spell: "Орфография",
-  unknown: "Прочее",
 };
 
 const StatCard = ({ title, value, subtitle, icon, color, delay }) => {
@@ -518,13 +457,13 @@ const StatCard = ({ title, value, subtitle, icon, color, delay }) => {
           justifyContent: "center",
           position: "relative",
           overflow: "hidden",
-          border: `1px solid ${alpha(color || theme.palette.primary.main, 0.15)}`,
-          background: `linear-gradient(135deg, ${alpha("#0a0a0f", 0.85)} 0%, ${alpha("#121218", 0.85)} 100%)`,
-          transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          border: `1px solid rgba(255, 255, 255, 0.08)`,
+          background: `rgba(10, 10, 10, 0.8)`,
+          transition: "all 0.2s ease",
           "&:hover": {
-            transform: "translateY(-4px)",
-            borderColor: alpha(color || theme.palette.primary.main, 0.5),
-            boxShadow: `0 12px 40px -10px ${alpha(color || theme.palette.primary.main, 0.4)}`,
+            transform: "translateY(-2px)",
+            borderColor: "rgba(255, 255, 255, 0.15)",
+            background: `rgba(15, 15, 15, 0.9)`,
             "& .stat-icon": {
               opacity: 0.15,
               transform: "rotate(-5deg) translateY(-10px) scale(1.1)",
@@ -598,16 +537,13 @@ const IssueItem = ({ issue, index }) => {
     <Paper
       elevation={0}
       sx={{
-        mb: 1.5,
-        borderRadius: 2,
-        background: `linear-gradient(135deg, ${alpha("#0f0f15", 0.7)} 0%, ${alpha("#121218", 0.7)} 100%)`,
-        border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        mb: 1,
+        borderRadius: 1,
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        transition: "border-color 0.15s ease",
         "&:hover": {
-          background: `linear-gradient(135deg, ${alpha("#15151d", 0.9)} 0%, ${alpha("#1a1a22", 0.9)} 100%)`,
-          borderColor: alpha(severityColor, 0.4),
-          boxShadow: `0 4px 16px ${alpha(severityColor, 0.15)}`,
-          transform: "translateY(-1px)",
+          borderColor: "rgba(255,255,255,0.18)",
         },
       }}
     >
@@ -629,7 +565,6 @@ const IssueItem = ({ issue, index }) => {
             height: 8,
             borderRadius: "50%",
             bgcolor: severityColor,
-            boxShadow: `0 0 8px ${severityColor}`,
           }}
         />
 
@@ -752,7 +687,6 @@ const IssueItem = ({ issue, index }) => {
 // Компонент пошагового руководства
 const ManualFixGuide = ({ guide, isOpen, onToggle }) => {
   const theme = useTheme();
-  const [activeStep, setActiveStep] = useState(0);
 
   if (!guide) return null;
 
@@ -781,9 +715,9 @@ const ManualFixGuide = ({ guide, isOpen, onToggle }) => {
         <Box
           sx={{
             p: 1,
-            borderRadius: 1.5,
-            bgcolor: alpha(theme.palette.info.main, 0.1),
-            color: theme.palette.info.main,
+            borderRadius: 1,
+            bgcolor: "rgba(255,255,255,0.05)",
+            color: "rgba(255,255,255,0.5)",
           }}
         >
           <BuildIcon fontSize="small" />
@@ -883,7 +817,12 @@ const ReportPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
-  const { reportData, fileName } = location.state || {};
+  const {
+    reportData,
+    fileName,
+    profileId: routeProfileId,
+    profileName: routeProfileName,
+  } = location.state || {};
 
   const [loading, setLoading] = useState(false);
   const [correctionSuccess, setCorrectionSuccess] = useState(false);
@@ -931,6 +870,8 @@ const ReportPage = () => {
   const effectiveResults = useMemo(() => reportData?.check_results || {}, [reportData]);
   const issues = useMemo(() => effectiveResults?.issues || [], [effectiveResults]);
   const profileInfo = useMemo(() => effectiveResults?.profile || null, [effectiveResults]);
+  const effectiveProfileName =
+    profileInfo?.name || routeProfileName || profileInfo?.profile_id || routeProfileId || "ГОСТ";
 
   const filteredIssues = useMemo(() => {
     if (filterSeverity === "all") return issues;
@@ -950,24 +891,6 @@ const ReportPage = () => {
     () => getDocumentGrade(totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount),
     [totalIssues, highSeverityCount, mediumSeverityCount, lowSeverityCount],
   );
-
-  const severityData = [
-    { name: "Критические", value: highSeverityCount, color: "#ef4444" },
-    { name: "Средние", value: mediumSeverityCount, color: "#f59e0b" },
-    { name: "Низкие", value: lowSeverityCount, color: "#3b82f6" },
-  ].filter((d) => d.value > 0);
-
-  const categoryData = useMemo(() => {
-    const cats = {};
-    issues.forEach((i) => {
-      const cat = i.type.split("_")[0];
-      cats[cat] = (cats[cat] || 0) + 1;
-    });
-    // Сортировка по убыванию количества ошибок
-    return Object.entries(cats)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [issues]);
 
   const handleCorrection = async () => {
     setLoading(true);
@@ -1004,13 +927,11 @@ const ReportPage = () => {
     <Box
       sx={{
         height: "100vh",
-        bgcolor: "#07070a",
+        bgcolor: "transparent",
         color: "text.primary",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        backgroundImage:
-          "radial-gradient(circle at 20% 0%, rgba(34, 211, 238, 0.08) 0%, transparent 40%), radial-gradient(circle at 80% 100%, rgba(249, 115, 22, 0.06) 0%, transparent 40%)",
       }}
     >
       {/* Scrollable Content Area */}
@@ -1032,9 +953,8 @@ const ReportPage = () => {
             top: 0,
             zIndex: 100,
             backdropFilter: "blur(12px)",
-            borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
-            bgcolor: "rgba(7,7,10,0.85)",
-            background: `linear-gradient(180deg, rgba(7,7,10,0.95) 0%, rgba(7,7,10,0.85) 100%)`,
+            borderBottom: `1px solid rgba(255, 255, 255, 0.08)`,
+            bgcolor: "rgba(0,0,0,0.85)",
           }}
         >
           <Container maxWidth="xl">
@@ -1051,9 +971,10 @@ const ReportPage = () => {
                   onClick={() => navigate("/")}
                   size="small"
                   sx={{
-                    color: "text.secondary",
+                    color: "rgba(255,255,255,0.4)",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 2,
+                    borderRadius: 1,
+                    "&:hover": { color: "#fff", borderColor: "rgba(255,255,255,0.3)" },
                   }}
                 >
                   <ArrowBackIcon fontSize="small" />
@@ -1062,13 +983,13 @@ const ReportPage = () => {
                   variant="body1"
                   sx={{
                     fontFamily: "'Wix Madefor Display', sans-serif",
-                    fontWeight: 700,
-                    color: theme.palette.primary.main,
-                    letterSpacing: 0.5,
-                    textShadow: `0 0 20px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    fontWeight: 900,
+                    color: "#fff",
+                    letterSpacing: "0.15em",
+                    fontSize: "0.85rem",
                   }}
                 >
-                  CURSA REPORT
+                  CURSA
                 </Typography>
                 <Divider
                   orientation="vertical"
@@ -1081,6 +1002,18 @@ const ReportPage = () => {
                     {fileName}
                   </Typography>
                 </Box>
+                <Chip
+                  size="small"
+                  label={effectiveProfileName}
+                  sx={{
+                    height: 22,
+                    fontSize: "0.68rem",
+                    fontWeight: 600,
+                    bgcolor: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "#e5e7eb",
+                  }}
+                />
               </Box>
 
               <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
@@ -1116,6 +1049,7 @@ const ReportPage = () => {
                   transition={{ duration: 0.5 }}
                 >
                   <Paper
+                    elevation={0}
                     className="glass-card"
                     sx={{
                       p: 4,
@@ -1126,28 +1060,15 @@ const ReportPage = () => {
                       justifyContent: "center",
                       position: "relative",
                       overflow: "hidden",
-                      border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
-                      background: `linear-gradient(135deg, ${alpha("#0a0a0f", 0.9)} 0%, ${alpha("#121218", 0.9)} 100%)`,
-                      transition: "all 0.3s ease",
+                      border: `1px solid rgba(255, 255, 255, 0.08)`,
+                      background: `rgba(10, 10, 10, 0.8)`,
+                      transition: "all 0.2s ease",
                       "&:hover": {
-                        borderColor: alpha(theme.palette.primary.main, 0.4),
-                        boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}`,
+                        borderColor: "rgba(255, 255, 255, 0.15)",
+                        background: "rgba(15, 15, 15, 0.9)",
                       },
                     }}
                   >
-                    <Box
-                      className="glow-effect"
-                      sx={{
-                        position: "absolute",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        width: "150%",
-                        height: "150%",
-                        background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.12)} 0%, transparent 60%)`,
-                        pointerEvents: "none",
-                      }}
-                    />
                     <ScoreCircle score={grade.score} grade={grade} />
                     <Typography
                       variant="body2"
@@ -1199,8 +1120,8 @@ const ReportPage = () => {
                       sx={{
                         p: 3,
                         borderRadius: 2,
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.12)} 0%, ${alpha("#0a0a0f", 0.95)} 100%)`,
-                        border: `1px solid ${alpha(theme.palette.secondary.main, 0.25)}`,
+                        background: `rgba(10, 10, 10, 0.8)`,
+                        border: `1px solid rgba(255, 255, 255, 0.08)`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
@@ -1215,7 +1136,7 @@ const ReportPage = () => {
                           left: 0,
                           right: 0,
                           height: "2px",
-                          background: `linear-gradient(90deg, transparent, ${theme.palette.secondary.main}, transparent)`,
+                          background: `#ededed`,
                         },
                       }}
                     >
@@ -1251,11 +1172,13 @@ const ReportPage = () => {
                           borderRadius: 2,
                           px: 3,
                           fontWeight: 700,
-                          background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${alpha(theme.palette.secondary.main, 0.8)} 100%)`,
-                          boxShadow: `0 4px 20px ${alpha(theme.palette.secondary.main, 0.3)}`,
+                          color: "#ededed",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          background: `rgba(255, 255, 255, 0.05)`,
+                          boxShadow: "none",
                           "&:hover": {
-                            background: theme.palette.secondary.main,
-                            boxShadow: `0 6px 30px ${alpha(theme.palette.secondary.main, 0.5)}`,
+                            background: "rgba(255, 255, 255, 0.1)",
+                            boxShadow: "none",
                           },
                         }}
                       >
@@ -1276,9 +1199,9 @@ const ReportPage = () => {
                         sx={{
                           p: 3,
                           borderRadius: 2,
-                          background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.12)} 0%, ${alpha("#0a0a0f", 0.95)} 100%)`,
-                          border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
-                          boxShadow: `0 4px 20px ${alpha(theme.palette.success.main, 0.15)}`,
+                          background: `rgba(10, 10, 10, 0.8)`,
+                          border: `1px solid rgba(255, 255, 255, 0.08)`,
+                          boxShadow: `none`,
                         }}
                       >
                         <Stack direction="row" alignItems="center" spacing={2} mb={2}>
@@ -1339,19 +1262,20 @@ const ReportPage = () => {
                         label={f === "all" ? "Все" : getSeverityLabel(f)}
                         clickable
                         onClick={() => setFilterSeverity(f)}
-                        color={
-                          filterSeverity === f
-                            ? f === "all"
-                              ? "default"
-                              : f === "high"
-                                ? "error"
-                                : f === "medium"
-                                  ? "warning"
-                                  : "info"
-                            : "default"
-                        }
-                        variant={filterSeverity === f ? "filled" : "outlined"}
-                        sx={{ borderRadius: 2, height: 28, fontSize: "0.75rem", fontWeight: 600 }}
+                        sx={{
+                          borderRadius: 0.5,
+                          height: 28,
+                          fontSize: "0.72rem",
+                          fontWeight: filterSeverity === f ? 700 : 500,
+                          bgcolor: filterSeverity === f ? "rgba(255,255,255,0.12)" : "transparent",
+                          color: filterSeverity === f ? "#fff" : "rgba(255,255,255,0.35)",
+                          border: "1px solid",
+                          borderColor:
+                            filterSeverity === f
+                              ? "rgba(255,255,255,0.25)"
+                              : "rgba(255,255,255,0.08)",
+                          "&:hover": { bgcolor: "rgba(255,255,255,0.08)", color: "#fff" },
+                        }}
                       />
                     ))}
                   </Stack>
@@ -1398,12 +1322,14 @@ const ReportPage = () => {
           <IconButton
             size="large"
             sx={{
-              bgcolor: alpha(theme.palette.primary.main, 0.2),
-              color: "primary.main",
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.5)}`,
+              bgcolor: "rgba(255,255,255,0.07)",
+              color: "rgba(255,255,255,0.6)",
+              border: "1px solid rgba(255,255,255,0.12)",
               backdropFilter: "blur(10px)",
+              borderRadius: 1,
               "&:hover": {
-                bgcolor: alpha(theme.palette.primary.main, 0.4),
+                bgcolor: "rgba(255,255,255,0.12)",
+                color: "#fff",
               },
             }}
           >

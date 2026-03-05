@@ -1,27 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
+import ErrorIcon from "@mui/icons-material/Error";
+import InfoIcon from "@mui/icons-material/Info";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import WarningIcon from "@mui/icons-material/Warning";
 import {
-  Box,
   Badge,
+  Box,
+  CircularProgress,
+  Divider,
   IconButton,
-  Popover,
   List,
   ListItem,
-  ListItemText,
   ListItemIcon,
-  Typography,
-  Divider,
-  Button,
+  ListItemText,
   Paper,
+  Popover,
   Tooltip,
-  CircularProgress
-} from '@mui/material';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import InfoIcon from '@mui/icons-material/Info';
-import WarningIcon from '@mui/icons-material/Warning';
-import ErrorIcon from '@mui/icons-material/Error';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
-import axios from 'axios';
+  Typography,
+} from "@mui/material";
+import axios from "axios";
+import React, { useEffect, useState } from "react";
+
+const isLocal =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const API_BASE = isLocal
+  ? "http://localhost:5000"
+  : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
 
 const NotificationsPanel = ({ onNotificationRead }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -34,14 +39,16 @@ const NotificationsPanel = ({ onNotificationRead }) => {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:5000/api/document/admin/alerts/notifications?limit=10');
+      const response = await axios.get(
+        `${API_BASE}/api/document/admin/alerts/notifications?limit=10`,
+      );
       if (response.data.success) {
         setNotifications(response.data.notifications);
         setUnreadCount(response.data.unread_count);
         setTotalCount(response.data.total_count);
       }
     } catch (error) {
-      console.error('Ошибка при получении уведомлений:', error);
+      console.error("Ошибка при получении уведомлений:", error);
     } finally {
       setLoading(false);
     }
@@ -58,7 +65,9 @@ const NotificationsPanel = ({ onNotificationRead }) => {
   // Отметка уведомления как прочитанного
   const markAsRead = async (notificationId) => {
     try {
-      const response = await axios.post(`http://localhost:5000/api/document/admin/alerts/notifications/${notificationId}/read`);
+      const response = await axios.post(
+        `${API_BASE}/api/document/admin/alerts/notifications/${notificationId}/read`,
+      );
       if (response.data.success) {
         // Обновляем список уведомлений
         fetchNotifications();
@@ -68,14 +77,16 @@ const NotificationsPanel = ({ onNotificationRead }) => {
         }
       }
     } catch (error) {
-      console.error('Ошибка при отметке уведомления как прочитанного:', error);
+      console.error("Ошибка при отметке уведомления как прочитанного:", error);
     }
   };
 
   // Отметка всех уведомлений как прочитанных
   const markAllAsRead = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/document/admin/alerts/notifications/read-all');
+      const response = await axios.post(
+        `${API_BASE}/api/document/admin/alerts/notifications/read-all`,
+      );
       if (response.data.success) {
         // Обновляем список уведомлений
         fetchNotifications();
@@ -85,14 +96,16 @@ const NotificationsPanel = ({ onNotificationRead }) => {
         }
       }
     } catch (error) {
-      console.error('Ошибка при отметке всех уведомлений как прочитанных:', error);
+      console.error("Ошибка при отметке всех уведомлений как прочитанных:", error);
     }
   };
 
   // Очистка всех уведомлений
   const clearAll = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/document/admin/alerts/notifications/clear');
+      const response = await axios.post(
+        `${API_BASE}/api/document/admin/alerts/notifications/clear`,
+      );
       if (response.data.success) {
         // Обновляем список уведомлений
         fetchNotifications();
@@ -102,7 +115,7 @@ const NotificationsPanel = ({ onNotificationRead }) => {
         }
       }
     } catch (error) {
-      console.error('Ошибка при очистке уведомлений:', error);
+      console.error("Ошибка при очистке уведомлений:", error);
     }
   };
 
@@ -118,11 +131,11 @@ const NotificationsPanel = ({ onNotificationRead }) => {
   // Конвертация уровня уведомления в иконку
   const getNotificationIcon = (level) => {
     switch (level) {
-      case 'error':
+      case "error":
         return <ErrorIcon color="error" />;
-      case 'warning':
+      case "warning":
         return <WarningIcon color="warning" />;
-      case 'info':
+      case "info":
       default:
         return <InfoIcon color="info" />;
     }
@@ -131,20 +144,16 @@ const NotificationsPanel = ({ onNotificationRead }) => {
   // Форматирование даты
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return `${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString('ru-RU')}`;
+    return `${date.toLocaleDateString("ru-RU")} ${date.toLocaleTimeString("ru-RU")}`;
   };
 
   const open = Boolean(anchorEl);
-  const id = open ? 'notifications-popover' : undefined;
+  const id = open ? "notifications-popover" : undefined;
 
   return (
     <>
       <Tooltip title="Уведомления">
-        <IconButton
-          onClick={handleClick}
-          color="inherit"
-          aria-label="Уведомления"
-        >
+        <IconButton onClick={handleClick} color="inherit" aria-label="Уведомления">
           <Badge badgeContent={unreadCount} color="error">
             <NotificationsIcon />
           </Badge>
@@ -156,16 +165,18 @@ const NotificationsPanel = ({ onNotificationRead }) => {
         anchorEl={anchorEl}
         onClose={handleClose}
         anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
+          vertical: "bottom",
+          horizontal: "right",
         }}
         transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
+          vertical: "top",
+          horizontal: "right",
         }}
       >
         <Paper sx={{ width: 400, maxHeight: 500 }}>
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box
+            sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
             <Typography variant="h6">Уведомления</Typography>
             <Box>
               <Tooltip title="Прочитать все">
@@ -182,18 +193,18 @@ const NotificationsPanel = ({ onNotificationRead }) => {
           </Box>
           <Divider />
           {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
               <CircularProgress size={30} />
             </Box>
           ) : notifications.length > 0 ? (
-            <List sx={{ overflow: 'auto', maxHeight: 400 }}>
+            <List sx={{ overflow: "auto", maxHeight: 400 }}>
               {notifications.map((notification) => (
                 <React.Fragment key={notification.id}>
-                  <ListItem 
-                    alignItems="flex-start" 
-                    sx={{ 
-                      bgcolor: notification.read ? 'transparent' : 'action.hover',
-                      pr: 1
+                  <ListItem
+                    alignItems="flex-start"
+                    sx={{
+                      bgcolor: notification.read ? "transparent" : "action.hover",
+                      pr: 1,
                     }}
                   >
                     <ListItemIcon sx={{ minWidth: 36 }}>
@@ -201,14 +212,17 @@ const NotificationsPanel = ({ onNotificationRead }) => {
                     </ListItemIcon>
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="body2" sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: notification.read ? "normal" : "bold" }}
+                          >
                             {notification.message}
                           </Typography>
                           {!notification.read && (
                             <Tooltip title="Отметить как прочитанное">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 onClick={() => markAsRead(notification.id)}
                                 edge="end"
                               >
@@ -219,10 +233,7 @@ const NotificationsPanel = ({ onNotificationRead }) => {
                         </Box>
                       }
                       secondary={
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                        >
+                        <Typography variant="caption" color="text.secondary">
                           {formatDate(notification.timestamp)}
                           {notification.source && ` • ${notification.source}`}
                         </Typography>
@@ -234,7 +245,7 @@ const NotificationsPanel = ({ onNotificationRead }) => {
               ))}
             </List>
           ) : (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Box sx={{ p: 3, textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
                 Нет уведомлений
               </Typography>
@@ -246,4 +257,4 @@ const NotificationsPanel = ({ onNotificationRead }) => {
   );
 };
 
-export default NotificationsPanel; 
+export default NotificationsPanel;
