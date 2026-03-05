@@ -6,6 +6,7 @@ import pytest
 os.environ.setdefault("FLASK_ENV", "testing")
 
 from app.extensions import db
+from app.models import User, UserRole
 
 
 class FakeRedis:
@@ -190,3 +191,33 @@ def test_forgot_and_reset_password(client, monkeypatch, app):
         },
     )
     assert response.status_code == 200
+
+
+def test_login_allows_unverified_email_when_verification_disabled(client, app):
+    """Password login should work in dev mode without enforced email verification."""
+    with app.app_context():
+        user = User(
+            email="dev-unverified@cursa.app",
+            first_name="Dev",
+            last_name="User",
+            role=UserRole.USER,
+            is_active=True,
+            is_email_verified=False,
+        )
+        user.set_password("SecurePass123")
+        db.session.add(user)
+        db.session.commit()
+
+    app.config["EMAIL_VERIFICATION_REQUIRED"] = False
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "dev-unverified@cursa.app", "password": "SecurePass123"},
+    )
+
+    assert response.status_code == 200, response.get_json()
+
+    with app.app_context():
+        updated = User.query.filter_by(email="dev-unverified@cursa.app").first()
+        assert updated is not None
+        assert updated.is_email_verified is True

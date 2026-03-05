@@ -49,12 +49,14 @@ def google_userinfo_response():
 class TestGoogleOAuth:
     """Test Google OAuth2 authentication"""
 
+    @patch("app.api.oauth_routes.EmailService.send_welcome_email", return_value=True)
     @patch("app.api.oauth_routes.requests.post")
     @patch("app.api.oauth_routes.requests.get")
     def test_google_oauth_new_user(
         self,
         mock_get,
         mock_post,
+        mock_welcome,
         client,
         oauth_headers,
         google_auth_code,
@@ -89,6 +91,8 @@ class TestGoogleOAuth:
         assert data["refresh_token"] is not None
         assert data["email"] == "user@gmail.com"
         assert data["first_name"] == "John"
+        assert data["is_new_user"] is True
+        mock_welcome.assert_called_once()
 
         # Check user was created in database
         user = User.query.filter_by(email="user@gmail.com").first()
@@ -97,12 +101,14 @@ class TestGoogleOAuth:
         assert user.is_email_verified is True
         assert user.role == UserRole.USER
 
+    @patch("app.api.oauth_routes.EmailService.send_welcome_email", return_value=True)
     @patch("app.api.oauth_routes.requests.post")
     @patch("app.api.oauth_routes.requests.get")
     def test_google_oauth_existing_user(
         self,
         mock_get,
         mock_post,
+        mock_welcome,
         client,
         oauth_headers,
         db,
@@ -145,6 +151,8 @@ class TestGoogleOAuth:
 
         assert data["success"] is True
         assert data["access_token"] is not None
+        assert data["is_new_user"] is False
+        mock_welcome.assert_not_called()
 
         # Check user was updated, not duplicated
         users = User.query.filter_by(email="user@gmail.com").all()
@@ -366,14 +374,14 @@ class TestOAuthErrorHandling:
             headers=oauth_headers,
         )
 
-        assert response.status_code == 500
+        assert response.status_code == 400
         data = response.get_json()
-        assert "Authentication failed" in data["error"]
+        assert "Invalid authorization code" in data["error"]
 
     def test_oauth_not_configured(self, client, oauth_headers, monkeypatch):
         """Test OAuth endpoint when provider is not configured"""
-        monkeypatch.delenv("GOOGLE_CLIENT_ID", raising=False)
-        monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
+        client.application.config["GOOGLE_CLIENT_ID"] = ""
+        client.application.config["GOOGLE_CLIENT_SECRET"] = ""
 
         response = client.post(
             "/api/auth/oauth/google/callback",

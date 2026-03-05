@@ -9,6 +9,7 @@ from typing import Callable, Optional, Dict, Any
 from flask import request, jsonify, g
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from app.config.security import RATE_LIMITS
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,9 @@ logger = logging.getLogger(__name__)
 # Storage будет установлен в setup_rate_limiting() с graceful degradation
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    # Берем базовый лимит из конфигурации безопасности,
+    # чтобы не блокировать легитимный трафик (например, polling профилей).
+    default_limits=[RATE_LIMITS.get("default", "200 per minute")],
     storage_uri="memory://",  # Default fallback
 )
 

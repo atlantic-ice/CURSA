@@ -5,12 +5,12 @@ Allows users to register/login using their Google account.
 """
 
 from flask import Blueprint, request, jsonify, current_app
-from datetime import datetime, timezone
+from flask_jwt_extended import create_access_token, create_refresh_token
 import requests
 import logging
 from app.extensions import db
 from app.models.user import User, UserRole
-from app.services.token_service import TokenManager
+from app.services.email_service import EmailService
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -79,11 +79,13 @@ def google_callback():
             return jsonify({"error": "Failed to retrieve user info"}), 400
 
         # Find or create user in database
-        user = _find_or_create_user_from_google(google_user)
+        user, is_new_user = _find_or_create_user_from_google(google_user)
 
         # Generate JWT tokens
-        token_manager = TokenManager(redis_client=current_app.redis, config=current_app.config)
-        access_token, refresh_token = token_manager.create_tokens(user_id=user.id, email=user.email)
+        access_token, refresh_token = _generate_tokens(user)
+
+        # Send welcome email for first-time OAuth users (best effort)
+        _send_welcome_email_if_new(user, is_new_user)
 
         logger.info(f"✓ User {user.email} authenticated via Google OAuth")
 
@@ -97,8 +99,7 @@ def google_callback():
                     "email": user.email,
                     "first_name": user.first_name,
                     "role": user.role.value,
-                    "is_new_user": user.created_at.replace(tzinfo=timezone.utc)
-                    == datetime.now(timezone.utc).replace(tzinfo=timezone.utc),
+                    "is_new_user": is_new_user,
                 }
             ),
             200,
@@ -143,11 +144,13 @@ def github_callback():
             return jsonify({"error": "Unable to get email from GitHub"}), 400
 
         # Find or create user
-        user = _find_or_create_user_from_github(github_user, user_email)
+        user, is_new_user = _find_or_create_user_from_github(github_user, user_email)
 
         # Generate JWT tokens
-        token_manager = TokenManager(redis_client=current_app.redis, config=current_app.config)
-        access_token, refresh_token = token_manager.create_tokens(user_id=user.id, email=user.email)
+        access_token, refresh_token = _generate_tokens(user)
+
+        # Send welcome email for first-time OAuth users (best effort)
+        _send_welcome_email_if_new(user, is_new_user)
 
         logger.info(f"✓ User {user.email} authenticated via GitHub OAuth")
 
@@ -160,6 +163,7 @@ def github_callback():
                     "user_id": user.id,
                     "email": user.email,
                     "first_name": user.first_name,
+                    "is_new_user": is_new_user,
                 }
             ),
             200,
@@ -195,11 +199,13 @@ def yandex_callback():
             return jsonify({"error": "Failed to retrieve user info"}), 400
 
         # Find or create user
-        user = _find_or_create_user_from_yandex(yandex_user)
+        user, is_new_user = _find_or_create_user_from_yandex(yandex_user)
 
         # Generate JWT tokens
-        token_manager = TokenManager(redis_client=current_app.redis, config=current_app.config)
-        access_token, refresh_token = token_manager.create_tokens(user_id=user.id, email=user.email)
+        access_token, refresh_token = _generate_tokens(user)
+
+        # Send welcome email for first-time OAuth users (best effort)
+        _send_welcome_email_if_new(user, is_new_user)
 
         logger.info(f"✓ User {user.email} authenticated via Yandex OAuth")
 
@@ -212,6 +218,7 @@ def yandex_callback():
                     "user_id": user.id,
                     "email": user.email,
                     "first_name": user.first_name,
+                    "is_new_user": is_new_user,
                 }
             ),
             200,
@@ -365,7 +372,37 @@ def _get_yandex_user_info(access_token: str) -> dict:
         return None
 
 
-def _find_or_create_user_from_google(google_user: dict) -> User:
+def _generate_tokens(user: User) -> tuple[str, str]:
+    """Generate JWT tokens using TokenManager when available, fallback otherwise."""
+    token_manager = getattr(current_app, "token_manager", None)
+    if token_manager:
+        return token_manager.create_tokens(user_id=user.id, email=user.email)
+
+    # Fallback mode when Redis/TokenManager is unavailable.
+    access_token = create_access_token(
+        identity=str(user.id),
+        additional_claims={"email": user.email, "user_id": user.id},
+    )
+    refresh_token = create_refresh_token(
+        identity=str(user.id),
+        additional_claims={"email": user.email},
+    )
+    return access_token, refresh_token
+
+
+def _send_welcome_email_if_new(user: User, is_new_user: bool) -> None:
+    """Send welcome email for newly created OAuth users (best effort)."""
+    if not is_new_user:
+        return
+
+    try:
+        email_service = EmailService()
+        email_service.send_welcome_email(user.email, user.full_name)
+    except Exception as e:
+        logger.warning(f"Welcome email skipped for {user.email}: {str(e)}")
+
+
+def _find_or_create_user_from_google(google_user: dict) -> tuple[User, bool]:
     """Find existing user or create new one from Google user data"""
     email = google_user.get("email")
 
@@ -385,7 +422,7 @@ def _find_or_create_user_from_google(google_user: dict) -> User:
         user.oauth_id = google_user.get("id")
 
         db.session.commit()
-        return user
+        return user, False
 
     # Create new user
     user = User(
@@ -401,10 +438,10 @@ def _find_or_create_user_from_google(google_user: dict) -> User:
 
     db.session.add(user)
     db.session.commit()
-    return user
+    return user, True
 
 
-def _find_or_create_user_from_github(github_user: dict, email: str) -> User:
+def _find_or_create_user_from_github(github_user: dict, email: str) -> tuple[User, bool]:
     """Find existing user or create new one from GitHub user data"""
     # Try to find by email
     user = User.query.filter_by(email=email).first()
@@ -422,7 +459,7 @@ def _find_or_create_user_from_github(github_user: dict, email: str) -> User:
         user.oauth_id = str(github_user.get("id"))
 
         db.session.commit()
-        return user
+        return user, False
 
     # Create new user
     name_parts = github_user.get("name", "").split(" ", 1) if github_user.get("name") else ["", ""]
@@ -440,12 +477,15 @@ def _find_or_create_user_from_github(github_user: dict, email: str) -> User:
 
     db.session.add(user)
     db.session.commit()
-    return user
+    return user, True
 
 
-def _find_or_create_user_from_yandex(yandex_user: dict) -> User:
+def _find_or_create_user_from_yandex(yandex_user: dict) -> tuple[User, bool]:
     """Find existing user or create new one from Yandex user data"""
     email = yandex_user.get("default_email")
+
+    if not email:
+        raise ValueError("Yandex account has no email")
 
     # Try to find by email
     user = User.query.filter_by(email=email).first()
@@ -457,7 +497,7 @@ def _find_or_create_user_from_yandex(yandex_user: dict) -> User:
         user.oauth_id = str(yandex_user.get("id"))
 
         db.session.commit()
-        return user
+        return user, False
 
     # Create new user
     user = User(
@@ -473,4 +513,4 @@ def _find_or_create_user_from_yandex(yandex_user: dict) -> User:
 
     db.session.add(user)
     db.session.commit()
-    return user
+    return user, True

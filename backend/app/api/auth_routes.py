@@ -19,7 +19,14 @@ Endpoints:
 - GET /api/auth/oauth/<provider>/callback - OAuth callback
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import (
+    Blueprint,
+    request,
+    jsonify,
+    current_app,
+    redirect,
+    make_response,
+)
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -27,10 +34,15 @@ from flask_jwt_extended import (
     get_jwt_identity,
     get_jwt,
 )
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from redis import Redis
 from email_validator import validate_email, EmailNotValidError
 import logging
+import requests
+import os
+import hashlib
+import hmac
+from urllib.parse import urlencode
 
 from app.extensions import db
 from app.models import User, UserRole
@@ -39,6 +51,7 @@ from app.services.email_service import EmailService
 from app.services.verification_service import VerificationService
 from app.services.totp_service import totp_service
 from app.security import rate_limit
+from app.api import oauth_routes as oauth_api
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -75,6 +88,11 @@ def _get_current_user_id():
         return int(identity)
     except (TypeError, ValueError):
         return identity
+
+
+def _is_email_verification_required() -> bool:
+    """Return whether email verification must be enforced for password login."""
+    return bool(current_app.config.get("EMAIL_VERIFICATION_REQUIRED", True))
 
 
 # ============ Register ============
@@ -136,6 +154,11 @@ def register():
         except Exception as e:
             logger.warning(f"Failed to send verification email: {e}")
 
+        # In local development we allow password auth even without mail delivery.
+        if not _is_email_verification_required() and not user.is_email_verified:
+            user.is_email_verified = True
+            db.session.commit()
+
         # Create tokens
         access_token = create_access_token(identity=str(user.id))
         refresh_token = create_refresh_token(identity=str(user.id))
@@ -148,6 +171,7 @@ def register():
                     "access_token": access_token,
                     "refresh_token": refresh_token,
                     "email_verification_sent": email_sent,
+                    "email_verification_required": _is_email_verification_required(),
                 }
             ),
             201,
@@ -184,7 +208,16 @@ def login():
             return jsonify({"error": "Аккаунт деактивирован"}), 401
 
         if not user.is_email_verified:
-            return jsonify({"error": "Email не подтвержден"}), 401
+            if _is_email_verification_required():
+                return jsonify({"error": "Email не подтвержден"}), 401
+
+            # Dev fallback for legacy accounts created before EMAIL_VERIFICATION_REQUIRED=false.
+            user.is_email_verified = True
+            db.session.commit()
+            logger.warning(
+                "Email verification skipped for %s because EMAIL_VERIFICATION_REQUIRED=false",
+                user.email,
+            )
 
         # Check 2FA if enabled
         requires_2fa = user.totp_enabled if hasattr(user, "totp_enabled") else False
@@ -265,6 +298,70 @@ def logout():
 # ============ Get Current User ============
 
 
+@bp.route("/me", methods=["PUT"])
+@jwt_required()
+@rate_limit("30 per hour")
+def update_profile():
+    """Update current user profile fields"""
+    try:
+        current_user_id = _get_current_user_id()
+        user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({"error": "Пользователь не найден"}), 404
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Нет данных"}), 400
+
+        if "first_name" in data:
+            user.first_name = data["first_name"].strip()[:100] if data["first_name"] else None
+        if "last_name" in data:
+            user.last_name = data["last_name"].strip()[:100] if data["last_name"] else None
+        if "organization" in data:
+            user.organization = data["organization"].strip()[:255] if data["organization"] else None
+
+        db.session.commit()
+        return jsonify({"user": user.to_dict(), "message": "Профиль обновлён"}), 200
+    except Exception as e:
+        logger.error(f"Update profile error: {e}")
+        return jsonify({"error": f"Ошибка обновления: {str(e)}"}), 500
+
+
+@bp.route("/change-password", methods=["POST"])
+@jwt_required()
+@rate_limit("10 per hour")
+def change_password():
+    """Change user password (supports OAuth users setting a password)"""
+    try:
+        current_user_id = _get_current_user_id()
+        user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({"error": "Пользователь не найден"}), 404
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Нет данных"}), 400
+
+        new_password = data.get("new_password", "")
+        old_password = data.get("old_password", "")
+
+        if not new_password or len(new_password) < 8:
+            return jsonify({"error": "Пароль должен быть не менее 8 символов"}), 400
+
+        if user.password_hash:
+            if not old_password:
+                return jsonify({"error": "Укажите текущий пароль"}), 400
+            if not user.check_password(old_password):
+                return jsonify({"error": "Неверный текущий пароль"}), 400
+
+        user.set_password(new_password)
+        db.session.commit()
+        return jsonify({"message": "Пароль успешно изменён"}), 200
+    except Exception as e:
+        logger.error(f"Change password error: {e}")
+        return jsonify({"error": f"Ошибка смены пароля: {str(e)}"}), 500
+
+
 @bp.route("/me", methods=["GET"])
 @jwt_required()
 @rate_limit("100 per hour")
@@ -285,6 +382,30 @@ def get_current_user():
     except Exception as e:
         logger.error(f"Get user error: {e}")
         return jsonify({"error": f"Ошибка получения данных: {str(e)}"}), 500
+
+
+@bp.route("/delete-account", methods=["DELETE"])
+@jwt_required()
+@rate_limit("3 per hour")
+def delete_account():
+    """Permanently delete the authenticated user account and all associated data."""
+    try:
+        current_user_id = _get_current_user_id()
+        user = User.query.get(current_user_id)
+
+        if not user:
+            return jsonify({"error": "Пользователь не найден"}), 404
+
+        db.session.delete(user)
+        db.session.commit()
+
+        logger.info(f"Account deleted: user_id={current_user_id}")
+        return jsonify({"message": "Аккаунт удалён"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Delete account error: {e}")
+        return jsonify({"error": f"Ошибка удаления аккаунта: {str(e)}"}), 500
 
 
 # ============ Email Verification ============
@@ -324,6 +445,38 @@ def verify_email():
     except Exception as e:
         logger.error(f"Email verification error: {e}")
         return jsonify({"error": f"Ошибка верификации: {str(e)}"}), 500
+
+
+# ============ Resend Email Verification ============
+
+
+@bp.route("/resend-verification", methods=["POST"])
+@jwt_required()
+@rate_limit("5 per hour")
+def resend_verification():
+    """Resend email verification letter to the current user"""
+    try:
+        current_user_id = _get_current_user_id()
+        user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({"error": "Пользователь не найден"}), 404
+
+        if user.is_email_verified:
+            return jsonify({"error": "Email уже подтверждён"}), 400
+
+        redis_client = _get_redis_client()
+        verification_service = VerificationService(storage=redis_client)
+        token = verification_service.create_verification_token(user.email, token_type="email")
+        email_service = EmailService()
+        sent = email_service.send_verification_email(user.email, token)
+
+        if not sent:
+            return jsonify({"error": "Не удалось отправить письмо. Попробуйте позже."}), 503
+
+        return jsonify({"message": "Письмо отправлено"}), 200
+    except Exception as e:
+        logger.error(f"Resend verification error: {e}")
+        return jsonify({"error": f"Ошибка: {str(e)}"}), 500
 
 
 # ============ Password Reset ============
@@ -421,7 +574,9 @@ def setup_2fa():
         if not user:
             return jsonify({"error": "Пользователь не найден"}), 404
 
-        secret, qr_code = totp_service.generate_qr_code(user.email)
+        # Generate secret and QR code
+        secret = totp_service.generate_secret()
+        qr_code = totp_service.generate_qr_code(user.email, secret)
 
         return jsonify({"secret": secret, "qr_code": f"data:image/png;base64,{qr_code}"}), 200
 
@@ -514,9 +669,133 @@ def regenerate_backup_codes():
 def oauth_providers():
     """Get available OAuth providers"""
     try:
-        return jsonify({"providers": ["google", "github", "yandex"]}), 200
+        return jsonify({"providers": ["telegram", "yandex"]}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/telegram/start", methods=["GET"])
+@rate_limit("30 per hour")
+def telegram_start():
+    """Render Telegram Login Widget page and start Telegram auth flow."""
+    try:
+        bot_username = _resolve_telegram_bot_username()
+        if not bot_username:
+            return (
+                jsonify(
+                    {
+                        "error": "Telegram not configured",
+                        "message": "Set TELEGRAM_BOT_TOKEN (and optionally TELEGRAM_BOT_USERNAME)",
+                    }
+                ),
+                503,
+            )
+
+        redirect_uri = request.args.get(
+            "redirect_uri", "http://localhost:3000/auth/telegram/callback"
+        )
+        callback_base = request.host_url.rstrip("/")
+        auth_url = (
+            f"{callback_base}/api/auth/telegram/callback?"
+            f"{urlencode({'redirect_uri': redirect_uri})}"
+        )
+
+        html = f"""
+<!doctype html>
+<html lang=\"ru\">
+    <head>
+        <meta charset=\"utf-8\" />
+        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+        <title>Вход через Telegram</title>
+        <style>
+            body {{
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                place-items: center;
+                background: #0f1115;
+                color: #f3f4f6;
+                font-family: Arial, sans-serif;
+            }}
+            .card {{
+                padding: 24px;
+                border: 1px solid #1f2937;
+                border-radius: 12px;
+                background: #111827;
+                text-align: center;
+                width: min(92vw, 420px);
+            }}
+            p {{ color: #9ca3af; }}
+        </style>
+    </head>
+    <body>
+        <div class=\"card\">
+            <h2>Вход через Telegram</h2>
+            <p>Нажмите кнопку ниже для авторизации.</p>
+            <script async src=\"https://telegram.org/js/telegram-widget.js?22\"
+                data-telegram-login=\"{bot_username}\"
+                data-size=\"large\"
+                data-auth-url=\"{auth_url}\"
+                data-request-access=\"write\">
+            </script>
+        </div>
+    </body>
+</html>
+"""
+
+        response = make_response(html, 200)
+        response.headers["Content-Type"] = "text/html; charset=utf-8"
+        return response
+    except Exception as e:
+        logger.error(f"Telegram start error: {e}")
+        return jsonify({"error": "Failed to start Telegram auth", "message": str(e)}), 500
+
+
+@bp.route("/telegram/callback", methods=["GET"])
+@rate_limit("60 per hour")
+def telegram_callback():
+    """Handle Telegram Login Widget callback, verify signature, issue tokens, redirect to frontend."""
+    try:
+        redirect_uri = request.args.get(
+            "redirect_uri", "http://localhost:3000/auth/telegram/callback"
+        )
+        telegram_data = {
+            "id": request.args.get("id"),
+            "first_name": request.args.get("first_name"),
+            "last_name": request.args.get("last_name"),
+            "username": request.args.get("username"),
+            "photo_url": request.args.get("photo_url"),
+            "auth_date": request.args.get("auth_date"),
+            "hash": request.args.get("hash"),
+        }
+
+        if not telegram_data["id"] or not telegram_data["auth_date"] or not telegram_data["hash"]:
+            return redirect(f"{redirect_uri}?error=missing_telegram_data")
+
+        if not _verify_telegram_signature(telegram_data):
+            return redirect(f"{redirect_uri}?error=invalid_telegram_signature")
+
+        user, is_new_user = _find_or_create_user_from_telegram(telegram_data)
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
+
+        fragment = urlencode(
+            {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "user_id": user.id,
+                "email": user.email,
+                "first_name": user.first_name or "",
+                "is_new_user": str(is_new_user).lower(),
+            }
+        )
+        return redirect(f"{redirect_uri}#{fragment}")
+    except Exception as e:
+        logger.error(f"Telegram callback error: {e}")
+        fallback_redirect = request.args.get(
+            "redirect_uri", "http://localhost:3000/auth/telegram/callback"
+        )
+        return redirect(f"{fallback_redirect}?error=telegram_auth_failed")
 
 
 @bp.route("/oauth/<provider>", methods=["POST"])
@@ -525,7 +804,8 @@ def oauth_login(provider):
     """Login with OAuth provider"""
     try:
         oauth_service = _get_oauth_service()
-        auth_url = oauth_service.get_authorization_url(provider)
+        auth_result = oauth_service.get_authorize_url(provider)
+        auth_url = auth_result[0] if isinstance(auth_result, tuple) else auth_result
         return jsonify({"auth_url": auth_url}), 200
     except Exception as e:
         logger.error(f"OAuth login error: {e}")
@@ -537,43 +817,73 @@ def oauth_login(provider):
 def oauth_callback(provider):
     """OAuth provider callback"""
     try:
+        provider = (provider or "").lower().strip()
+        if provider not in {"google", "github", "yandex"}:
+            return jsonify({"error": "Unsupported OAuth provider"}), 400
+
         data = request.get_json()
-        code = data.get("code")
+        code = data.get("code") if data else None
 
         if not code:
-            return jsonify({"error": "Auth code required"}), 400
+            return jsonify({"error": "Missing authorization code"}), 400
 
-        oauth_service = _get_oauth_service()
-        user_info = oauth_service.exchange_code_for_token(provider, code)
+        provider_keys = {
+            "google": ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+            "github": ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
+            "yandex": ("YANDEX_CLIENT_ID", "YANDEX_CLIENT_SECRET"),
+        }
+        key_id, key_secret = provider_keys[provider]
+        if not current_app.config.get(key_id) or not current_app.config.get(key_secret):
+            return jsonify({"error": "OAuth not configured"}), 503
 
-        if not user_info:
-            return jsonify({"error": "Failed to get user info"}), 400
+        if provider == "google":
+            token = oauth_api._exchange_google_code_for_token(code)
+            if not token:
+                return jsonify({"error": "Invalid authorization code"}), 400
+            user_info = oauth_api._get_google_user_info(token["access_token"])
+            if not user_info:
+                return jsonify({"error": "Failed to retrieve user info"}), 400
+            user, is_new_user = oauth_api._find_or_create_user_from_google(user_info)
 
-        email = user_info.get("email")
-        user = User.query.filter_by(email=email).first()
+        elif provider == "github":
+            token = oauth_api._exchange_github_code_for_token(code)
+            if not token:
+                return jsonify({"error": "Invalid authorization code"}), 400
+            user_info = oauth_api._get_github_user_info(token["access_token"])
+            if not user_info:
+                return jsonify({"error": "Failed to retrieve user info"}), 400
 
-        if not user:
-            user = User(
-                email=email,
-                first_name=user_info.get("given_name"),
-                last_name=user_info.get("family_name"),
-                oauth_provider=provider,
-                oauth_id=user_info.get("sub"),
-                is_email_verified=True,
-                is_active=True,
-            )
-            db.session.add(user)
-            db.session.commit()
+            user_email = user_info.get("email")
+            if not user_email:
+                user_email = oauth_api._get_github_user_email(token["access_token"])
+            if not user_email:
+                return jsonify({"error": "Unable to get email from GitHub"}), 400
 
-        access_token = create_access_token(identity=str(user.id))
-        refresh_token = create_refresh_token(identity=str(user.id))
+            user, is_new_user = oauth_api._find_or_create_user_from_github(user_info, user_email)
+
+        else:  # yandex
+            token = oauth_api._exchange_yandex_code_for_token(code)
+            if not token:
+                return jsonify({"error": "Invalid authorization code"}), 400
+            user_info = oauth_api._get_yandex_user_info(token["access_token"])
+            if not user_info:
+                return jsonify({"error": "Failed to retrieve user info"}), 400
+            user, is_new_user = oauth_api._find_or_create_user_from_yandex(user_info)
+
+        access_token, refresh_token = oauth_api._generate_tokens(user)
+        oauth_api._send_welcome_email_if_new(user, is_new_user)
 
         return (
             jsonify(
                 {
+                    "success": True,
                     "user": user.to_dict(),
                     "access_token": access_token,
                     "refresh_token": refresh_token,
+                    "user_id": user.id,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "is_new_user": is_new_user,
                 }
             ),
             200,
@@ -581,4 +891,98 @@ def oauth_callback(provider):
 
     except Exception as e:
         logger.error(f"OAuth callback error: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Authentication failed", "message": str(e)}), 500
+
+
+def _verify_telegram_signature(telegram_data: dict) -> bool:
+    """Validate Telegram Login Widget payload signature."""
+    bot_token = current_app.config.get("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        return False
+
+    received_hash = telegram_data.get("hash", "")
+    if not received_hash:
+        return False
+
+    check_pairs = []
+    for key in ["auth_date", "first_name", "id", "last_name", "photo_url", "username"]:
+        value = telegram_data.get(key)
+        if value is not None and value != "":
+            check_pairs.append(f"{key}={value}")
+    data_check_string = "\n".join(sorted(check_pairs))
+
+    secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+    computed_hash = hmac.new(
+        secret_key, data_check_string.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(computed_hash, received_hash)
+
+
+def _resolve_telegram_bot_username() -> str | None:
+    """Resolve bot username from config/env or via Telegram getMe API."""
+    username = current_app.config.get("TELEGRAM_BOT_USERNAME") or os.getenv("TELEGRAM_BOT_USERNAME")
+    if username:
+        return username.lstrip("@").strip()
+
+    bot_token = current_app.config.get("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        return None
+
+    try:
+        response = requests.get(f"https://api.telegram.org/bot{bot_token}/getMe", timeout=10)
+        if response.status_code != 200:
+            return None
+        payload = response.json()
+        if not payload.get("ok"):
+            return None
+        user = payload.get("result") or {}
+        resolved = (user.get("username") or "").strip()
+        return resolved or None
+    except Exception:
+        return None
+
+
+def _find_or_create_user_from_telegram(telegram_user: dict) -> tuple[User, bool]:
+    """Find existing user or create new one from Telegram user data."""
+    oauth_id = str(telegram_user.get("id"))
+    user = User.query.filter_by(oauth_provider="telegram", oauth_id=oauth_id).first()
+    if user:
+        if telegram_user.get("first_name"):
+            user.first_name = telegram_user.get("first_name")
+        if telegram_user.get("last_name"):
+            user.last_name = telegram_user.get("last_name")
+        user.is_email_verified = True
+        db.session.commit()
+        return user, False
+
+    username = (telegram_user.get("username") or "").strip().lower()
+    email = f"tg_{username}@telegram.local" if username else f"tg_{oauth_id}@telegram.local"
+
+    # If synthetic email already exists, attach telegram identity to that user.
+    existing_by_email = User.query.filter_by(email=email).first()
+    if existing_by_email:
+        existing_by_email.oauth_provider = "telegram"
+        existing_by_email.oauth_id = oauth_id
+        existing_by_email.is_email_verified = True
+        if telegram_user.get("first_name"):
+            existing_by_email.first_name = telegram_user.get("first_name")
+        if telegram_user.get("last_name"):
+            existing_by_email.last_name = telegram_user.get("last_name")
+        db.session.commit()
+        return existing_by_email, False
+
+    user = User(
+        email=email,
+        first_name=telegram_user.get("first_name", ""),
+        last_name=telegram_user.get("last_name", ""),
+        is_email_verified=True,
+        oauth_provider="telegram",
+        oauth_id=oauth_id,
+        role=UserRole.USER,
+        is_active=True,
+    )
+
+    db.session.add(user)
+    db.session.commit()
+    return user, True

@@ -3,7 +3,27 @@ Database and application configuration
 """
 
 import os
+import socket
 from datetime import timedelta
+
+
+def _normalize_database_url(raw_url: str) -> str:
+    """Normalize DB URL for local development.
+
+    If DATABASE_URL points to host `postgres` but this hostname is not resolvable
+    in the current environment (typical local non-docker run), fallback to
+    localhost to avoid connection failures during auth/registration.
+    """
+    if not raw_url:
+        return "sqlite:///cursa.db"
+
+    if "@postgres:" in raw_url:
+        try:
+            socket.gethostbyname("postgres")
+        except socket.gaierror:
+            return raw_url.replace("@postgres:", "@localhost:")
+
+    return raw_url
 
 
 class Config:
@@ -15,16 +35,23 @@ class Config:
     TESTING = False
 
     # Database
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        "postgresql://cursa_user:cursa_password_change_in_production@postgres:5432/cursa_db",
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(
+        os.getenv(
+            "DATABASE_URL",
+            "sqlite:///cursa.db",
+        )
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,
-        "pool_recycle": 3600,
-        "pool_pre_ping": True,
-    }
+
+    # ConnectionPool только для PostgreSQL
+    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgresql"):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_size": 10,
+            "pool_recycle": 3600,
+            "pool_pre_ping": True,
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {}
 
     # JWT
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwt-secret-key-change-in-production")
@@ -71,6 +98,7 @@ class Config:
     # SendGrid (preferred)
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
     SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "noreply@cursa.app")
+    EMAIL_VERIFICATION_REQUIRED = os.getenv("EMAIL_VERIFICATION_REQUIRED", "true").lower() == "true"
 
     # Rate Limiting
     RATELIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "True").lower() == "true"
@@ -94,12 +122,19 @@ class Config:
     YANDEX_CLIENT_ID = os.getenv("YANDEX_CLIENT_ID", "")
     YANDEX_CLIENT_SECRET = os.getenv("YANDEX_CLIENT_SECRET", "")
 
+    # Telegram Bot OAuth (primary login method for Russia)
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""
 
     DEBUG = True
     TESTING = False
+    EMAIL_VERIFICATION_REQUIRED = (
+        os.getenv("EMAIL_VERIFICATION_REQUIRED", "false").lower() == "true"
+    )
 
 
 class ProductionConfig(Config):

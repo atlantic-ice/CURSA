@@ -85,12 +85,16 @@ class User(db.Model):
             return False
         return check_password_hash(self.password_hash, password)
 
-    def enable_2fa(self, secret: str, backup_codes: list) -> None:
-        """Enable 2FA for user"""
+    def enable_2fa(self, secret: str) -> list:
+        """Enable 2FA for user and generate backup codes"""
+        from app.services.totp_service import totp_service
+
+        backup_codes = totp_service.generate_backup_codes(count=10)
         self.totp_secret = secret
         self.backup_codes = backup_codes
         self.totp_enabled = True
         self.last_2fa_check = datetime.now(timezone.utc)
+        return backup_codes
 
     def disable_2fa(self) -> None:
         """Disable 2FA for user"""
@@ -98,6 +102,17 @@ class User(db.Model):
         self.backup_codes = None
         self.totp_enabled = False
         self.last_2fa_check = None
+
+    def regenerate_backup_codes(self) -> list:
+        """Regenerate backup codes for 2FA"""
+        from app.services.totp_service import totp_service
+
+        if not self.totp_enabled:
+            raise ValueError("2FA is not enabled")
+
+        backup_codes = totp_service.generate_backup_codes(count=10)
+        self.backup_codes = backup_codes
+        return backup_codes
 
     def verify_2fa_token(self, token: str) -> bool:
         """Verify 2FA token or backup code"""
@@ -156,6 +171,8 @@ class User(db.Model):
             "is_2fa_enabled": self.totp_enabled,
             "created_at": self.created_at.isoformat(),
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
+            "oauth_provider": self.oauth_provider,
+            "has_password": self.password_hash is not None,
         }
         if include_email:
             data["email"] = self.email
