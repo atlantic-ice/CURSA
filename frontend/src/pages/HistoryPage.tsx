@@ -1,36 +1,24 @@
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import DeleteIcon from "@mui/icons-material/Delete";
-import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
-import DownloadIcon from "@mui/icons-material/Download";
-import HighlightOffIcon from "@mui/icons-material/HighlightOff";
-import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
-import NoteAddOutlinedIcon from "@mui/icons-material/NoteAddOutlined";
-import SearchIcon from "@mui/icons-material/Search";
-import SortIcon from "@mui/icons-material/Sort";
-import {
-  Box,
-  Button,
-  Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  IconButton,
-  InputBase,
-  Tooltip,
-  Typography,
-} from "@mui/material";
 import { motion } from "framer-motion";
-import { FC, useContext, useState } from "react";
+import { ArrowUpDown, CheckCircle2, Download, FileText, Trash2, TrashIcon } from "lucide-react";
+import { FC, useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckHistoryContext } from "../App";
-import usePageStyles from "../hooks/usePageStyles";
-import type { HistoryItem, LocationState } from "../types";
 
-// ============================================================================
-// Type Definitions
-// ============================================================================
+import { CheckHistoryContext } from "../App";
+import AppPageLayout from "../components/layout/AppPageLayout";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Checkbox } from "../components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { SearchField } from "../components/ui/search-field";
+import type { HistoryItem, LocationState } from "../types";
 
 interface HistoryPageProps {
   className?: string;
@@ -42,73 +30,42 @@ interface CheckHistoryContextType {
   clearHistory: () => void;
 }
 
-// ============================================================================
-// Constants & Config
-// ============================================================================
-
 const isLocal =
   typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
+const env =
+  typeof globalThis !== "undefined"
+    ? (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    : undefined;
+
 const API_BASE = isLocal
   ? "http://localhost:5000"
-  : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
+  : env?.REACT_APP_API_BASE || "https://cursa.onrender.com";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
-};
-
-const rowVariants = {
+const rowMotion = {
   hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.22 } },
 };
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Pluralize word for Russian language (запись/записи/записей)
- */
 const pluralRecords = (n: number): string => {
   if (n % 10 === 1 && n !== 11) return "запись";
   if (n % 10 >= 2 && n % 10 <= 4 && (n < 10 || n > 20)) return "записи";
   return "записей";
 };
 
-/**
- * Get plural form for deletion dialog (запись/записи/записей)
- */
 const getDeletePlural = (count: number): string => {
   if (count === 1) return "запись";
   if (count >= 2 && count <= 4) return "записи";
   return "записей";
 };
 
-// ============================================================================
-// Main Component
-// ============================================================================
-
-/**
- * HistoryPage Component
- *
- * Displays:
- * - List of all validation history records
- * - Search and filtering capabilities
- * - Bulk operations (delete, export to CSV)
- * - Download corrected documents
- * - Pagination
- */
 const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
   const navigate = useNavigate();
   const { history, removeFromHistory, clearHistory } = useContext(
     CheckHistoryContext,
   ) as CheckHistoryContextType;
-  const { isDark, textPrimary, textMuted, borderColor, borderColorSubtle, rowHover, inputBg } =
-    usePageStyles();
 
-  // ========== State ==========
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [clearDialogOpen, setClearDialogOpen] = useState<boolean>(false);
@@ -120,35 +77,32 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
 
   const rowsPerPage = 20;
 
-  // ========== Computed Values ==========
-
-  const filteredHistory = history
-    .filter(
-      (item: HistoryItem) =>
-        (item.fileName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.profileId || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.reportData?.check_results?.profile?.name || "")
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        new Date(item.timestamp || (item.id as unknown as number))
-          .toLocaleString("ru-RU")
-          .includes(searchQuery),
-    )
-    .sort((a: HistoryItem, b: HistoryItem) => {
-      const ta = (a.timestamp || a.id || 0) as number;
-      const tb = (b.timestamp || b.id || 0) as number;
-      return sortDirection === "asc" ? ta - tb : tb - ta;
-    });
+  const filteredHistory = useMemo(
+    () =>
+      history
+        .filter((item: HistoryItem) => {
+          const q = searchQuery.toLowerCase();
+          return (
+            (item.fileName || "").toLowerCase().includes(q) ||
+            (item.profileId || "").toLowerCase().includes(q) ||
+            (item.reportData?.check_results?.profile?.name || "").toLowerCase().includes(q) ||
+            new Date(item.timestamp || (item.id as unknown as number))
+              .toLocaleString("ru-RU")
+              .includes(searchQuery)
+          );
+        })
+        .sort((a: HistoryItem, b: HistoryItem) => {
+          const ta = (a.timestamp || a.id || 0) as number;
+          const tb = (b.timestamp || b.id || 0) as number;
+          return sortDirection === "asc" ? ta - tb : tb - ta;
+        }),
+    [history, searchQuery, sortDirection],
+  );
 
   const paged = filteredHistory.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  const totalPages = Math.ceil(filteredHistory.length / rowsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredHistory.length / rowsPerPage));
 
-  // ========== Event Handlers ==========
-
-  /**
-   * Download corrected document
-   */
-  const downloadDocument = (filePath: string, originalName: string | undefined): void => {
+  const downloadDocument = (filePath: string, originalName?: string): void => {
     if (!filePath) return;
 
     const safeName =
@@ -158,17 +112,14 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
 
     if (filePath.indexOf("/") === -1 && filePath.indexOf("\\") === -1) {
       window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filePath)}`;
-    } else {
-      window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(safeName)}`;
+      return;
     }
+
+    window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(safeName)}`;
   };
 
-  /**
-   * Toggle selection of a single item
-   */
-  const toggleSelect = (id: string, e: React.MouseEvent): void => {
-    e.stopPropagation();
-    setSelectedIds((prev: Set<string>) => {
+  const toggleSelect = (id: string): void => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -179,29 +130,32 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
     });
   };
 
-  /**
-   * Toggle select all items on current page
-   */
-  const toggleSelectAll = (): void => {
-    if (selectedIds.size === paged.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(paged.map((i: HistoryItem) => i.id || "")));
+  const toggleSelectAllOnPage = (): void => {
+    const pageIds = paged.map((item) => item.id || "").filter(Boolean);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+      return;
     }
+
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      pageIds.forEach((id) => next.add(id));
+      return next;
+    });
   };
 
-  /**
-   * Delete selected items
-   */
   const bulkDelete = (): void => {
-    selectedIds.forEach((id: string) => removeFromHistory(id));
+    selectedIds.forEach((id) => removeFromHistory(id));
     setSelectedIds(new Set());
     setBulkDeleteOpen(false);
   };
 
-  /**
-   * Export history to CSV
-   */
   const exportCSV = (): void => {
     const headers = ["Файл", "Дата", "Профиль", "Замечания", "Балл", "Исправлен"];
     const rows = filteredHistory.map((item: HistoryItem) => {
@@ -227,7 +181,6 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
     });
 
     const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
-
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -237,9 +190,6 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
     URL.revokeObjectURL(url);
   };
 
-  /**
-   * Navigate to report
-   */
   const openReport = (item: HistoryItem): void => {
     navigate("/report", {
       state: {
@@ -251,591 +201,297 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
     });
   };
 
-  // ========== Render ==========
+  const pageIds = paged.map((item) => item.id || "").filter(Boolean);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
 
   return (
-    <Box
+    <AppPageLayout
       className={className}
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        py: 4,
-        px: { xs: 3, md: 4 },
-      }}
-    >
-      {/* Header */}
-      <Box
-        sx={{
-          mb: 4,
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              letterSpacing: "-0.025em",
-              fontFamily: "'Wix Madefor Display', sans-serif",
-              color: textPrimary,
-              mb: 0.5,
-            }}
+      title="История проверок"
+      actions={
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl"
+            onClick={() => setSortDirection((d) => (d === "desc" ? "asc" : "desc"))}
           >
-            История проверок
-          </Typography>
-          <Typography sx={{ color: textMuted, fontSize: "0.875rem" }}>
+            <ArrowUpDown className="size-4" />
+            {sortDirection === "desc" ? "Сначала новые" : "Сначала старые"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl"
+            disabled={filteredHistory.length === 0}
+            onClick={exportCSV}
+          >
+            <Download className="size-4" />
+            CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="rounded-xl"
+            disabled={history.length === 0}
+            onClick={() => setClearDialogOpen(true)}
+          >
+            <TrashIcon className="size-4" />
+            Очистить
+          </Button>
+        </div>
+      }
+    >
+      <Card className="rounded-[30px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+        <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:p-5">
+          <p className="text-sm text-[#b6b6b6] md:mr-2">
             {history.length === 0
               ? "Нет записей"
               : `${history.length} ${pluralRecords(history.length)}`}
-          </Typography>
-        </motion.div>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-          <Button
-            onClick={() => navigate("/")}
-            startIcon={<NoteAddOutlinedIcon />}
-            variant="contained"
-            sx={{
-              borderRadius: 1,
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              textTransform: "none",
-              letterSpacing: "0.03em",
-              px: 2.5,
-              boxShadow: "none",
-            }}
-          >
-            Новая проверка
-          </Button>
-        </motion.div>
-      </Box>
-
-      {/* Toolbar */}
-      <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            px: 1.5,
-            py: 0.75,
-            borderRadius: 1,
-            bgcolor: inputBg,
-            border: "1px solid",
-            borderColor,
-            flex: "1 1 240px",
-            maxWidth: 360,
-          }}
-        >
-          <SearchIcon sx={{ fontSize: 16, color: textMuted }} />
-          <InputBase
-            placeholder="Поиск по названию или дате"
+          </p>
+          <SearchField
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
+            onChange={(value) => {
+              setSearchQuery(value);
               setPage(0);
             }}
-            sx={{
-              flex: 1,
-              fontSize: "0.875rem",
-              color: textPrimary,
-              "& input::placeholder": { color: textMuted },
-            }}
+            onSearch={() => setPage(0)}
+            placeholder="Поиск по названию или дате"
+            buttonLabel="Поиск"
+            className="min-w-0 flex-1"
+            inputClassName="h-11 rounded-2xl border-[#2e2f2f] bg-[#171717] text-[#fafafa] placeholder:text-[#7b7b7b]"
+            buttonClassName="h-11 rounded-2xl px-4"
           />
-          {searchQuery && (
-            <IconButton size="small" onClick={() => setSearchQuery("")} sx={{ p: 0.25 }}>
-              <HighlightOffIcon sx={{ fontSize: 15, color: textMuted }} />
-            </IconButton>
-          )}
-        </Box>
 
-        <Button
-          size="small"
-          startIcon={<SortIcon sx={{ fontSize: 15 }} />}
-          onClick={() => setSortDirection((d) => (d === "desc" ? "asc" : "desc"))}
-          sx={{
-            borderRadius: 1,
-            color: textMuted,
-            border: "1px solid",
-            borderColor,
-            fontSize: "0.8rem",
-            textTransform: "none",
-            px: 1.5,
-            py: 0.875,
-            "&:hover": { color: textPrimary },
-          }}
-        >
-          {sortDirection === "desc" ? "Сначала новые" : "Сначала старые"}
-        </Button>
-
-        <Box sx={{ flex: 1 }} />
-
-        {selectedIds.size > 0 && (
-          <Tooltip title={`Удалить выбранные (${selectedIds.size})`}>
+          {selectedIds.size > 0 && (
             <Button
-              size="small"
-              startIcon={<DeleteIcon sx={{ fontSize: 15 }} />}
+              size="sm"
+              variant="destructive"
+              className="rounded-xl"
               onClick={() => setBulkDeleteOpen(true)}
-              sx={{
-                borderRadius: 1,
-                color: "#e34234",
-                border: "1px solid rgba(227,66,52,0.25)",
-                fontSize: "0.8rem",
-                textTransform: "none",
-                px: 1.5,
-                "&:hover": { bgcolor: "rgba(227,66,52,0.06)" },
-              }}
             >
+              <Trash2 className="size-4" />
               Удалить ({selectedIds.size})
             </Button>
-          </Tooltip>
-        )}
+          )}
+        </CardContent>
+      </Card>
 
-        <Tooltip title="Экспортировать в CSV">
-          <span>
-            <Button
-              size="small"
-              startIcon={<DownloadIcon sx={{ fontSize: 15 }} />}
-              onClick={exportCSV}
-              disabled={filteredHistory.length === 0}
-              sx={{
-                borderRadius: 1,
-                color: textMuted,
-                border: "1px solid",
-                borderColor,
-                fontSize: "0.8rem",
-                textTransform: "none",
-                px: 1.5,
-                "&:hover": { color: textPrimary },
-              }}
-            >
-              CSV
-            </Button>
-          </span>
-        </Tooltip>
+      <Card className="rounded-[30px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+        <CardHeader className="p-6 pb-4">
+          <CardTitle className="text-xl">Записи</CardTitle>
+          <CardDescription>
+            Список проверок с действиями и загрузкой исправленного документа.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 p-6 pt-0">
+          {history.length === 0 ? (
+            <div className="rounded-[26px] border border-dashed border-[#2e2f2f] bg-[#171717] px-6 py-16 text-center">
+              <FileText className="mx-auto size-10 text-muted-foreground" />
+              <p className="mt-4 text-base font-medium text-foreground">История пуста</p>
+              <Button variant="outline" className="mt-4 rounded-xl" onClick={() => navigate("/")}>
+                Загрузить первый документ
+              </Button>
+            </div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="rounded-[26px] border border-dashed border-[#2e2f2f] bg-[#171717] px-6 py-16 text-center text-sm text-[#b6b6b6]">
+              Ничего не найдено.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-[24px_minmax(0,1fr)_160px_96px_120px] items-center gap-3 rounded-2xl border border-[#2e2f2f] bg-[#222222] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#b6b6b6]">
+                <Checkbox checked={allPageSelected} onCheckedChange={toggleSelectAllOnPage} />
+                <span>Файл</span>
+                <span>Дата</span>
+                <span>Балл</span>
+                <span>Действия</span>
+              </div>
 
-        <Tooltip title="Очистить всю историю">
-          <span>
-            <Button
-              size="small"
-              startIcon={<DeleteSweepIcon sx={{ fontSize: 15 }} />}
-              onClick={() => setClearDialogOpen(true)}
-              disabled={history.length === 0}
-              sx={{
-                borderRadius: 1,
-                color: "#e34234",
-                border: "1px solid rgba(227,66,52,0.25)",
-                fontSize: "0.8rem",
-                textTransform: "none",
-                px: 1.5,
-                "&:hover": { bgcolor: "rgba(227,66,52,0.06)" },
-              }}
-            >
-              Очистить
-            </Button>
-          </span>
-        </Tooltip>
-      </Box>
-
-      {/* Content */}
-      <Box sx={{ flex: 1, overflowY: "auto", pr: 0.5 }} className="custom-scrollbar">
-        {history.length === 0 ? (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: 300,
-              gap: 2,
-            }}
-          >
-            <InsertDriveFileOutlinedIcon sx={{ fontSize: 48, color: textMuted, opacity: 0.4 }} />
-            <Typography sx={{ color: textMuted, fontSize: "0.9rem" }}>История пуста</Typography>
-            <Button
-              onClick={() => navigate("/")}
-              variant="outlined"
-              size="small"
-              sx={{ borderRadius: 1, textTransform: "none", borderColor, color: textMuted }}
-            >
-              Загрузить первый документ
-            </Button>
-          </Box>
-        ) : filteredHistory.length === 0 ? (
-          <Box
-            sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}
-          >
-            <Typography sx={{ color: textMuted, fontSize: "0.875rem" }}>
-              Ничего не найдено
-            </Typography>
-          </Box>
-        ) : (
-          <>
-            {/* Table Header */}
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "36px minmax(0,1fr) 140px 120px 85px 60px 100px 130px",
-                gap: 1,
-                px: 2,
-                py: 1,
-                borderBottom: "1px solid",
-                borderColor,
-              }}
-            >
-              <Checkbox
-                size="small"
-                checked={paged.length > 0 && selectedIds.size === paged.length}
-                indeterminate={selectedIds.size > 0 && selectedIds.size < paged.length}
-                onChange={toggleSelectAll}
-                sx={{
-                  p: 0,
-                  color: textMuted,
-                  "&.Mui-checked": { color: "primary.main" },
-                  "&.MuiCheckbox-indeterminate": { color: "primary.main" },
-                }}
-              />
-              {["Файл", "Дата", "Профиль", "Проблем", "Балл", "Исправлен", ""].map((h) => (
-                <Typography
-                  key={h}
-                  sx={{
-                    fontSize: "0.7rem",
-                    letterSpacing: "0.08em",
-                    color: textMuted,
-                    textTransform: "uppercase",
-                    fontWeight: 600,
-                  }}
-                >
-                  {h}
-                </Typography>
-              ))}
-            </Box>
-
-            {/* Table Rows */}
-            <motion.div variants={containerVariants} initial="hidden" animate="show">
-              {paged.map((item: HistoryItem) => {
-                const issuesCount =
-                  item.reportData?.check_results?.total_issues_count ?? item.totalIssues ?? 0;
+              {paged.map((item) => {
+                const itemId = item.id || "";
+                const selected = selectedIds.has(itemId);
                 const correctedPath =
                   item.correctedFilePath || item.reportData?.corrected_file_path;
                 const score = item.score ?? item.reportData?.score;
-                const scoreColor =
-                  score == null
-                    ? textMuted
-                    : score >= 4
-                      ? "#34d399"
-                      : score >= 3
-                        ? "#fbbf24"
-                        : "#f87171";
-                const dateStr = new Date(
-                  item.timestamp || (item.id as unknown as number),
-                ).toLocaleString("ru-RU", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
+                const issuesCount =
+                  item.reportData?.check_results?.total_issues_count ?? item.totalIssues ?? 0;
 
                 return (
-                  <motion.div key={item.id} variants={rowVariants}>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "36px minmax(0,1fr) 140px 120px 85px 60px 100px 130px",
-                        gap: 1,
-                        px: 2,
-                        py: 1.5,
-                        borderBottom: "1px solid",
-                        borderColor: borderColorSubtle,
-                        cursor: "pointer",
-                        transition: "background 0.15s",
-                        "&:hover": { bgcolor: rowHover },
-                        alignItems: "center",
-                        bgcolor: selectedIds.has(item.id || "")
-                          ? isDark
-                            ? "rgba(99,102,241,0.06)"
-                            : "rgba(99,102,241,0.04)"
-                          : undefined,
-                      }}
+                  <motion.div
+                    key={itemId || `${item.fileName}-${item.timestamp}`}
+                    initial="hidden"
+                    animate="show"
+                    variants={rowMotion}
+                    className="grid grid-cols-[24px_minmax(0,1fr)_160px_96px_120px] items-center gap-3 rounded-2xl border border-[#2e2f2f] bg-[#171717] px-3 py-3 transition-colors hover:bg-[#222222]"
+                  >
+                    <Checkbox checked={selected} onCheckedChange={() => toggleSelect(itemId)} />
+
+                    <button
+                      type="button"
                       onClick={() => openReport(item)}
+                      className="min-w-0 text-left"
                     >
-                      <Checkbox
-                        size="small"
-                        checked={selectedIds.has(item.id || "")}
-                        onChange={(e) => toggleSelect(item.id || "", e)}
-                        onClick={(e) => e.stopPropagation()}
-                        sx={{ p: 0, color: textMuted, "&.Mui-checked": { color: "primary.main" } }}
-                      />
-
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
-                        <InsertDriveFileOutlinedIcon
-                          sx={{ fontSize: 16, color: textMuted, flexShrink: 0 }}
-                        />
-                        <Typography
-                          sx={{
-                            fontSize: "0.875rem",
-                            fontWeight: 500,
-                            color: textPrimary,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {item.fileName || "Без названия"}
-                        </Typography>
-                      </Box>
-
-                      <Typography sx={{ fontSize: "0.775rem", color: textMuted }}>
-                        {dateStr}
-                      </Typography>
-
-                      <Typography
-                        sx={{
-                          fontSize: "0.74rem",
-                          color: textMuted,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {item.reportData?.check_results?.profile?.name || item.profileId || "—"}
-                      </Typography>
-
-                      <Box
-                        sx={{
-                          display: "inline-flex",
-                          px: 1.25,
-                          py: 0.25,
-                          borderRadius: 0.5,
-                          border: "1px solid",
-                          borderColor:
-                            issuesCount > 0 ? "rgba(251,191,36,0.25)" : "rgba(52,211,153,0.25)",
-                          bgcolor:
-                            issuesCount > 0 ? "rgba(251,191,36,0.07)" : "rgba(52,211,153,0.07)",
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                            color: issuesCount > 0 ? "#fbbf24" : "#34d399",
-                          }}
-                        >
-                          {issuesCount}
-                        </Typography>
-                      </Box>
-
-                      <Typography
-                        sx={{
-                          fontSize: "0.78rem",
-                          fontWeight: score != null ? 600 : 400,
-                          color: scoreColor,
-                        }}
-                      >
-                        {score != null
-                          ? typeof score === "number"
-                            ? score.toFixed(1)
-                            : score
-                          : "—"}
-                      </Typography>
-
-                      <Box>
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {item.fileName || "Без названия"}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#b6b6b6]">
+                        <span>{item.profileId || "default_gost"}</span>
+                        <span>•</span>
+                        <span>{issuesCount} замечаний</span>
                         {correctedPath ? (
-                          <Box
-                            sx={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 0.5,
-                              px: 1.25,
-                              py: 0.25,
-                              borderRadius: 0.5,
-                              border: "1px solid rgba(52,211,153,0.25)",
-                              bgcolor: "rgba(52,211,153,0.07)",
-                            }}
-                          >
-                            <CheckCircleOutlineIcon sx={{ fontSize: 12, color: "#34d399" }} />
-                            <Typography
-                              sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#34d399" }}
-                            >
-                              Да
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Typography sx={{ fontSize: "0.75rem", color: textMuted }}>—</Typography>
-                        )}
-                      </Box>
+                          <Badge className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-600 dark:text-emerald-300">
+                            <CheckCircle2 className="mr-1 size-3" />
+                            DOCX
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </button>
 
-                      <Box
-                        sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                    <p className="text-xs text-[#b6b6b6]">
+                      {new Date(item.timestamp || (item.id as unknown as number)).toLocaleString(
+                        "ru-RU",
+                      )}
+                    </p>
+
+                    <p className="text-sm font-semibold text-foreground">
+                      {score == null ? "-" : Number(score).toFixed(1)}
+                    </p>
+
+                    <div className="flex items-center gap-1">
+                      {correctedPath ? (
                         <Button
-                          size="small"
-                          onClick={() => openReport(item)}
-                          sx={{
-                            borderRadius: 0.5,
-                            fontSize: "0.75rem",
-                            textTransform: "none",
-                            color: textMuted,
-                            py: 0.25,
-                            px: 1,
-                            "&:hover": { color: textPrimary },
-                          }}
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 rounded-lg"
+                          onClick={() => downloadDocument(correctedPath, item.fileName)}
                         >
-                          Открыть
+                          <Download className="size-4" />
                         </Button>
-                        {correctedPath && (
-                          <Tooltip title="Скачать исправленный документ">
-                            <IconButton
-                              size="small"
-                              onClick={() => downloadDocument(correctedPath, item.fileName)}
-                              sx={{ color: "#34d399", p: 0.5 }}
-                            >
-                              <DownloadIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        <Tooltip title="Удалить из истории">
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setDeleteItemId(item.id || null);
-                              setDeleteDialogOpen(true);
-                            }}
-                            sx={{ color: textMuted, p: 0.5, "&:hover": { color: "#e34234" } }}
-                          >
-                            <DeleteIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
+                      ) : null}
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-lg text-destructive"
+                        onClick={() => {
+                          setDeleteItemId(itemId);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </motion.div>
                 );
               })}
-            </motion.div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 1,
-                  mt: 3,
-                  pb: 2,
-                }}
-              >
-                <Button
-                  size="small"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => p - 1)}
-                  sx={{
-                    borderRadius: 1,
-                    textTransform: "none",
-                    border: "1px solid",
-                    borderColor,
-                    color: textMuted,
-                    minWidth: 36,
-                  }}
-                >
-                  ←
-                </Button>
-                <Typography sx={{ px: 2, fontSize: "0.8rem", color: textMuted }}>
-                  {page + 1} / {totalPages}
-                </Typography>
-                <Button
-                  size="small"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage((p) => p + 1)}
-                  sx={{
-                    borderRadius: 1,
-                    textTransform: "none",
-                    border: "1px solid",
-                    borderColor,
-                    color: textMuted,
-                    minWidth: 36,
-                  }}
-                >
-                  →
-                </Button>
-              </Box>
-            )}
-          </>
-        )}
-      </Box>
+              <div className="flex items-center justify-between pt-2 text-sm text-[#b6b6b6]">
+                <span>
+                  Страница {page + 1} из {totalPages}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  >
+                    Назад
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl"
+                    disabled={page >= totalPages - 1}
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  >
+                    Вперед
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Clear History Dialog */}
-      <Dialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)}>
-        <DialogTitle>Очистить историю?</DialogTitle>
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
         <DialogContent>
-          <DialogContentText>
-            Все записи будут удалены. Это действие нельзя отменить.
-          </DialogContentText>
+          <DialogHeader>
+            <DialogTitle>Очистить всю историю?</DialogTitle>
+            <DialogDescription>
+              Это действие удалит все записи без возможности восстановления.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                clearHistory();
+                setSelectedIds(new Set());
+                setClearDialogOpen(false);
+              }}
+            >
+              Удалить все
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setClearDialogOpen(false)}>Отмена</Button>
-          <Button
-            onClick={() => {
-              clearHistory();
-              setClearDialogOpen(false);
-            }}
-            color="error"
-            variant="contained"
-          >
-            Очистить
-          </Button>
-        </DialogActions>
       </Dialog>
 
-      {/* Delete Single Item Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Удалить запись?</DialogTitle>
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <DialogContent>
-          <DialogContentText>Запись будет удалена из истории проверок.</DialogContentText>
+          <DialogHeader>
+            <DialogTitle>Удалить выбранные записи?</DialogTitle>
+            <DialogDescription>
+              Будет удалено {selectedIds.size} {getDeletePlural(selectedIds.size)}.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>
+              Отмена
+            </Button>
+            <Button variant="destructive" onClick={bulkDelete}>
+              Удалить
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
-          <Button
-            onClick={() => {
-              if (deleteItemId) removeFromHistory(deleteItemId);
-              setDeleteItemId(null);
-              setDeleteDialogOpen(false);
-            }}
-            color="error"
-          >
-            Удалить
-          </Button>
-        </DialogActions>
       </Dialog>
 
-      {/* Bulk Delete Dialog */}
-      <Dialog open={bulkDeleteOpen} onClose={() => setBulkDeleteOpen(false)}>
-        <DialogTitle>Удалить выбранные записи?</DialogTitle>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
-          <DialogContentText>
-            Будет удалено {selectedIds.size} {getDeletePlural(selectedIds.size)}. Это действие
-            нельзя отменить.
-          </DialogContentText>
+          <DialogHeader>
+            <DialogTitle>Удалить запись?</DialogTitle>
+            <DialogDescription>
+              Запись будет удалена из истории без возможности восстановления.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteItemId) {
+                  removeFromHistory(deleteItemId);
+                  setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(deleteItemId);
+                    return next;
+                  });
+                }
+                setDeleteDialogOpen(false);
+                setDeleteItemId(null);
+              }}
+            >
+              Удалить
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkDeleteOpen(false)}>Отмена</Button>
-          <Button onClick={bulkDelete} color="error" variant="contained">
-            Удалить
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </AppPageLayout>
   );
 };
 

@@ -1,82 +1,61 @@
-import AddIcon from "@mui/icons-material/Add";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import CropFreeIcon from "@mui/icons-material/CropFree";
-import DeleteIcon from "@mui/icons-material/Delete";
-import DescriptionIcon from "@mui/icons-material/Description";
-import EditIcon from "@mui/icons-material/Edit";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
-import FormatSizeIcon from "@mui/icons-material/FormatSize";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import PlaylistPlayIcon from "@mui/icons-material/PlaylistPlay";
-import SchoolIcon from "@mui/icons-material/School";
-import SearchIcon from "@mui/icons-material/Search";
-import TableChartIcon from "@mui/icons-material/TableChart";
-import TitleIcon from "@mui/icons-material/Title";
-import VerifiedIcon from "@mui/icons-material/Verified";
+﻿import { AnimatePresence, motion } from "framer-motion";
 import {
-  Badge,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Container,
+  AlertCircle,
+  ArrowRightLeft,
+  BarChart3,
+  BookMarked,
+  Copy,
+  FileDown,
+  FileText,
+  FolderKanban,
+  GraduationCap,
+  LayoutList,
+  ListTree,
+  Loader2,
+  Pencil,
+  Plus,
+  Ruler,
+  School,
+  ShieldCheck,
+  Table2,
+  Trash2,
+  Type,
+} from "lucide-react";
+import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+
+import { getApiErrorMessage, profilesApi } from "../api/client";
+import ProfileBulkOperations from "../components/ProfileBulkOperations.js";
+import ProfileComparison from "../components/ProfileComparison.js";
+import ProfileEditor from "../components/ProfileEditor.js";
+import ProfileHistory from "../components/ProfileHistory.js";
+import ProfileImportExport from "../components/ProfileImportExport.js";
+import ProfileStatistics from "../components/ProfileStatistics.js";
+import ProfileValidation from "../components/ProfileValidation.js";
+import AppPageLayout from "../components/layout/AppPageLayout";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import {
   Dialog,
-  DialogActions,
   DialogContent,
-  DialogContentText,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
-  Divider,
-  Grid,
-  IconButton,
-  InputAdornment,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Paper,
-  Tab,
-  Tabs,
-  TextField,
-  Tooltip,
-  Typography,
-  alpha,
-  useTheme,
-} from "@mui/material";
-import axios, { AxiosError } from "axios";
-import { AnimatePresence, motion } from "framer-motion";
-import { FC, ReactNode, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+} from "../components/ui/dialog";
+import { SearchField } from "../components/ui/search-field";
+import { Separator } from "../components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
+import { cn } from "../lib/utils";
 
-import HealthStatusChip from "../components/HealthStatusChip";
-import ProfileBulkOperations from "../components/ProfileBulkOperations";
-import ProfileComparison from "../components/ProfileComparison";
-import ProfileEditor from "../components/ProfileEditor";
-import ProfileHistory from "../components/ProfileHistory";
-import ProfileImportExport from "../components/ProfileImportExport";
-import ProfileStatistics from "../components/ProfileStatistics";
-import ProfileValidation from "../components/ProfileValidation";
-
-const isLocal =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-const API_BASE = isLocal ? "" : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
-
-/**
- * Profile font settings interface
- */
 interface FontSettings {
   name: string;
   size: number;
   color: string;
 }
 
-/**
- * Profile margins interface
- */
 interface Margins {
   left: number;
   right: number;
@@ -84,9 +63,6 @@ interface Margins {
   bottom: number;
 }
 
-/**
- * Heading settings interface for specific level (h1, h2)
- */
 interface HeadingSettings {
   font_size: number;
   alignment: string;
@@ -94,9 +70,6 @@ interface HeadingSettings {
   first_line_indent?: number;
 }
 
-/**
- * Bibliography settings interface
- */
 interface BibliographySettings {
   style: string;
   font_size?: number;
@@ -105,9 +78,6 @@ interface BibliographySettings {
   max_age_years?: number;
 }
 
-/**
- * Profile rules interface with all formatting requirements
- */
 interface ProfileRules {
   font: FontSettings;
   margins: Margins;
@@ -139,9 +109,6 @@ interface ProfileRules {
   required_sections: string[];
 }
 
-/**
- * Profile list item interface (minimal data)
- */
 interface Profile {
   id: string;
   name: string;
@@ -152,36 +119,36 @@ interface Profile {
   is_system?: boolean;
 }
 
-/**
- * Detailed profile data interface
- */
 interface ProfileData extends Profile {
   extends?: string;
   rules: ProfileRules;
 }
 
-/**
- * Profile form data interface for create/edit operations
- */
 interface ProfileFormData {
   name: string;
   description?: string;
   category: "gost" | "university" | "custom";
   university?: string;
+  version?: string;
   rules?: ProfileRules;
 }
 
-/**
- * Import operation result interface
- */
+interface ProfilesNavigationState {
+  mode?: "manage" | "edit" | "import-export" | "compare" | "statistics" | "bulk" | "create";
+  profileId?: string;
+  source?: string;
+}
+
+interface ProfilesEntryContext {
+  source?: string;
+  message: string;
+}
+
 interface ImportResult {
   id: string;
   name: string;
 }
 
-/**
- * Category counts interface
- */
 interface CategoryCounts {
   all: number;
   gost: number;
@@ -189,9 +156,6 @@ interface CategoryCounts {
   custom: number;
 }
 
-/**
- * RuleCard component props interface
- */
 interface RuleCardProps {
   title: string;
   icon: ReactNode;
@@ -199,127 +163,113 @@ interface RuleCardProps {
   delay: number;
 }
 
-/**
- * RuleItem component props interface
- */
 interface RuleItemProps {
   label: string;
   value: string | number;
 }
 
-/**
- * ProfilesPageProps interface (no props required)
- */
 interface ProfilesPageProps {}
 
-/**
- * RuleCard Sub-Component
- *
- * Displays a card with formatting rules in an animated container
- *
- * @param props - RuleCardProps with title, icon, children, and animation delay
- * @returns Card component with animated entrance
- */
-const RuleCard: FC<RuleCardProps> = ({ title, icon, children, delay }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      style={{ height: "100%" }}
-    >
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          height: "100%",
-          borderRadius: 1,
-          bgcolor: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          transition: "border-color 0.15s ease",
-          display: "flex",
-          flexDirection: "column",
-          "&:hover": {
-            borderColor: "rgba(255,255,255,0.18)",
-          },
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2, flexShrink: 0 }}>
-          <Box
-            sx={{
-              p: 1,
-              borderRadius: 1,
-              bgcolor: "rgba(255,255,255,0.05)",
-              color: "rgba(255,255,255,0.45)",
-              display: "flex",
-            }}
-          >
-            {icon}
-          </Box>
-          <Typography variant="subtitle1" fontWeight={700}>
-            {title}
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flexGrow: 1 }}>{children}</Box>
-      </Paper>
-    </motion.div>
-  );
+const pagePanelClass = "border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm backdrop-blur-sm";
+
+const getCategoryLabel = (category: Profile["category"]): string => {
+  switch (category) {
+    case "gost":
+      return "ГОСТ";
+    case "university":
+      return "Университет";
+    default:
+      return "Пользовательский";
+  }
 };
 
-/**
- * RuleItem Sub-Component
- *
- * Displays a single rule item with label and value
- *
- * @param props - RuleItemProps with label and value
- * @returns Formatted rule item row
- */
-const RuleItem: FC<RuleItemProps> = ({ label, value }) => (
-  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-    <Typography variant="body2" color="text.secondary">
-      {label}
-    </Typography>
-    <Typography variant="body2" fontWeight={600}>
-      {value}
-    </Typography>
-  </Box>
+const getAlignmentLabel = (value: string): string => {
+  switch (value) {
+    case "JUSTIFY":
+      return "По ширине";
+    case "CENTER":
+      return "По центру";
+    case "LEFT":
+      return "По левому краю";
+    case "RIGHT":
+      return "По правому краю";
+    default:
+      return value;
+  }
+};
+
+const getCategoryIcon = (category: Profile["category"], className?: string) => {
+  switch (category) {
+    case "gost":
+      return <ShieldCheck className={className} />;
+    case "university":
+      return <GraduationCap className={className} />;
+    default:
+      return <FileText className={className} />;
+  }
+};
+
+const RuleCard: FC<RuleCardProps> = ({ title, icon, children, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 18 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.28, delay }}
+    className="h-full"
+  >
+    <Card className={cn(pagePanelClass, "h-full rounded-3xl")}>
+      <CardHeader className="space-y-0 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-muted-foreground">
+            {icon}
+          </div>
+          <CardTitle className="text-base font-semibold tracking-[-0.02em]">{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="flex h-full flex-col gap-3">{children}</CardContent>
+    </Card>
+  </motion.div>
 );
 
-/**
- * ProfilesPage Component
- *
- * Manages the display, creation, editing, and deletion of validation profiles.
- * Features include profile list with search/filter, detailed profile view with
- * all formatting rules, comparison, import/export, statistics, and bulk operations.
- *
- * States:
- * - profiles: List of all profiles from API
- * - selectedId: Currently selected profile ID
- * - profileData: Detailed data for selected profile
- * - loading: Initial load state
- * - loadingDetails: Profile details fetch state
- * - error: Error messages
- * - View toggle: Comparison, ImportExport, Statistics, BulkOperations, Editing, Creating
- * - categoryTab: Filter by category (all, gost, university)
- * - searchQuery: Search filter for profiles
- *
- * @returns React component with full profile management interface
- */
-const ProfilesPage: FC<ProfilesPageProps> = () => {
-  const navigate = useNavigate();
-  const theme = useTheme();
+const RuleItem: FC<RuleItemProps> = ({ label, value }) => (
+  <div className="flex items-center justify-between gap-4 text-sm">
+    <span className="text-muted-foreground">{label}</span>
+    <span className="text-right font-medium text-foreground">{value}</span>
+  </div>
+);
 
-  // Profile data state
+const SummaryCard: FC<{ label: string; value: number; hint: string }> = ({
+  label,
+  value,
+  hint,
+}) => (
+  <Card className={cn(pagePanelClass, "rounded-3xl")}>
+    <CardContent className="p-6">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-2 text-4xl font-black tracking-[-0.04em] text-foreground">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{hint}</p>
+    </CardContent>
+  </Card>
+);
+
+const ProfilesPage: FC<ProfilesPageProps> = () => {
+  const location = useLocation();
+  const navigationState = (location.state as ProfilesNavigationState | null) ?? null;
+  const navigationAppliedRef = useRef<boolean>(false);
+
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [editorSeed, setEditorSeed] = useState<ProfileFormData | null>(null);
+  const [pendingNavigationMode, setPendingNavigationMode] =
+    useState<ProfilesNavigationState | null>(null);
+  const [entryContext, setEntryContext] = useState<ProfilesEntryContext | null>(null);
 
-  // Loading and error states
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // UI state - view toggles
   const [categoryTab, setCategoryTab] = useState<"all" | "gost" | "university">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -330,93 +280,84 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
   const [showStatistics, setShowStatistics] = useState<boolean>(false);
   const [showBulkOperations, setShowBulkOperations] = useState<boolean>(false);
 
-  /**
-   * Fetch list of all profiles from API
-   */
-  useEffect(() => {
-    fetchProfiles();
+  const buildEditableSeed = useCallback((profile: ProfileData): ProfileFormData => {
+    return {
+      name: profile.is_system ? `${profile.name} (Системный)` : profile.name,
+      description: profile.description || "",
+      category: profile.is_system ? "custom" : profile.category,
+      university: profile.university,
+      version: profile.version || "1.0",
+      rules: JSON.parse(JSON.stringify(profile.rules)),
+    };
   }, []);
 
-  /**
-   * Fetch detailed profile data when selection changes
-   */
-  useEffect(() => {
-    if (selectedId && !isCreating) {
-      fetchProfileDetails(selectedId);
-      setIsEditing(false);
-    }
-  }, [selectedId]);
-
-  /**
-   * Fetch all profiles from API
-   */
-  const fetchProfiles = async (): Promise<void> => {
+  const fetchProfiles = useCallback(async (): Promise<void> => {
     try {
-      const res = await axios.get<Profile[]>(`${API_BASE}/api/profiles/`);
-      setProfiles(res.data);
-      if (res.data.length > 0 && !selectedId) {
-        setSelectedId(res.data[0].id);
+      const data = await profilesApi.list<Profile>();
+      setProfiles(data);
+      if (data.length > 0 && !selectedId) {
+        setSelectedId(data[0].id);
       }
     } catch (err) {
       console.error(err);
-      setError("Не удалось загрузить список профилей");
+      setError("Ошибка загрузки профилей. Проверьте соединение.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedId]);
 
-  /**
-   * Fetch detailed profile data by ID
-   *
-   * @param id - Profile ID to fetch
-   */
-  const fetchProfileDetails = async (id: string): Promise<void> => {
+  useEffect(() => {
+    void fetchProfiles();
+  }, [fetchProfiles]);
+
+  const fetchProfileDetails = useCallback(async (id: string): Promise<void> => {
     setLoadingDetails(true);
     setError(null);
     try {
-      const res = await axios.get<ProfileData>(`${API_BASE}/api/profiles/${id}`);
-      setProfileData(res.data);
+      const data = await profilesApi.getById<ProfileData>(id);
+      setProfileData(data);
     } catch (err) {
       console.error(err);
-      setError("Не удалось загрузить данные профиля");
+      setError("Ошибка загрузки профиля. Проверьте соединение.");
       setProfileData(null);
     } finally {
       setLoadingDetails(false);
     }
-  };
+  }, []);
 
-  /**
-   * Initialize profile creation mode
-   */
-  const handleCreateStart = (): void => {
+  useEffect(() => {
+    if (selectedId && !isCreating) {
+      void fetchProfileDetails(selectedId);
+      setIsEditing(false);
+    }
+  }, [fetchProfileDetails, isCreating, selectedId]);
+
+  const handleCreateStart = useCallback((seedData: ProfileFormData | null = null): void => {
     setIsCreating(true);
     setIsEditing(false);
+    setEditorSeed(seedData);
     setShowComparison(false);
     setShowImportExport(false);
     setShowStatistics(false);
     setShowBulkOperations(false);
     setSelectedId(null);
     setProfileData(null);
-  };
+  }, []);
 
-  /**
-   * Initialize profile editing mode
-   */
-  const handleEditStart = (): void => {
+  const handleEditStart = useCallback((): void => {
     setIsEditing(true);
     setIsCreating(false);
+    setEditorSeed(null);
     setShowComparison(false);
     setShowImportExport(false);
     setShowStatistics(false);
     setShowBulkOperations(false);
-  };
+  }, []);
 
-  /**
-   * Cancel current operation and return to view mode
-   */
-  const handleCancel = (): void => {
+  const handleCancel = useCallback((): void => {
     setIsCreating(false);
     setIsEditing(false);
+    setEditorSeed(null);
     setShowComparison(false);
     setShowImportExport(false);
     setShowStatistics(false);
@@ -424,61 +365,145 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
     if (!selectedId && profiles.length > 0) {
       setSelectedId(profiles[0].id);
     }
-  };
+  }, [profiles, selectedId]);
 
-  /**
-   * Show profile comparison view
-   */
-  const handleShowComparison = (): void => {
+  const handleShowComparison = useCallback((): void => {
     setShowComparison(true);
+    setEditorSeed(null);
     setShowImportExport(false);
     setShowStatistics(false);
     setShowBulkOperations(false);
     setIsEditing(false);
     setIsCreating(false);
-  };
+  }, []);
 
-  /**
-   * Show import/export view
-   */
-  const handleShowImportExport = (): void => {
+  const handleShowImportExport = useCallback((): void => {
     setShowImportExport(true);
+    setEditorSeed(null);
     setShowComparison(false);
     setShowStatistics(false);
     setShowBulkOperations(false);
     setIsEditing(false);
     setIsCreating(false);
-  };
+  }, []);
 
-  /**
-   * Show statistics view
-   */
-  const handleShowStatistics = (): void => {
+  const handleShowStatistics = useCallback((): void => {
     setShowStatistics(true);
+    setEditorSeed(null);
     setShowImportExport(false);
     setShowComparison(false);
     setShowBulkOperations(false);
     setIsEditing(false);
     setIsCreating(false);
-  };
+  }, []);
 
-  /**
-   * Show bulk operations view
-   */
-  const handleShowBulkOperations = (): void => {
+  const handleShowBulkOperations = useCallback((): void => {
     setShowBulkOperations(true);
+    setEditorSeed(null);
     setShowStatistics(false);
     setShowImportExport(false);
     setShowComparison(false);
     setIsEditing(false);
     setIsCreating(false);
-  };
+  }, []);
 
-  /**
-   * Handle successful profile import
-   *
-   * @param result - Import result with imported profile ID
-   */
+  useEffect(() => {
+    if (navigationAppliedRef.current || !navigationState || profiles.length === 0) {
+      return;
+    }
+
+    const requestedProfileId =
+      navigationState.profileId &&
+      profiles.some((profile) => profile.id === navigationState.profileId)
+        ? navigationState.profileId
+        : profiles[0]?.id;
+
+    if (requestedProfileId) {
+      setSelectedId(requestedProfileId);
+    }
+
+    switch (navigationState.mode) {
+      case "import-export":
+        handleShowImportExport();
+        setEntryContext({
+          source: navigationState.source,
+          message: "Импортируйте шаблон профиля через JSON.",
+        });
+        navigationAppliedRef.current = true;
+        break;
+      case "compare":
+        handleShowComparison();
+        navigationAppliedRef.current = true;
+        break;
+      case "statistics":
+        handleShowStatistics();
+        navigationAppliedRef.current = true;
+        break;
+      case "bulk":
+        handleShowBulkOperations();
+        navigationAppliedRef.current = true;
+        break;
+      case "create":
+        handleCreateStart();
+        setEntryContext({
+          source: navigationState.source,
+          message: "Создайте новый шаблон профиля, настройте параметры и сохраните.",
+        });
+        navigationAppliedRef.current = true;
+        break;
+      case "edit":
+        setPendingNavigationMode({ ...navigationState, profileId: requestedProfileId });
+        break;
+      default:
+        if (navigationState.source === "upload") {
+          setEntryContext({
+            source: navigationState.source,
+            message: "Выберите шаблон, настройте параметры и загрузите файл.",
+          });
+        }
+        navigationAppliedRef.current = true;
+        break;
+    }
+  }, [
+    handleCreateStart,
+    handleShowBulkOperations,
+    handleShowComparison,
+    handleShowImportExport,
+    handleShowStatistics,
+    navigationState,
+    profiles,
+  ]);
+
+  useEffect(() => {
+    if (
+      !pendingNavigationMode?.profileId ||
+      !profileData ||
+      profileData.id !== pendingNavigationMode.profileId
+    ) {
+      return;
+    }
+
+    if (pendingNavigationMode.mode === "edit") {
+      if (profileData.is_system) {
+        handleCreateStart(buildEditableSeed(profileData));
+        setEntryContext({
+          source: pendingNavigationMode.source,
+          message:
+            "Системный шаблон защищён, параметры можно изменить только при создании нового профиля.",
+        });
+      } else {
+        handleEditStart();
+        setEntryContext({
+          source: pendingNavigationMode.source,
+          message: "Редактируйте параметры выбранного профиля.",
+        });
+      }
+    }
+
+    navigationAppliedRef.current = true;
+    setPendingNavigationMode(null);
+  }, [buildEditableSeed, handleCreateStart, handleEditStart, pendingNavigationMode, profileData]);
+
   const handleImportSuccess = async (result: ImportResult): Promise<void> => {
     await fetchProfiles();
     if (result.id) {
@@ -487,530 +512,393 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
     }
   };
 
-  /**
-   * Save profile (create or update)
-   *
-   * @param data - Profile data to save
-   */
   const handleSave = async (data: ProfileFormData): Promise<void> => {
     try {
       if (isCreating) {
-        const res = await axios.post<ProfileData>(`${API_BASE}/api/profiles/`, data);
+        const created = await profilesApi.create<ProfileData, ProfileFormData>(data);
         await fetchProfiles();
-        setSelectedId(res.data.id);
+        setSelectedId(created.id);
         setIsCreating(false);
       } else if (selectedId) {
-        await axios.put(`${API_BASE}/api/profiles/${selectedId}`, data);
+        await profilesApi.update<Record<string, unknown>, ProfileFormData>(selectedId, data);
         await fetchProfileDetails(selectedId);
         setIsEditing(false);
-        // Refresh list to update name/desc if changed
-        const res = await axios.get<Profile[]>(`${API_BASE}/api/profiles/`);
-        setProfiles(res.data);
+        await fetchProfiles();
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
       console.error("Error saving profile:", err);
-      alert("Ошибка при сохранении профиля: " + errorMsg);
+      alert("Ошибка при сохранении профиля: " + getApiErrorMessage(err));
     }
   };
 
-  /**
-   * Duplicate selected profile
-   */
   const handleDuplicate = async (): Promise<void> => {
     if (!selectedId) return;
     try {
-      const res = await axios.post<ProfileData>(`${API_BASE}/api/profiles/${selectedId}/duplicate`);
+      const duplicated = await profilesApi.duplicate<ProfileData>(selectedId);
       await fetchProfiles();
-      setSelectedId(res.data.id);
+      setSelectedId(duplicated.id);
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
       console.error("Error duplicating profile:", err);
-      alert("Ошибка при дублировании: " + errorMsg);
+      alert("Ошибка при дублировании: " + getApiErrorMessage(err));
     }
   };
 
-  /**
-   * Open delete confirmation dialog
-   */
-  const handleDeleteClick = (): void => {
-    setDeleteDialogOpen(true);
-  };
-
-  /**
-   * Confirm and execute profile deletion
-   */
   const handleDeleteConfirm = async (): Promise<void> => {
     try {
       if (!selectedId) return;
-      await axios.delete(`${API_BASE}/api/profiles/${selectedId}`);
+      await profilesApi.remove(selectedId);
       setDeleteDialogOpen(false);
-      const res = await axios.get<Profile[]>(`${API_BASE}/api/profiles/`);
-      setProfiles(res.data);
-      if (res.data.length > 0) {
-        setSelectedId(res.data[0].id);
+      const data = await profilesApi.list<Profile>();
+      setProfiles(data);
+      if (data.length > 0) {
+        setSelectedId(data[0].id);
       } else {
         setSelectedId(null);
         setProfileData(null);
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
       console.error("Error deleting profile:", err);
-      alert("Ошибка при удалении: " + errorMsg);
+      alert("Ошибка при удалении: " + getApiErrorMessage(err));
       setDeleteDialogOpen(false);
     }
   };
 
-  /**
-   * Get category icon by category type
-   *
-   * @param category - Profile category
-   * @returns Icon component for category
-   */
-  const getCategoryIcon = (category: string): ReactNode => {
-    switch (category) {
-      case "gost":
-        return <VerifiedIcon fontSize="small" />;
-      case "university":
-        return <SchoolIcon fontSize="small" />;
-      default:
-        return <DescriptionIcon fontSize="small" />;
-    }
-  };
-
-  // Calculate filtered profiles list
-  const filteredProfiles = profiles.filter((p) => {
-    const matchesCategory = categoryTab === "all" || p.category === categoryTab;
+  const filteredProfiles = profiles.filter((profile) => {
+    const matchesCategory = categoryTab === "all" || profile.category === categoryTab;
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      profile.name.toLowerCase().includes(query) ||
+      (profile.description && profile.description.toLowerCase().includes(query));
     return matchesCategory && matchesSearch;
   });
 
-  // Calculate category counts
   const categoryCounts: CategoryCounts = {
     all: profiles.length,
-    gost: profiles.filter((p) => p.category === "gost").length,
-    university: profiles.filter((p) => p.category === "university").length,
-    custom: profiles.filter((p) => p.category === "custom").length,
+    gost: profiles.filter((profile) => profile.category === "gost").length,
+    university: profiles.filter((profile) => profile.category === "university").length,
+    custom: profiles.filter((profile) => profile.category === "custom").length,
   };
 
-  // Loading state
+  const summaryCards = useMemo(
+    () => [
+      {
+        label: "Все профили",
+        value: categoryCounts.all,
+        hint: "Общее количество профилей в системе.",
+      },
+      {
+        label: "Системные",
+        value: profiles.filter((profile) => profile.is_system).length,
+        hint: "Базовые профили CURSA и ГОСТ.",
+      },
+      {
+        label: "Пользовательские",
+        value: categoryCounts.custom,
+        hint: "Профили, созданные пользователями.",
+      },
+    ],
+    [categoryCounts.all, categoryCounts.custom, profiles],
+  );
+
+  const activeUtilityMode =
+    showComparison || showImportExport || showStatistics || showBulkOperations;
+
   if (loading) {
     return (
-      <Box
-        sx={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}
-      >
-        <CircularProgress />
-      </Box>
+      <AppPageLayout title="Профили оформления" contentClassName="gap-4 md:gap-6">
+        <Card className={cn(pagePanelClass, "rounded-[2rem]")}>
+          <CardContent className="flex min-h-[360px] items-center justify-center p-6">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </AppPageLayout>
     );
   }
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Header */}
-      <Box sx={{ pt: 3, px: 0, zIndex: 10, flexShrink: 0 }}>
-        <Container maxWidth="xl">
-          <Paper
-            className="glass-card"
-            elevation={0}
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            {/* Back button and title */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <IconButton
-                onClick={(): void => navigate("/")}
-                size="small"
-                sx={{
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 1,
-                  color: "rgba(255,255,255,0.5)",
-                  "&:hover": { color: "#fff", borderColor: "rgba(255,255,255,0.3)" },
-                }}
-              >
-                <ArrowBackIcon fontSize="small" />
-              </IconButton>
-              <Box>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    fontWeight: 700,
-                    color: alpha(theme.palette.common.white, 0.8),
-                    fontFamily: '"Wix Madefor Display", "Montserrat", sans-serif',
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    userSelect: "none",
-                  }}
+    <TooltipProvider>
+      <AppPageLayout title="Профили оформления" contentClassName="gap-4 md:gap-6">
+        <Card
+          className={cn(
+            pagePanelClass,
+            "overflow-hidden rounded-[2rem] border-border/70 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),transparent)]",
+          )}
+        >
+          <CardContent className="flex flex-col gap-5 p-6 md:p-8 xl:flex-row xl:items-center xl:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Общее количество профилей
+              </p>
+              <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-[-0.04em] text-foreground md:text-4xl">
+                Подберите шаблон, сравните правила и соберите собственный профиль оформления.
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+                Экран переведен на общий shadcn/Tailwind-язык CURSA: чистые surface-карточки, единая
+                иерархия действий и без MUI-обвязки на уровне страницы.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-[#2e2f2f] bg-[#171717] px-3 py-1 text-xs font-semibold text-[#b6b6b6]"
                 >
-                  CURSA / PROFILES
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  fontWeight={500}
-                  sx={{ display: "block", mt: 0.5 }}
+                  <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+                  {categoryCounts.gost} ГОСТ
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-[#2e2f2f] bg-[#171717] px-3 py-1 text-xs font-semibold text-[#b6b6b6]"
                 >
-                  Стандарты оформления
-                </Typography>
-              </Box>
-            </Box>
+                  <School className="mr-1 h-3.5 w-3.5" />
+                  {categoryCounts.university} Университет
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-[#2e2f2f] bg-[#171717] px-3 py-1 text-xs font-semibold text-[#b6b6b6]"
+                >
+                  <FolderKanban className="mr-1 h-3.5 w-3.5" />
+                  {categoryCounts.custom} Пользовательские
+                </Badge>
+              </div>
+            </div>
 
-            {/* Category badges and action buttons */}
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <Chip
-                  icon={<VerifiedIcon />}
-                  label={`${categoryCounts.gost} ГОСТ`}
-                  size="small"
-                  sx={{
-                    bgcolor: "rgba(255,255,255,0.05)",
-                    color: "rgba(255,255,255,0.55)",
-                    fontWeight: 600,
-                    borderRadius: 0.5,
-                    border: "1px solid rgba(255,255,255,0.1)",
-                  }}
-                />
-                <Chip
-                  icon={<SchoolIcon />}
-                  label={`${categoryCounts.university} вузов`}
-                  size="small"
-                  sx={{
-                    bgcolor: "rgba(255,255,255,0.05)",
-                    color: "rgba(255,255,255,0.55)",
-                    fontWeight: 600,
-                    borderRadius: 0.5,
-                    border: "1px solid rgba(255,255,255,0.1)",
-                  }}
-                />
-              </Box>
-              <HealthStatusChip />
-
-              {/* Comparison button */}
-              <Tooltip title="Сравнить профили">
-                <IconButton
-                  onClick={(e): void => {
-                    e.stopPropagation();
-                    handleShowComparison();
-                  }}
-                  sx={{
-                    borderRadius: 1,
-                    bgcolor: showComparison ? "rgba(255,255,255,0.1)" : "transparent",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: showComparison ? "#fff" : "rgba(255,255,255,0.45)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.07)", color: "#fff" },
-                  }}
-                >
-                  <CompareArrowsIcon />
-                </IconButton>
+            <div className="flex flex-wrap items-center gap-2 xl:max-w-[420px] xl:justify-end">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={showComparison ? "secondary" : "outline"}
+                    size="icon"
+                    onClick={handleShowComparison}
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Сравнить профили</TooltipContent>
               </Tooltip>
-
-              {/* Import/Export button */}
-              <Tooltip title="Импорт / Экспорт">
-                <IconButton
-                  onClick={(e): void => {
-                    e.stopPropagation();
-                    handleShowImportExport();
-                  }}
-                  sx={{
-                    borderRadius: 1,
-                    bgcolor: showImportExport ? "rgba(255,255,255,0.1)" : "transparent",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: showImportExport ? "#fff" : "rgba(255,255,255,0.45)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.07)", color: "#fff" },
-                  }}
-                >
-                  <FileDownloadIcon />
-                </IconButton>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={showImportExport ? "secondary" : "outline"}
+                    size="icon"
+                    onClick={handleShowImportExport}
+                  >
+                    <FileDown className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Импорт и экспорт</TooltipContent>
               </Tooltip>
-
-              {/* Statistics button */}
-              <Tooltip title="Статистика">
-                <IconButton
-                  onClick={(e): void => {
-                    e.stopPropagation();
-                    handleShowStatistics();
-                  }}
-                  sx={{
-                    borderRadius: 1,
-                    bgcolor: showStatistics ? "rgba(255,255,255,0.1)" : "transparent",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: showStatistics ? "#fff" : "rgba(255,255,255,0.45)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.07)", color: "#fff" },
-                  }}
-                >
-                  <BarChartIcon />
-                </IconButton>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={showStatistics ? "secondary" : "outline"}
+                    size="icon"
+                    onClick={handleShowStatistics}
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Статистика</TooltipContent>
               </Tooltip>
-
-              {/* Bulk operations button */}
-              <Tooltip title="Массовые операции">
-                <IconButton
-                  onClick={(e): void => {
-                    e.stopPropagation();
-                    handleShowBulkOperations();
-                  }}
-                  sx={{
-                    borderRadius: 1,
-                    bgcolor: showBulkOperations ? "rgba(255,255,255,0.1)" : "transparent",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: showBulkOperations ? "#fff" : "rgba(255,255,255,0.45)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.07)", color: "#fff" },
-                  }}
-                >
-                  <PlaylistPlayIcon />
-                </IconButton>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={showBulkOperations ? "secondary" : "outline"}
+                    size="icon"
+                    onClick={handleShowBulkOperations}
+                  >
+                    <LayoutList className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Массовые операции</TooltipContent>
               </Tooltip>
-
-              {/* Create profile button */}
               <Button
                 id="create-profile-btn"
                 data-testid="create-profile-btn"
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={(e): void => {
-                  e.stopPropagation();
-                  handleCreateStart();
-                }}
+                onClick={() => handleCreateStart()}
                 disabled={isCreating}
-                sx={{
-                  borderRadius: 1,
-                  fontWeight: 700,
-                  bgcolor: "#fff",
-                  color: "#000",
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.85)" },
-                }}
+                className="rounded-full px-5 font-semibold"
               >
+                <Plus className="h-4 w-4" />
                 Создать профиль
               </Button>
-            </Box>
-          </Paper>
-        </Container>
-      </Box>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Main content */}
-      <Container
-        maxWidth="xl"
-        sx={{ flexGrow: 1, py: 3, overflow: "hidden", display: "flex", flexDirection: "column" }}
-      >
-        <Grid container spacing={3} sx={{ flexGrow: 1, height: "100%", overflow: "hidden" }}>
-          {/* Sidebar profile list */}
-          <Grid size={{ xs: 12, md: 3, lg: 2.5 }} sx={{ height: "100%" }}>
-            <Paper
-              className="glass-card"
-              elevation={0}
-              sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-              }}
-            >
-              {/* Category tabs */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {summaryCards.map((item) => (
+            <SummaryCard key={item.label} label={item.label} value={item.value} hint={item.hint} />
+          ))}
+        </div>
+
+        <div className="grid min-h-0 gap-4 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+          <Card className={cn(pagePanelClass, "min-h-[480px] rounded-[2rem]")}>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg font-bold tracking-[-0.03em]">
+                    Каталог профилей
+                  </CardTitle>
+                  <CardDescription>Фильтруйте и выбирайте активный шаблон.</CardDescription>
+                </div>
+                <Badge
+                  variant="secondary"
+                  className="rounded-full border border-[#2e2f2f] bg-[#222222] px-2.5 py-1 text-xs text-[#b6b6b6]"
+                >
+                  {filteredProfiles.length}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex h-full min-h-0 flex-col gap-4">
               <Tabs
                 value={categoryTab}
-                onChange={(e, v): void => setCategoryTab(v as typeof categoryTab)}
-                variant="fullWidth"
-                sx={{
-                  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                  minHeight: 48,
-                  "& .MuiTab-root": { minHeight: 48, py: 1, fontSize: "0.875rem", fontWeight: 600 },
-                }}
+                onValueChange={(value) => setCategoryTab(value as typeof categoryTab)}
               >
-                <Tab
-                  value="all"
-                  label={
-                    <Badge
-                      badgeContent={categoryCounts.all}
-                      color="primary"
-                      max={99}
-                      sx={{ "& .MuiBadge-badge": { right: -8, top: 5 } }}
-                    >
-                      <Box component="span" sx={{ px: 1.5 }}>
-                        Все
-                      </Box>
-                    </Badge>
-                  }
-                />
-                <Tab value="gost" label="ГОСТ" />
-                <Tab value="university" label="Вузы" />
+                <TabsList className="grid w-full grid-cols-3 rounded-2xl border border-[#2e2f2f] bg-[#222222] p-1">
+                  <TabsTrigger value="all" className="rounded-xl">
+                    Все {categoryCounts.all}
+                  </TabsTrigger>
+                  <TabsTrigger value="gost" className="rounded-xl">
+                    ГОСТ
+                  </TabsTrigger>
+                  <TabsTrigger value="university" className="rounded-xl">
+                    ВУЗы
+                  </TabsTrigger>
+                </TabsList>
               </Tabs>
 
-              {/* Search field */}
-              <Box sx={{ p: 1.5, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Поиск профилей..."
-                  value={searchQuery}
-                  onChange={(e): void => setSearchQuery(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
-                      </InputAdornment>
-                    ),
-                    sx: {
-                      borderRadius: 2,
-                      bgcolor: alpha(theme.palette.common.white, 0.05),
-                      "& fieldset": { border: "none" },
-                      "&:hover": { bgcolor: alpha(theme.palette.common.white, 0.08) },
-                      "&.Mui-focused": { bgcolor: alpha(theme.palette.common.white, 0.1) },
-                    },
-                  }}
-                />
-              </Box>
+              <SearchField
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={() => undefined}
+                placeholder="Поиск профилей..."
+                buttonLabel="Поиск"
+                inputClassName="h-11 rounded-2xl border-[#2e2f2f] bg-[#171717] text-[#fafafa] placeholder:text-[#7b7b7b]"
+                buttonClassName="h-11 rounded-2xl px-4"
+              />
 
-              {/* Profiles list */}
-              <List sx={{ p: 1.5, flexGrow: 1, overflow: "auto" }}>
-                {filteredProfiles.map((profile, idx) => (
-                  <motion.div
-                    key={profile.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.03 }}
-                  >
-                    <ListItemButton
-                      selected={selectedId === profile.id && !isCreating}
-                      onClick={(): void => {
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+                {filteredProfiles.map((profile, index) => {
+                  const isActive = selectedId === profile.id && !isCreating;
+
+                  return (
+                    <motion.button
+                      key={profile.id}
+                      type="button"
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.025 }}
+                      onClick={() => {
                         setSelectedId(profile.id);
                         setIsCreating(false);
                       }}
-                      sx={{
-                        borderRadius: 1,
-                        mb: 0.5,
-                        py: 1,
-                        transition: "all 0.15s",
-                        "&.Mui-selected": {
-                          bgcolor: "rgba(255,255,255,0.08)",
-                          color: "#fff",
-                          border: "1px solid rgba(255,255,255,0.15)",
-                          "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
-                        },
-                        "&:hover": {
-                          bgcolor: "rgba(255,255,255,0.04)",
-                        },
-                      }}
-                    >
-                      <ListItemIcon
-                        sx={{
-                          minWidth: 32,
-                          color:
-                            selectedId === profile.id && !isCreating
-                              ? "rgba(255,255,255,0.8)"
-                              : "rgba(255,255,255,0.3)",
-                        }}
-                      >
-                        {getCategoryIcon(profile.category)}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={profile.name}
-                        secondary={profile.university || profile.version}
-                        primaryTypographyProps={{ variant: "body2", fontWeight: 600, noWrap: true }}
-                        secondaryTypographyProps={{ variant: "caption", noWrap: true }}
-                      />
-                      {profile.is_system && (
-                        <Tooltip title="Системный профиль">
-                          <VerifiedIcon
-                            fontSize="small"
-                            sx={{ color: "rgba(255,255,255,0.4)", ml: 0.5 }}
-                          />
-                        </Tooltip>
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition-colors",
+                        isActive
+                          ? "border-[#2e2f2f] bg-[#222222] text-[#fafafa]"
+                          : "border-transparent bg-[#171717] hover:border-[#2e2f2f] hover:bg-[#222222]",
                       )}
-                    </ListItemButton>
-                  </motion.div>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
+                    >
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#2e2f2f] bg-[#171717] text-[#b6b6b6]">
+                        {getCategoryIcon(profile.category, "h-4 w-4")}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start gap-2">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {profile.name}
+                          </p>
+                          {profile.is_system ? (
+                            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          ) : null}
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {profile.university || profile.version || "Без доп. метаданных"}
+                        </p>
+                        {profile.description ? (
+                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                            {profile.description}
+                          </p>
+                        ) : null}
+                      </div>
+                    </motion.button>
+                  );
+                })}
 
-          {/* Main content area with conditional rendering */}
-          <Grid size={{ xs: 12, md: 9, lg: 9.5 }} sx={{ height: "100%" }}>
+                {!filteredProfiles.length ? (
+                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-[#2e2f2f] bg-[#171717] p-6 text-center text-sm text-[#b6b6b6]">
+                    По этому фильтру профили не найдены.
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="min-h-0">
+            {entryContext && !activeUtilityMode ? (
+              <Card className={cn(pagePanelClass, "mb-4 rounded-[1.75rem]")}>
+                <CardContent className="flex items-start gap-3 p-4">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent">
+                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm leading-6 text-foreground">{entryContext.message}</p>
+                </CardContent>
+              </Card>
+            ) : null}
+
             <AnimatePresence mode="wait">
               {showComparison ? (
                 <motion.div
                   key="comparison"
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 18 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  style={{ height: "100%" }}
+                  exit={{ opacity: 0, x: -18 }}
                 >
-                  <ProfileComparison
-                    profiles={profiles}
-                    onClose={(): void => setShowComparison(false)}
-                  />
+                  <ProfileComparison profiles={profiles} onClose={() => setShowComparison(false)} />
                 </motion.div>
               ) : showImportExport ? (
                 <motion.div
                   key="import-export"
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 18 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  style={{ height: "100%" }}
+                  exit={{ opacity: 0, x: -18 }}
                 >
                   <ProfileImportExport
                     profiles={profiles}
                     onImport={handleImportSuccess}
                     onRefresh={fetchProfiles}
-                    onClose={(): void => setShowImportExport(false)}
+                    onClose={() => setShowImportExport(false)}
                   />
                 </motion.div>
               ) : showStatistics ? (
                 <motion.div
                   key="statistics"
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 18 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  style={{ height: "100%" }}
+                  exit={{ opacity: 0, x: -18 }}
                 >
-                  <ProfileStatistics
-                    profiles={profiles}
-                    onClose={(): void => setShowStatistics(false)}
-                  />
+                  <ProfileStatistics profiles={profiles} onClose={() => setShowStatistics(false)} />
                 </motion.div>
               ) : showBulkOperations ? (
                 <motion.div
-                  key="bulk-operations"
-                  initial={{ opacity: 0, x: 20 }}
+                  key="bulk"
+                  initial={{ opacity: 0, x: 18 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  style={{ height: "100%" }}
+                  exit={{ opacity: 0, x: -18 }}
                 >
                   <ProfileBulkOperations
                     profiles={profiles}
-                    onClose={(): void => setShowBulkOperations(false)}
+                    onClose={() => setShowBulkOperations(false)}
                     onRefresh={fetchProfiles}
                   />
                 </motion.div>
               ) : isCreating || isEditing ? (
                 <motion.div
                   key="editor"
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 18 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  style={{ height: "100%" }}
+                  exit={{ opacity: 0, x: -18 }}
                 >
                   <ProfileEditor
-                    initialData={isEditing ? profileData : null}
+                    initialData={isEditing ? profileData : editorSeed}
                     onSave={handleSave}
                     onCancel={handleCancel}
                   />
@@ -1021,324 +909,338 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  style={{
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexDirection: "column",
-                    gap: 2,
-                  }}
                 >
-                  {loadingDetails ? (
-                    <CircularProgress size={32} />
-                  ) : error ? (
-                    <>
-                      <Typography color="error" variant="h6">
-                        {error}
-                      </Typography>
-                      <Button
-                        variant="outlined"
-                        onClick={(): Promise<void> => fetchProfileDetails(selectedId!)}
-                      >
-                        Повторить
-                      </Button>
-                    </>
-                  ) : (
-                    <Typography color="text.secondary">Выберите профиль</Typography>
-                  )}
+                  <Card className={cn(pagePanelClass, "rounded-[2rem]")}>
+                    <CardContent className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-6 text-center">
+                      {loadingDetails ? (
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      ) : error ? (
+                        <>
+                          <AlertCircle className="h-8 w-8 text-destructive" />
+                          <div>
+                            <p className="text-lg font-semibold text-destructive">{error}</p>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              Не удалось показать детали профиля.
+                            </p>
+                          </div>
+                          {selectedId ? (
+                            <Button
+                              variant="outline"
+                              onClick={() => fetchProfileDetails(selectedId)}
+                            >
+                              Повторить
+                            </Button>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <Ruler className="h-8 w-8 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            Выберите профиль из списка слева.
+                          </p>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
                 </motion.div>
               ) : (
                 <motion.div
                   key={selectedId}
-                  initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+                  initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  style={{ height: "100%", overflowY: "auto", paddingRight: 8 }}
+                  exit={{ opacity: 0, y: -16, filter: "blur(8px)" }}
+                  transition={{ duration: 0.28, ease: "easeOut" }}
+                  className="space-y-4"
                 >
-                  {/* Profile detail view */}
-                  <Box
-                    sx={{
-                      mb: 4,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="h4" fontWeight={800} gutterBottom>
-                        {profileData.name}
-                      </Typography>
-                      <Typography variant="body1" color="text.secondary">
-                        {profileData.description}
-                      </Typography>
-                      {profileData.extends && (
-                        <Chip
-                          size="small"
-                          label={`Наследует: ${profileData.extends}`}
-                          sx={{ mt: 1 }}
-                          variant="outlined"
-                        />
-                      )}
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <Tooltip title="Дублировать">
-                        <IconButton onClick={handleDuplicate}>
-                          <ContentCopyIcon />
-                        </IconButton>
-                      </Tooltip>
-                      {!profileData.is_system && (
-                        <>
-                          <Tooltip title="Редактировать">
-                            <IconButton onClick={handleEditStart} color="primary">
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Удалить">
-                            <IconButton onClick={handleDeleteClick} color="error">
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </Box>
-                  </Box>
+                  <Card className={cn(pagePanelClass, "rounded-[2rem]")}>
+                    <CardContent className="flex flex-col gap-5 p-6 md:flex-row md:items-start md:justify-between">
+                      <div className="max-w-3xl">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          Активный профиль
+                        </p>
+                        <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-foreground">
+                          {profileData.name}
+                        </h2>
+                        {profileData.description ? (
+                          <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base">
+                            {profileData.description}
+                          </p>
+                        ) : null}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Badge variant="outline" className="rounded-full px-3 py-1">
+                            {getCategoryLabel(profileData.category)}
+                          </Badge>
+                          {profileData.university ? (
+                            <Badge variant="outline" className="rounded-full px-3 py-1">
+                              {profileData.university}
+                            </Badge>
+                          ) : null}
+                          {profileData.extends ? (
+                            <Badge variant="outline" className="rounded-full px-3 py-1">
+                              Наследует: {profileData.extends}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" onClick={handleDuplicate}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Дублировать</TooltipContent>
+                        </Tooltip>
+                        {!profileData.is_system ? (
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" onClick={handleEditStart}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Редактировать</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  onClick={() => setDeleteDialogOpen(true)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Удалить</TooltipContent>
+                            </Tooltip>
+                          </>
+                        ) : null}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  {/* Profile validation section */}
-                  <Box sx={{ mb: 3 }}>
+                  <div>
                     <ProfileValidation profileId={selectedId!} profileName={profileData.name} />
-                  </Box>
+                  </div>
 
-                  {/* Profile history section */}
-                  <Box sx={{ mb: 3 }}>
+                  <div>
                     <ProfileHistory
                       profileId={selectedId!}
                       profileName={profileData.name}
                       isSystemProfile={profileData.is_system || false}
-                      onRestore={(): Promise<void> => fetchProfileDetails(selectedId!)}
+                      onRestore={() => fetchProfileDetails(selectedId!)}
                     />
-                  </Box>
+                  </div>
 
-                  {/* Profile rules grid */}
-                  <Grid container spacing={3}>
-                    {/* Font and text rules */}
-                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-                      <RuleCard title="Шрифт и текст" icon={<FormatSizeIcon />} delay={0.1}>
-                        <RuleItem label="Гарнитура" value={profileData.rules.font.name} />
-                        <RuleItem label="Размер" value={`${profileData.rules.font.size} пт`} />
-                        <RuleItem
-                          label="Цвет"
-                          value={
-                            profileData.rules.font.color === "000000"
-                              ? "Черный"
-                              : profileData.rules.font.color
-                          }
-                        />
-                        <Divider sx={{ my: 1 }} />
-                        <RuleItem
-                          label="Межстрочный"
-                          value={`${profileData.rules.line_spacing}x`}
-                        />
-                        <RuleItem
-                          label="Отступ первой строки"
-                          value={`${profileData.rules.first_line_indent} см`}
-                        />
-                        <RuleItem
-                          label="Выравнивание"
-                          value={
-                            profileData.rules.paragraph_alignment === "JUSTIFY"
-                              ? "По ширине"
-                              : profileData.rules.paragraph_alignment
-                          }
-                        />
-                      </RuleCard>
-                    </Grid>
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <RuleCard
+                      title="Шрифт и текст"
+                      icon={<Type className="h-4 w-4" />}
+                      delay={0.05}
+                    >
+                      <RuleItem label="Гарнитура" value={profileData.rules.font.name} />
+                      <RuleItem label="Размер" value={`${profileData.rules.font.size} пт`} />
+                      <RuleItem
+                        label="Цвет"
+                        value={
+                          profileData.rules.font.color === "000000"
+                            ? "Чёрный"
+                            : profileData.rules.font.color
+                        }
+                      />
+                      <Separator className="my-1" />
+                      <RuleItem label="Межстрочный" value={`${profileData.rules.line_spacing}x`} />
+                      <RuleItem
+                        label="Отступ первой строки"
+                        value={`${profileData.rules.first_line_indent} см`}
+                      />
+                      <RuleItem
+                        label="Выравнивание"
+                        value={getAlignmentLabel(profileData.rules.paragraph_alignment)}
+                      />
+                    </RuleCard>
 
-                    {/* Page margins rules */}
-                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-                      <RuleCard title="Поля страницы" icon={<CropFreeIcon />} delay={0.2}>
-                        <RuleItem label="Левое" value={`${profileData.rules.margins.left} см`} />
-                        <RuleItem label="Правое" value={`${profileData.rules.margins.right} см`} />
-                        <RuleItem label="Верхнее" value={`${profileData.rules.margins.top} см`} />
-                        <RuleItem label="Нижнее" value={`${profileData.rules.margins.bottom} см`} />
-                      </RuleCard>
-                    </Grid>
+                    <RuleCard
+                      title="Поля страницы"
+                      icon={<Ruler className="h-4 w-4" />}
+                      delay={0.1}
+                    >
+                      <RuleItem label="Левое" value={`${profileData.rules.margins.left} см`} />
+                      <RuleItem label="Правое" value={`${profileData.rules.margins.right} см`} />
+                      <RuleItem label="Верхнее" value={`${profileData.rules.margins.top} см`} />
+                      <RuleItem label="Нижнее" value={`${profileData.rules.margins.bottom} см`} />
+                    </RuleCard>
 
-                    {/* Headings rules */}
-                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-                      <RuleCard title="Заголовки" icon={<TitleIcon />} delay={0.3}>
-                        <Typography variant="caption" color="primary" fontWeight={600}>
-                          УРОВЕНЬ 1
-                        </Typography>
-                        <RuleItem
-                          label="Размер"
-                          value={`${profileData.rules.headings.h1.font_size} пт`}
-                        />
-                        <RuleItem
-                          label="Выравнивание"
-                          value={profileData.rules.headings.h1.alignment}
-                        />
-                        <RuleItem
-                          label="Интервал после"
-                          value={`${profileData.rules.headings.h1.space_after || 0} пт`}
-                        />
+                    <RuleCard
+                      title="Заголовки"
+                      icon={<ListTree className="h-4 w-4" />}
+                      delay={0.15}
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                        Уровень 1
+                      </p>
+                      <RuleItem
+                        label="Размер"
+                        value={`${profileData.rules.headings.h1.font_size} пт`}
+                      />
+                      <RuleItem
+                        label="Выравнивание"
+                        value={getAlignmentLabel(profileData.rules.headings.h1.alignment)}
+                      />
+                      <RuleItem
+                        label="Интервал после"
+                        value={`${profileData.rules.headings.h1.space_after || 0} пт`}
+                      />
+                      <Separator className="my-1" />
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                        Уровень 2
+                      </p>
+                      <RuleItem
+                        label="Размер"
+                        value={`${profileData.rules.headings.h2.font_size} пт`}
+                      />
+                      <RuleItem
+                        label="Отступ"
+                        value={`${profileData.rules.headings.h2.first_line_indent || 0} см`}
+                      />
+                    </RuleCard>
 
-                        <Divider sx={{ my: 1 }} />
+                    <RuleCard
+                      title="Таблицы и подписи"
+                      icon={<Table2 className="h-4 w-4" />}
+                      delay={0.2}
+                    >
+                      <RuleItem
+                        label="Шрифт таблиц"
+                        value={`${profileData.rules.tables.font_size} пт`}
+                      />
+                      <RuleItem
+                        label="Интервал таблиц"
+                        value={`${profileData.rules.tables.line_spacing}x`}
+                      />
+                      <Separator className="my-1" />
+                      <RuleItem
+                        label="Шрифт подписей"
+                        value={`${profileData.rules.captions.font_size} пт`}
+                      />
+                      <RuleItem
+                        label="Разделитель"
+                        value={`"${profileData.rules.captions.separator}"`}
+                      />
+                      <RuleItem
+                        label="Выравнивание"
+                        value={getAlignmentLabel(profileData.rules.captions.alignment)}
+                      />
+                    </RuleCard>
 
-                        <Typography variant="caption" color="primary" fontWeight={600}>
-                          УРОВЕНЬ 2
-                        </Typography>
-                        <RuleItem
-                          label="Размер"
-                          value={`${profileData.rules.headings.h2.font_size} пт`}
-                        />
-                        <RuleItem
-                          label="Отступ"
-                          value={`${profileData.rules.headings.h2.first_line_indent || 0} см`}
-                        />
-                      </RuleCard>
-                    </Grid>
+                    <RuleCard
+                      title="Списки и сноски"
+                      icon={<LayoutList className="h-4 w-4" />}
+                      delay={0.25}
+                    >
+                      <RuleItem
+                        label="Шрифт списков"
+                        value={`${profileData.rules.lists.font_size} пт`}
+                      />
+                      <RuleItem
+                        label="Отступ слева"
+                        value={`${profileData.rules.lists.left_indent} см`}
+                      />
+                      <Separator className="my-1" />
+                      <RuleItem
+                        label="Шрифт сносок"
+                        value={`${profileData.rules.footnotes.font_size} пт`}
+                      />
+                      <RuleItem
+                        label="Интервал сносок"
+                        value={`${profileData.rules.footnotes.line_spacing}x`}
+                      />
+                    </RuleCard>
 
-                    {/* Tables and captions rules */}
-                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-                      <RuleCard title="Таблицы и подписи" icon={<TableChartIcon />} delay={0.4}>
-                        <RuleItem
-                          label="Шрифт таблиц"
-                          value={`${profileData.rules.tables.font_size} пт`}
-                        />
-                        <RuleItem
-                          label="Интервал таблиц"
-                          value={`${profileData.rules.tables.line_spacing}x`}
-                        />
-                        <Divider sx={{ my: 1 }} />
-                        <RuleItem
-                          label="Шрифт подписей"
-                          value={`${profileData.rules.captions.font_size} пт`}
-                        />
-                        <RuleItem
-                          label="Разделитель"
-                          value={`"${profileData.rules.captions.separator}"`}
-                        />
-                        <RuleItem
-                          label="Выравнивание"
-                          value={profileData.rules.captions.alignment}
-                        />
-                      </RuleCard>
-                    </Grid>
-
-                    {/* Lists and footnotes rules */}
-                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+                    {profileData.rules.bibliography ? (
                       <RuleCard
-                        title="Списки и сноски"
-                        icon={<FormatListBulletedIcon />}
-                        delay={0.5}
+                        title="Библиография"
+                        icon={<BookMarked className="h-4 w-4" />}
+                        delay={0.3}
                       >
                         <RuleItem
-                          label="Шрифт списков"
-                          value={`${profileData.rules.lists.font_size} пт`}
+                          label="Стиль"
+                          value={
+                            profileData.rules.bibliography.style === "gost"
+                              ? "ГОСТ"
+                              : profileData.rules.bibliography.style
+                          }
                         />
                         <RuleItem
-                          label="Отступ слева"
-                          value={`${profileData.rules.lists.left_indent} см`}
-                        />
-                        <Divider sx={{ my: 1 }} />
-                        <RuleItem
-                          label="Шрифт сносок"
-                          value={`${profileData.rules.footnotes.font_size} пт`}
+                          label="Размер шрифта"
+                          value={`${profileData.rules.bibliography.font_size || 14} пт`}
                         />
                         <RuleItem
-                          label="Интервал сносок"
-                          value={`${profileData.rules.footnotes.line_spacing}x`}
+                          label="Сортировка"
+                          value={
+                            profileData.rules.bibliography.sort_order === "alphabetical"
+                              ? "По алфавиту"
+                              : profileData.rules.bibliography.sort_order
+                          }
+                        />
+                        <Separator className="my-1" />
+                        <RuleItem
+                          label="Мин. источников"
+                          value={profileData.rules.bibliography.min_sources || 15}
+                        />
+                        <RuleItem
+                          label="Макс. возраст"
+                          value={`${profileData.rules.bibliography.max_age_years || 5} лет`}
                         />
                       </RuleCard>
-                    </Grid>
+                    ) : null}
 
-                    {/* Bibliography rules */}
-                    {profileData.rules.bibliography && (
-                      <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-                        <RuleCard title="Библиография" icon={<MenuBookIcon />} delay={0.55}>
-                          <RuleItem
-                            label="Стиль"
-                            value={
-                              profileData.rules.bibliography.style === "gost"
-                                ? "ГОСТ"
-                                : profileData.rules.bibliography.style
-                            }
-                          />
-                          <RuleItem
-                            label="Размер шрифта"
-                            value={`${profileData.rules.bibliography.font_size || 14} пт`}
-                          />
-                          <RuleItem
-                            label="Сортировка"
-                            value={
-                              profileData.rules.bibliography.sort_order === "alphabetical"
-                                ? "По алфавиту"
-                                : profileData.rules.bibliography.sort_order
-                            }
-                          />
-                          <Divider sx={{ my: 1 }} />
-                          <RuleItem
-                            label="Мин. источников"
-                            value={profileData.rules.bibliography.min_sources || 15}
-                          />
-                          <RuleItem
-                            label="Макс. возраст"
-                            value={`${profileData.rules.bibliography.max_age_years || 5} лет`}
-                          />
-                        </RuleCard>
-                      </Grid>
-                    )}
-
-                    {/* Required sections rules */}
-                    <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-                      <RuleCard title="Структура" icon={<MenuBookIcon />} delay={0.6}>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          Обязательные разделы:
-                        </Typography>
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                          {profileData.rules.required_sections.map((sec, idx) => (
-                            <Chip
-                              key={idx}
-                              label={sec}
-                              size="small"
-                              sx={{
-                                bgcolor: "rgba(255,255,255,0.06)",
-                                color: "rgba(255,255,255,0.55)",
-                                borderRadius: 0.5,
-                                border: "1px solid rgba(255,255,255,0.1)",
-                              }}
-                            />
-                          ))}
-                        </Box>
-                      </RuleCard>
-                    </Grid>
-                  </Grid>
+                    <RuleCard
+                      title="Структура"
+                      icon={<FileText className="h-4 w-4" />}
+                      delay={0.35}
+                    >
+                      <p className="text-sm text-muted-foreground">Обязательные разделы:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {profileData.rules.required_sections.map((section, index) => (
+                          <Badge
+                            key={`${section}-${index}`}
+                            variant="outline"
+                            className="rounded-xl px-3 py-1 text-xs font-medium"
+                          >
+                            {section}
+                          </Badge>
+                        ))}
+                      </div>
+                    </RuleCard>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </Grid>
-        </Grid>
-      </Container>
+          </div>
+        </div>
 
-      {/* Delete confirmation dialog */}
-      <Dialog open={deleteDialogOpen} onClose={(): void => setDeleteDialogOpen(false)}>
-        <DialogTitle>Удалить профиль?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Вы действительно хотите удалить профиль "{profileData?.name}"? Это действие нельзя
-            отменить.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={(): void => setDeleteDialogOpen(false)}>Отмена</Button>
-          <Button onClick={handleDeleteConfirm} color="error" autoFocus>
-            Удалить
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Удалить профиль?</DialogTitle>
+              <DialogDescription>
+                Вы действительно хотите удалить профиль "{profileData?.name}"? Это действие нельзя
+                отменить.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Отмена
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteConfirm}>
+                Удалить
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </AppPageLayout>
+    </TooltipProvider>
   );
 };
 

@@ -1,97 +1,36 @@
-import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
-import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
-import DownloadIcon from "@mui/icons-material/Download";
-import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
-import HighlightOffIcon from "@mui/icons-material/HighlightOff";
-import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
-import NoteAddOutlinedIcon from "@mui/icons-material/NoteAddOutlined";
-import SearchIcon from "@mui/icons-material/Search";
-import SortIcon from "@mui/icons-material/Sort";
-import { Box, Button, Grid, IconButton, InputBase, Tooltip, Typography } from "@mui/material";
 import { AnimatePresence, motion } from "framer-motion";
-import { FC, ReactNode, useContext, useMemo, useState } from "react";
+import { ChevronDown, Download, FileText, SlidersHorizontal } from "lucide-react";
+import { FC, useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { CheckHistoryContext } from "../App";
-import usePageStyles from "../hooks/usePageStyles";
+import { CheckHistoryContext } from "../App.js";
+import AppPageLayout from "../components/layout/AppPageLayout";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { SearchField } from "../components/ui/search-field";
+import { cn } from "../lib/utils";
+import type { HistoryItem } from "../types";
+
+interface ReportsPageProps {
+  className?: string;
+}
+
+interface ReportsHistoryContext {
+  history: HistoryItem[];
+}
+
+type SortType = "date-desc" | "date-asc" | "name-asc" | "name-desc";
+type ScoreFilterType = "all" | "good" | "bad";
 
 const isLocal =
   typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
 const API_BASE = isLocal
   ? "http://localhost:5000"
   : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
 
-/**
- * Container and item animation variants for reports list
- */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
-};
-
-/**
- * StatCard component props interface
- */
-interface StatCardProps {
-  isDark: boolean;
-  title: string;
-  value: string | number;
-  icon: ReactNode;
-}
-
-/**
- * Score distribution score band interface
- */
-interface ScoreDistBand {
-  score: number;
-  count: number;
-  pct: number;
-  color: string;
-}
-
-/**
- * History item interface (from CheckHistoryContext)
- */
-interface HistoryItem {
-  id: string | number;
-  fileName?: string;
-  timestamp?: number;
-  score?: number;
-  reportData?: {
-    score?: number;
-    check_results?: {
-      total_issues_count?: number;
-    };
-    corrected_file_path?: string;
-  };
-  correctedFilePath?: string;
-  totalIssues?: number;
-}
-
-/**
- * Sort state type definition
- */
-type SortType = "date-desc" | "date-asc" | "name-asc" | "name-desc";
-
-/**
- * Score filter type definition
- */
-type ScoreFilterType = "all" | "good" | "bad";
-
-/**
- * ReportsPageProps interface (no props required)
- */
-interface ReportsPageProps {}
-
-/**
- * Sort labels mapping
- */
 const SORT_LABELS: Record<SortType, string> = {
   "date-desc": "Сначала новые",
   "date-asc": "Сначала старые",
@@ -99,210 +38,162 @@ const SORT_LABELS: Record<SortType, string> = {
   "name-desc": "Имя Я→А",
 };
 
-/**
- * StatCard Sub-Component
- *
- * Displays statistics card with icon, title and value
- *
- * @param props - StatCardProps with theme and data
- * @returns Card displaying statistic
- */
-const StatCard: FC<StatCardProps> = ({ isDark, title, value, icon }) => {
-  const textPrimary = isDark ? "#fff" : "#000";
-  const textMuted = isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.4)";
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
 
-  return (
-    <Box sx={{ p: 3, border: "1px solid", borderColor, borderRadius: 1 }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          mb: 2,
-        }}
-      >
-        <Typography
-          sx={{
-            fontSize: "0.75rem",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: textMuted,
-            fontWeight: 600,
-          }}
-        >
-          {title}
-        </Typography>
-        <Box sx={{ color: textMuted, display: "flex" }}>{icon}</Box>
-      </Box>
-      <Typography
-        sx={{
-          fontSize: "2rem",
-          fontWeight: 700,
-          letterSpacing: "-0.04em",
-          color: textPrimary,
-          fontFamily: "'Wix Madefor Display', sans-serif",
-        }}
-      >
-        {value}
-      </Typography>
-    </Box>
+const getItemKey = (item: HistoryItem, index = 0): string => {
+  return String(
+    item.id ?? `${item.fileName || item.document_name || "report"}-${item.timestamp || index}`,
   );
 };
 
-/**
- * ReportsPage Component
- *
- * Displays all validation reports from history with filtering, sorting, and export capabilities.
- * Features include:
- * - List view with collapsible rows showing detailed information
- * - Search by filename
- * - Sort by date or name (ascending/descending)
- * - Filter by score (all, good ≥4, bad ≤2)
- * - Score distribution visualization
- * - Download corrected documents
- * - CSV export of all reports
- * - Navigation to detailed report view
- *
- * State:
- * - query: Search filter for filename
- * - sort: Current sort order
- * - scoreFilter: Score range filter
- * - expandedId: Currently expanded report row ID
- *
- * @returns React component with reports list and management interface
- */
-const ReportsPage: FC<ReportsPageProps> = () => {
-  const navigate = useNavigate();
-  const {
-    isDark,
-    textPrimary,
-    textMuted,
-    borderColor,
-    borderColorSubtle,
-    rowHover,
-    inputBg,
-    contentPaddingX,
-  } = usePageStyles();
-  const { history } = useContext(CheckHistoryContext);
+const getTimestampValue = (item: HistoryItem): number => {
+  const raw = item.timestamp ?? item.id ?? 0;
+  if (typeof raw === "number") {
+    return raw;
+  }
 
-  // UI state
-  const [query, setQuery] = useState<string>("");
+  const parsed = Date.parse(String(raw));
+  if (!Number.isNaN(parsed)) {
+    return parsed;
+  }
+
+  const numeric = Number(raw);
+  return Number.isNaN(numeric) ? 0 : numeric;
+};
+
+const getIssuesCount = (item: HistoryItem): number => {
+  return (
+    item.totalIssues ??
+    item.issues_count ??
+    item.reportData?.check_results?.total_issues_count ??
+    item.validation_result?.summary?.total_issues ??
+    0
+  );
+};
+
+const getScoreValue = (item: HistoryItem): number | null => {
+  const candidate = item.score ?? item.reportData?.score;
+  if (candidate == null) {
+    return null;
+  }
+
+  return typeof candidate === "number" ? candidate : Number(candidate);
+};
+
+const getCorrectedPath = (item: HistoryItem): string | undefined => {
+  return item.correctedFilePath || item.corrected_file_path || item.reportData?.corrected_file_path;
+};
+
+const getProfileLabel = (item: HistoryItem): string => {
+  return (
+    item.profileName ||
+    item.profileId ||
+    item.profile_name ||
+    item.reportData?.check_results?.profile?.name ||
+    "Базовый профиль"
+  );
+};
+
+const downloadDocument = (filePath: string, originalName?: string): void => {
+  if (!filePath) {
+    return;
+  }
+
+  const safeName =
+    originalName && originalName.endsWith(".docx")
+      ? originalName
+      : `${originalName || "document"}.docx`;
+
+  if (filePath.indexOf("/") === -1 && filePath.indexOf("\\") === -1) {
+    window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filePath)}`;
+    return;
+  }
+
+  window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(safeName)}`;
+};
+
+const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
+  const navigate = useNavigate();
+  const { history } = useContext(CheckHistoryContext) as ReportsHistoryContext;
+
+  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortType>("date-desc");
   const [scoreFilter, setScoreFilter] = useState<ScoreFilterType>("all");
-  const [expandedId, setExpandedId] = useState<string | number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  /**
-   * Calculate report statistics
-   */
   const totalReports = history.length;
-  const withCorrections = history.filter(
-    (h) => h.correctedFilePath || h.reportData?.corrected_file_path,
-  ).length;
-  const avgScore =
-    history.length > 0
-      ? (history.reduce((acc, h) => acc + (h.score || 0), 0) / history.length).toFixed(1)
-      : "—";
-
-  /**
-   * Calculate score distribution (1-5 range)
-   */
-  const scoreDist = useMemo((): ScoreDistBand[] => {
-    const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    history.forEach((h) => {
-      const s = h.score ?? h.reportData?.score;
-      if (s != null) {
-        const rounded = Math.round(s);
-        if (rounded >= 1 && rounded <= 5) counts[rounded]++;
-      }
-    });
-    const maxCount = Math.max(...Object.values(counts), 1);
-    return [5, 4, 3, 2, 1].map((n) => ({
-      score: n,
-      count: counts[n],
-      pct: (counts[n] / maxCount) * 100,
-      color: n >= 4 ? "#34d399" : n === 3 ? "#fbbf24" : "#f87171",
-    }));
+  const withCorrections = useMemo(
+    () => history.filter((item) => Boolean(getCorrectedPath(item))).length,
+    [history],
+  );
+  const averageScore = useMemo(() => {
+    const scored = history
+      .map(getScoreValue)
+      .filter((score): score is number => score != null && Number.isFinite(score));
+    if (scored.length === 0) {
+      return 0;
+    }
+    return scored.reduce((sum, score) => sum + score, 0) / scored.length;
   }, [history]);
 
-  /**
-   * Cycle through sort options
-   */
   const cycleSort = (): void => {
-    setSort((s) =>
-      s === "date-desc"
+    setSort((previous) =>
+      previous === "date-desc"
         ? "date-asc"
-        : s === "date-asc"
+        : previous === "date-asc"
           ? "name-asc"
-          : s === "name-asc"
+          : previous === "name-asc"
             ? "name-desc"
             : "date-desc",
     );
   };
 
-  /**
-   * Filter and sort reports based on current criteria
-   */
-  const items = useMemo((): HistoryItem[] => {
+  const items = useMemo(() => {
     let filtered = query
-      ? history.filter((h) => (h.fileName || "").toLowerCase().includes(query.toLowerCase()))
+      ? history.filter((item) =>
+          (item.fileName || item.document_name || "").toLowerCase().includes(query.toLowerCase()),
+        )
       : history;
 
     if (scoreFilter === "good") {
-      filtered = filtered.filter((h) => (h.score ?? h.reportData?.score ?? 0) >= 4);
+      filtered = filtered.filter((item) => (getScoreValue(item) ?? 0) >= 4);
     }
     if (scoreFilter === "bad") {
-      filtered = filtered.filter((h) => {
-        const s = h.score ?? h.reportData?.score ?? null;
-        return s != null && s <= 2;
+      filtered = filtered.filter((item) => {
+        const score = getScoreValue(item);
+        return score != null && score <= 2;
       });
     }
 
-    return [...filtered].sort((a, b) => {
-      if (sort === "date-desc")
-        return (b.timestamp || Number(b.id) || 0) - (a.timestamp || Number(a.id) || 0);
-      if (sort === "date-asc")
-        return (a.timestamp || Number(a.id) || 0) - (b.timestamp || Number(b.id) || 0);
-      const na = (a.fileName || "").localeCompare(b.fileName || "");
-      return sort === "name-asc" ? na : -na;
+    return [...filtered].sort((left, right) => {
+      if (sort === "date-desc") {
+        return getTimestampValue(right) - getTimestampValue(left);
+      }
+      if (sort === "date-asc") {
+        return getTimestampValue(left) - getTimestampValue(right);
+      }
+
+      const compare = (left.fileName || left.document_name || "").localeCompare(
+        right.fileName || right.document_name || "",
+      );
+      return sort === "name-asc" ? compare : -compare;
     });
-  }, [history, query, sort, scoreFilter]);
+  }, [history, query, scoreFilter, sort]);
 
-  /**
-   * Download corrected document
-   *
-   * @param filePath - Path to the corrected file
-   * @param originalName - Original document name
-   */
-  const downloadDocument = (filePath: string, originalName?: string): void => {
-    if (!filePath) return;
-
-    const safeName = originalName
-      ? originalName.endsWith(".docx")
-        ? originalName
-        : originalName + ".docx"
-      : `document_${Date.now()}.docx`;
-
-    if (filePath.indexOf("/") === -1 && filePath.indexOf("\\") === -1) {
-      window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filePath)}`;
-    } else {
-      window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(safeName)}`;
-    }
-  };
-
-  /**
-   * Export all reports to CSV file
-   */
   const exportCSV = (): void => {
     const rows: Array<Array<string | number>> = [
       ["Файл", "Дата", "Проблем", "Балл", "Исправлен"],
-      ...history.map((h) => {
-        const issues = h.reportData?.check_results?.total_issues_count ?? h.totalIssues ?? 0;
-        const score = h.score ?? h.reportData?.score ?? "";
-        const corrected = h.correctedFilePath || h.reportData?.corrected_file_path ? "Да" : "Нет";
-        const date = new Date(h.timestamp || h.id).toLocaleString("ru-RU");
+      ...history.map((item) => {
+        const issues = getIssuesCount(item);
+        const score = getScoreValue(item) ?? "";
+        const corrected = getCorrectedPath(item) ? "Да" : "Нет";
+        const date = new Date(getTimestampValue(item)).toLocaleString("ru-RU");
+
         return [
-          `"${(h.fileName || "").replace(/"/g, '""')}"`,
+          `"${(item.fileName || item.document_name || "").replace(/"/g, '""')}"`,
           `"${date}"`,
           issues,
           score,
@@ -311,729 +202,316 @@ const ReportsPage: FC<ReportsPageProps> = () => {
       }),
     ];
 
-    const csv = "\ufeff" + rows.map((r) => r.join(",")).join("\n");
+    const csv = "\ufeff" + rows.map((row) => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cursa_reports_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `cursa_reports_${new Date().toISOString().split("T")[0]}.csv`;
+    anchor.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <Box
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        py: 4,
-        px: contentPaddingX,
-      }}
+    <AppPageLayout
+      className={className}
+      title="Отчёты"
+      actions={
+        <>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl"
+            disabled={history.length === 0}
+            onClick={exportCSV}
+          >
+            <Download className="size-4" />
+            CSV
+          </Button>
+        </>
+      }
     >
-      {/* Header section */}
-      <Box
-        sx={{
-          mb: 4,
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              letterSpacing: "-0.025em",
-              fontFamily: "'Wix Madefor Display', sans-serif",
-              color: textPrimary,
-              mb: 0.5,
-            }}
-          >
-            Отчёты
-          </Typography>
-          <Typography sx={{ color: textMuted, fontSize: "0.875rem" }}>
-            Результаты проверок и исправленные документы
-          </Typography>
-        </motion.div>
+      <motion.section initial="hidden" animate="show" variants={fadeUp} className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="rounded-[28px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                Всего отчётов
+              </p>
+              <p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-foreground">
+                {totalReports}
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Action buttons */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Tooltip title="Экспортировать все отчёты в CSV">
-              <span>
+          <Card className="rounded-[28px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                С исправлениями
+              </p>
+              <p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-foreground">
+                {withCorrections}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[28px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                Средний балл
+              </p>
+              <p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-foreground">
+                {averageScore > 0 ? averageScore.toFixed(1) : "0.0"}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="rounded-[30px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+          <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:p-5">
+            <SearchField
+              value={query}
+              onChange={setQuery}
+              onSearch={() => undefined}
+              placeholder="Поиск по названию"
+              buttonLabel="Поиск"
+              className="min-w-0 flex-1"
+              inputClassName="h-11 rounded-2xl border-[#2e2f2f] bg-[#171717] text-[#fafafa] placeholder:text-[#7b7b7b]"
+              buttonClassName="h-11 rounded-2xl px-4"
+            />
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="rounded-2xl" onClick={cycleSort}>
+                <SlidersHorizontal className="size-4" />
+                {SORT_LABELS[sort]}
+              </Button>
+              {[
+                { key: "all" as const, label: "Все" },
+                { key: "good" as const, label: "Балл ≥ 4" },
+                { key: "bad" as const, label: "Балл ≤ 2" },
+              ].map((filter) => (
                 <Button
-                  size="small"
-                  startIcon={<FileDownloadOutlinedIcon sx={{ fontSize: 15 }} />}
-                  onClick={exportCSV}
-                  disabled={history.length === 0}
-                  sx={{
-                    borderRadius: 1,
-                    color: textMuted,
-                    border: "1px solid",
-                    borderColor,
-                    fontSize: "0.8rem",
-                    textTransform: "none",
-                    px: 1.5,
-                    "&:hover": { color: textPrimary },
-                  }}
+                  key={filter.key}
+                  variant={scoreFilter === filter.key ? "default" : "outline"}
+                  className="rounded-2xl"
+                  onClick={() => setScoreFilter(filter.key)}
                 >
-                  Экспорт CSV
+                  {filter.label}
                 </Button>
-              </span>
-            </Tooltip>
-            <Button
-              onClick={(): void => navigate("/")}
-              startIcon={<NoteAddOutlinedIcon />}
-              variant="contained"
-              sx={{
-                borderRadius: 1,
-                fontWeight: 600,
-                fontSize: "0.8rem",
-                textTransform: "none",
-                letterSpacing: "0.03em",
-                px: 2.5,
-                boxShadow: "none",
-              }}
-            >
-              Новая проверка
-            </Button>
-          </Box>
-        </motion.div>
-      </Box>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.section>
 
-      {/* Statistics cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+      <motion.section
+        initial="hidden"
+        animate="show"
+        variants={fadeUp}
+        transition={{ delay: 0.06 }}
       >
-        <Grid container spacing={2} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={4}>
-            <StatCard
-              isDark={isDark}
-              title="Всего отчётов"
-              value={totalReports || "0"}
-              icon={<ArticleOutlinedIcon sx={{ fontSize: 18 }} />}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <StatCard
-              isDark={isDark}
-              title="С исправлениями"
-              value={withCorrections || "0"}
-              icon={<DownloadIcon sx={{ fontSize: 18 }} />}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <StatCard
-              isDark={isDark}
-              title="Средний балл"
-              value={avgScore}
-              icon={<AssessmentOutlinedIcon sx={{ fontSize: 18 }} />}
-            />
-          </Grid>
-        </Grid>
-      </motion.div>
+        <Card className="rounded-[30px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+          <CardHeader className="p-6 pb-4">
+            <CardTitle className="text-xl">Список отчётов</CardTitle>
+            <CardDescription>
+              Нажмите на карточку, чтобы раскрыть метаданные и действия для конкретного документа.
+            </CardDescription>
+          </CardHeader>
 
-      {/* Score distribution visualization */}
-      {history.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Box
-            sx={{
-              mb: 3,
-              p: 2.5,
-              border: "1px solid",
-              borderColor,
-              borderRadius: 1,
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: "0.7rem",
-                fontWeight: 600,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: textMuted,
-                mb: 1.5,
-              }}
-            >
-              Распределение баллов
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-              {scoreDist.map(({ score, count, pct, color }) => (
-                <Box key={score} sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Typography
-                    sx={{
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      color: count > 0 ? color : textMuted,
-                      width: 20,
-                      flexShrink: 0,
-                      textAlign: "right",
-                    }}
-                  >
-                    {score}
-                  </Typography>
-                  <Box
-                    sx={{
-                      flex: 1,
-                      height: 6,
-                      borderRadius: 3,
-                      bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        height: "100%",
-                        width: `${pct}%`,
-                        bgcolor: count > 0 ? color : "transparent",
-                        borderRadius: 3,
-                        transition: "width 0.6s cubic-bezier(0.4,0,0.2,1)",
-                        opacity: count > 0 ? 1 : 0,
-                      }}
-                    />
-                  </Box>
-                  <Typography
-                    sx={{
-                      fontSize: "0.72rem",
-                      color: count > 0 ? textPrimary : textMuted,
-                      fontWeight: count > 0 ? 600 : 400,
-                      width: 24,
-                      flexShrink: 0,
-                      textAlign: "center",
-                    }}
-                  >
-                    {count || "—"}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        </motion.div>
-      )}
-
-      {/* Toolbar with search and filters */}
-      <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
-        {/* Search field */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            px: 1.5,
-            py: 0.75,
-            borderRadius: 1,
-            bgcolor: inputBg,
-            border: "1px solid",
-            borderColor,
-            flex: "1 1 240px",
-            maxWidth: 360,
-          }}
-        >
-          <SearchIcon sx={{ fontSize: 16, color: textMuted }} />
-          <InputBase
-            placeholder="Поиск по названию"
-            value={query}
-            onChange={(e): void => setQuery(e.target.value)}
-            sx={{
-              flex: 1,
-              fontSize: "0.875rem",
-              color: textPrimary,
-              "& input::placeholder": { color: textMuted },
-            }}
-          />
-          {query && (
-            <IconButton size="small" onClick={(): void => setQuery("")} sx={{ p: 0.25 }}>
-              <HighlightOffIcon sx={{ fontSize: 15, color: textMuted }} />
-            </IconButton>
-          )}
-        </Box>
-
-        {/* Sort button */}
-        <Button
-          size="small"
-          startIcon={<SortIcon sx={{ fontSize: 15 }} />}
-          onClick={cycleSort}
-          sx={{
-            borderRadius: 1,
-            color: textMuted,
-            border: "1px solid",
-            borderColor,
-            fontSize: "0.8rem",
-            textTransform: "none",
-            px: 1.5,
-            py: 0.875,
-            "&:hover": { color: textPrimary },
-          }}
-        >
-          {SORT_LABELS[sort]}
-        </Button>
-
-        {/* Score filter chips */}
-        {[
-          { key: "all" as const, label: "Все" },
-          { key: "good" as const, label: "Балл ≥ 4" },
-          { key: "bad" as const, label: "Балл ≤ 2" },
-        ].map((f) => {
-          const active = scoreFilter === f.key;
-          return (
-            <Button
-              key={f.key}
-              size="small"
-              onClick={(): void => setScoreFilter(f.key)}
-              sx={{
-                borderRadius: 1,
-                fontSize: "0.78rem",
-                textTransform: "none",
-                px: 1.5,
-                py: 0.875,
-                border: "1px solid",
-                borderColor: active ? "primary.main" : borderColor,
-                color: active ? "primary.main" : textMuted,
-                bgcolor: active
-                  ? isDark
-                    ? "rgba(99,102,241,0.08)"
-                    : "rgba(99,102,241,0.06)"
-                  : "transparent",
-                "&:hover": { color: textPrimary },
-              }}
-            >
-              {f.label}
-            </Button>
-          );
-        })}
-      </Box>
-
-      {/* Reports list content */}
-      <Box sx={{ flex: 1, overflowY: "auto", pr: 0.5 }} className="custom-scrollbar">
-        {history.length === 0 ? (
-          /* Empty state */
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: 300,
-              gap: 2,
-            }}
-          >
-            <ArticleOutlinedIcon sx={{ fontSize: 48, color: textMuted, opacity: 0.4 }} />
-            <Typography sx={{ color: textMuted, fontSize: "0.9rem" }}>Нет отчётов</Typography>
-            <Button
-              onClick={(): void => navigate("/")}
-              variant="outlined"
-              size="small"
-              sx={{ borderRadius: 1, textTransform: "none", borderColor, color: textMuted }}
-            >
-              Загрузить документ
-            </Button>
-          </Box>
-        ) : items.length === 0 ? (
-          /* No results */
-          <Box
-            sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}
-          >
-            <Typography sx={{ color: textMuted, fontSize: "0.875rem" }}>
-              Ничего не найдено
-            </Typography>
-          </Box>
-        ) : (
-          <>
-            {/* Table header */}
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "minmax(0,1fr) 150px 85px 70px 90px 160px",
-                gap: 1,
-                px: 2,
-                py: 1,
-                borderBottom: "1px solid",
-                borderColor,
-              }}
-            >
-              {["Файл", "Дата", "Проблем", "Балл", "Исправлен", ""].map((h) => (
-                <Typography
-                  key={h}
-                  sx={{
-                    fontSize: "0.7rem",
-                    letterSpacing: "0.08em",
-                    color: textMuted,
-                    textTransform: "uppercase",
-                    fontWeight: 600,
-                  }}
-                >
-                  {h}
-                </Typography>
-              ))}
-            </Box>
-
-            {/* Reports list with animations */}
-            <motion.div variants={containerVariants} initial="hidden" animate="show">
-              {items.map((item) => {
-                const issuesCount =
-                  item.reportData?.check_results?.total_issues_count ?? item.totalIssues ?? 0;
-                const correctedPath =
-                  item.correctedFilePath || item.reportData?.corrected_file_path;
-                const score = item.score ?? item.reportData?.score;
-                const dateStr = new Date(item.timestamp || item.id).toLocaleString("ru-RU", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
+          <CardContent className="space-y-4 p-6 pt-0">
+            {history.length === 0 ? (
+              <div className="rounded-[26px] border border-dashed border-[#2e2f2f] bg-[#171717] px-6 py-16 text-center">
+                <FileText className="mx-auto size-10 text-muted-foreground" />
+                <p className="mt-4 text-base font-medium text-foreground">Нет отчётов</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  После первой проверки список заполнится автоматически.
+                </p>
+              </div>
+            ) : items.length === 0 ? (
+              <div className="rounded-[26px] border border-dashed border-[#2e2f2f] bg-[#171717] px-6 py-16 text-center text-sm text-[#b6b6b6]">
+                По текущим фильтрам ничего не найдено.
+              </div>
+            ) : (
+              items.map((item, index) => {
+                const itemKey = getItemKey(item, index);
+                const correctedPath = getCorrectedPath(item);
+                const issuesCount = getIssuesCount(item);
+                const score = getScoreValue(item);
+                const isExpanded = expandedId === itemKey;
 
                 return (
-                  <motion.div key={item.id} variants={itemVariants}>
-                    {/* Table row */}
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(0,1fr) 150px 85px 70px 90px 160px",
-                        gap: 1,
-                        px: 2,
-                        py: 1.5,
-                        borderBottom: "1px solid",
-                        borderColor: borderColorSubtle,
-                        cursor: "pointer",
-                        transition: "background 0.15s",
-                        bgcolor: expandedId === item.id ? rowHover : "transparent",
-                        "&:hover": { bgcolor: rowHover },
-                        alignItems: "center",
-                      }}
-                      onClick={(): void => setExpandedId(expandedId === item.id ? null : item.id)}
+                  <div
+                    key={itemKey}
+                    className="rounded-[26px] border border-[#2e2f2f] bg-[#171717] transition-colors hover:bg-[#222222]"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(isExpanded ? null : itemKey)}
+                      className="flex w-full items-start justify-between gap-4 px-4 py-4 text-left md:px-5 md:py-5"
                     >
-                      {/* File name column */}
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
-                        <InsertDriveFileOutlinedIcon
-                          sx={{ fontSize: 16, color: textMuted, flexShrink: 0 }}
-                        />
-                        <Typography
-                          sx={{
-                            fontSize: "0.875rem",
-                            fontWeight: 500,
-                            color: textPrimary,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {item.fileName || "Без названия"}
-                        </Typography>
-                      </Box>
-
-                      {/* Date column */}
-                      <Typography sx={{ fontSize: "0.775rem", color: textMuted }}>
-                        {dateStr}
-                      </Typography>
-
-                      {/* Issues count column */}
-                      <Box
-                        sx={{
-                          display: "inline-flex",
-                          px: 1.25,
-                          py: 0.25,
-                          borderRadius: 0.5,
-                          border: "1px solid",
-                          borderColor:
-                            issuesCount > 0 ? "rgba(251,191,36,0.25)" : "rgba(52,211,153,0.25)",
-                          bgcolor:
-                            issuesCount > 0 ? "rgba(251,191,36,0.07)" : "rgba(52,211,153,0.07)",
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                            color: issuesCount > 0 ? "#fbbf24" : "#34d399",
-                          }}
-                        >
-                          {issuesCount}
-                        </Typography>
-                      </Box>
-
-                      {/* Score column */}
-                      <Typography
-                        sx={{
-                          fontSize: "0.775rem",
-                          color: score ? textPrimary : textMuted,
-                          fontWeight: score ? 600 : 400,
-                        }}
-                      >
-                        {score != null
-                          ? typeof score === "number"
-                            ? score.toFixed(1)
-                            : score
-                          : "—"}
-                      </Typography>
-
-                      {/* Has corrected column */}
-                      <Box>
-                        {correctedPath ? (
-                          <Box
-                            sx={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 0.5,
-                              px: 1.25,
-                              py: 0.25,
-                              borderRadius: 0.5,
-                              border: "1px solid rgba(52,211,153,0.25)",
-                              bgcolor: "rgba(52,211,153,0.07)",
-                            }}
+                      <div className="min-w-0 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-base font-semibold text-foreground">
+                            {item.fileName || item.document_name || "Без названия"}
+                          </p>
+                          <Badge
+                            variant="outline"
+                            className="rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]"
                           >
-                            <Typography
-                              sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#34d399" }}
-                            >
-                              Да
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Typography sx={{ fontSize: "0.75rem", color: textMuted }}>—</Typography>
-                        )}
-                      </Box>
+                            {getProfileLabel(item)}
+                          </Badge>
+                        </div>
 
-                      {/* Actions column */}
-                      <Box
-                        sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}
-                        onClick={(e): void => e.stopPropagation()}
-                      >
-                        <Button
-                          size="small"
-                          onClick={(): void =>
-                            navigate("/report", {
-                              state: { reportData: item.reportData, fileName: item.fileName },
-                            })
-                          }
-                          sx={{
-                            borderRadius: 0.5,
-                            fontSize: "0.75rem",
-                            textTransform: "none",
-                            color: textMuted,
-                            py: 0.25,
-                            px: 1,
-                            "&:hover": { color: textPrimary },
-                          }}
-                        >
-                          Открыть
-                        </Button>
-                        {correctedPath && (
-                          <Tooltip title="Скачать исправленный .DOCX">
-                            <Button
-                              size="small"
-                              startIcon={<DownloadIcon sx={{ fontSize: 13 }} />}
-                              onClick={(): void => downloadDocument(correctedPath, item.fileName)}
-                              sx={{
-                                borderRadius: 0.5,
-                                fontSize: "0.75rem",
-                                textTransform: "none",
-                                color: "#34d399",
-                                py: 0.25,
-                                px: 1,
-                                "&:hover": { bgcolor: "rgba(52,211,153,0.08)" },
-                              }}
-                            >
-                              .DOCX
-                            </Button>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </Box>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-[#b6b6b6]">
+                          <span>{new Date(getTimestampValue(item)).toLocaleString("ru-RU")}</span>
+                          <span>•</span>
+                          <span>{issuesCount} замечаний</span>
+                          {score != null && Number.isFinite(score) && (
+                            <>
+                              <span>•</span>
+                              <span>Балл {score.toFixed(1)}</span>
+                            </>
+                          )}
+                        </div>
 
-                    {/* Expandable details row */}
-                    <AnimatePresence>
-                      {expandedId === item.id && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {correctedPath ? (
+                            <Badge className="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-600 dark:text-emerald-300">
+                              Исправленный DOCX готов
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="rounded-full px-3 py-1 text-muted-foreground"
+                            >
+                              Только отчёт
+                            </Badge>
+                          )}
+
+                          {issuesCount > 0 ? (
+                            <Badge
+                              variant="outline"
+                              className="rounded-full border-amber-500/25 bg-amber-500/10 px-3 py-1 text-amber-600 dark:text-amber-300"
+                            >
+                              Требует внимания
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="rounded-full border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-emerald-600 dark:text-emerald-300"
+                            >
+                              Замечаний нет
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <ChevronDown
+                        className={cn(
+                          "mt-1 size-4 shrink-0 text-[#b6b6b6] transition-transform",
+                          isExpanded && "rotate-180",
+                        )}
+                      />
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
                         <motion.div
-                          key={`exp-${item.id}`}
+                          key={`expanded-${itemKey}`}
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.18, ease: "easeInOut" }}
-                          style={{ overflow: "hidden" }}
+                          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden"
                         >
-                          <Box
-                            sx={{
-                              px: 2,
-                              py: 1.75,
-                              display: "flex",
-                              gap: 3,
-                              alignItems: "center",
-                              bgcolor: isDark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.018)",
-                              borderBottom: "1px solid",
-                              borderColor,
-                            }}
-                          >
-                            {/* Score badge */}
-                            <Box
-                              sx={{
-                                width: 52,
-                                height: 52,
-                                borderRadius: 1.5,
-                                border: "2px solid",
-                                borderColor:
-                                  score != null
-                                    ? score >= 4
-                                      ? "rgba(52,211,153,0.4)"
-                                      : score >= 3
-                                        ? "rgba(251,191,36,0.4)"
-                                        : "rgba(248,113,113,0.4)"
-                                    : borderColor,
-                                bgcolor:
-                                  score != null
-                                    ? score >= 4
-                                      ? "rgba(52,211,153,0.08)"
-                                      : score >= 3
-                                        ? "rgba(251,191,36,0.08)"
-                                        : "rgba(248,113,113,0.08)"
-                                    : "transparent",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                              }}
-                            >
-                              <Typography
-                                sx={{
-                                  fontSize: "1.2rem",
-                                  fontWeight: 700,
-                                  color:
-                                    score != null
-                                      ? score >= 4
-                                        ? "#34d399"
-                                        : score >= 3
-                                          ? "#fbbf24"
-                                          : "#f87171"
-                                      : textMuted,
-                                }}
-                              >
-                                {score != null
-                                  ? typeof score === "number"
-                                    ? score.toFixed(1)
-                                    : score
-                                  : "—"}
-                              </Typography>
-                            </Box>
+                          <div className="grid gap-4 border-t border-[#2e2f2f] px-4 py-4 md:grid-cols-[120px_minmax(0,1fr)_auto] md:px-5 md:py-5">
+                            <div className="rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4 text-center">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                                Оценка
+                              </p>
+                              <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
+                                {score != null && Number.isFinite(score) ? score.toFixed(1) : "—"}
+                              </p>
+                            </div>
 
-                            {/* Metadata section */}
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                <Typography
-                                  sx={{
-                                    fontSize: "0.78rem",
-                                    color: textPrimary,
-                                    fontWeight: 500,
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {item.fileName || "Без названия"}
-                                </Typography>
-                              </Box>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                  mt: 0.5,
-                                }}
-                              >
-                                <Typography
-                                  sx={{
-                                    fontSize: "0.72rem",
-                                    fontWeight: 600,
-                                    color: issuesCount > 0 ? "#fbbf24" : "#34d399",
-                                  }}
-                                >
-                                  {issuesCount} замеч.
-                                </Typography>
-                                <Typography sx={{ fontSize: "0.72rem", color: textMuted }}>
-                                  ·
-                                </Typography>
-                                <Typography sx={{ fontSize: "0.72rem", color: textMuted }}>
-                                  {dateStr}
-                                </Typography>
-                              </Box>
-                            </Box>
+                            <div className="space-y-3 rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4">
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                                  Документ
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-foreground">
+                                  {item.fileName || item.document_name || "Без названия"}
+                                </p>
+                              </div>
 
-                            {/* Expanded actions */}
-                            <Box sx={{ display: "flex", gap: 1, flexShrink: 0 }}>
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                                    Дата проверки
+                                  </p>
+                                  <p className="mt-1 text-sm text-foreground">
+                                    {new Date(getTimestampValue(item)).toLocaleString("ru-RU")}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                                    Профиль
+                                  </p>
+                                  <p className="mt-1 text-sm text-foreground">
+                                    {getProfileLabel(item)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 md:items-end">
                               <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={(e): void => {
-                                  e.stopPropagation();
+                                variant="outline"
+                                className="rounded-2xl"
+                                onClick={() =>
                                   navigate("/report", {
                                     state: {
                                       reportData: item.reportData,
                                       fileName: item.fileName,
+                                      profileId: item.profileId,
+                                      profileName:
+                                        item.profileName ||
+                                        item.reportData?.check_results?.profile?.name,
                                     },
-                                  });
-                                }}
-                                sx={{
-                                  borderRadius: 0.75,
-                                  textTransform: "none",
-                                  fontSize: "0.78rem",
-                                  py: 0.5,
-                                  px: 1.5,
-                                  borderColor,
-                                  color: textMuted,
-                                  "&:hover": { color: textPrimary },
-                                }}
+                                  })
+                                }
                               >
                                 Открыть отчёт
                               </Button>
+
                               {correctedPath && (
                                 <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<DownloadIcon sx={{ fontSize: 13 }} />}
-                                  onClick={(e): void => {
-                                    e.stopPropagation();
-                                    downloadDocument(correctedPath, item.fileName);
-                                  }}
-                                  sx={{
-                                    borderRadius: 0.75,
-                                    textTransform: "none",
-                                    fontSize: "0.78rem",
-                                    py: 0.5,
-                                    px: 1.5,
-                                    borderColor: "rgba(52,211,153,0.35)",
-                                    color: "#34d399",
-                                    "&:hover": { bgcolor: "rgba(52,211,153,0.08)" },
-                                  }}
+                                  variant="outline"
+                                  className="rounded-2xl text-emerald-600 hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-300"
+                                  onClick={() =>
+                                    downloadDocument(
+                                      correctedPath,
+                                      item.fileName || item.document_name,
+                                    )
+                                  }
                                 >
-                                  .DOCX
+                                  <Download className="size-4" />
+                                  Скачать DOCX
                                 </Button>
                               )}
-                            </Box>
-                          </Box>
+                            </div>
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </motion.div>
+                  </div>
                 );
-              })}
-            </motion.div>
-          </>
-        )}
-      </Box>
-    </Box>
+              })
+            )}
+          </CardContent>
+        </Card>
+      </motion.section>
+    </AppPageLayout>
   );
 };
 
