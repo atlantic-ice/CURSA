@@ -172,6 +172,7 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const BillingPage = lazy(() => import("./pages/BillingPage"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
 
 // ============================================================================
 // Constants
@@ -182,6 +183,7 @@ const SHORTCUT_DEFS: ShortcutDef[] = [
   { keys: ["G", "D"], description: "Панель" },
   { keys: ["G", "H"], description: "История" },
   { keys: ["G", "R"], description: "Отчёты" },
+  { keys: ["G", "P"], description: "Тарифы" },
   { keys: ["G", "A"], description: "Аккаунт" },
   { keys: ["G", "S"], description: "Настройки" },
   { keys: ["Ctrl", "K"], description: "Командная палитра" },
@@ -192,6 +194,7 @@ const PALETTE_NAV_ITEMS: PaletteNavItem[] = [
   { label: "Загрузить документ", to: "/", shortcut: "N", icon: FilePlus2 },
   { label: "Панель", to: "/dashboard", shortcut: "G D", icon: LayoutDashboard },
   { label: "Отчёты", to: "/reports", shortcut: "G R", icon: ArrowUpRight },
+  { label: "Тарифы", to: "/pricing", shortcut: "G P", icon: Command },
   { label: "Аккаунт", to: "/account", shortcut: "G A", icon: User },
   { label: "Настройки", to: "/settings", shortcut: "G S", icon: Settings },
 ];
@@ -491,6 +494,7 @@ const KeyboardShortcutsHandler: FC<KeyboardShortcutsHandlerProps> = ({
       d: "/dashboard",
       h: "/history",
       r: "/reports",
+      p: "/pricing",
       a: "/account",
       s: "/settings",
     };
@@ -584,6 +588,14 @@ const AnimatedRoutes: FC = () => {
           element={
             <PageWrapper>
               <PreviewPage />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/pricing"
+          element={
+            <PageWrapper>
+              <PricingPage />
             </PageWrapper>
           }
         />

@@ -8,6 +8,7 @@ import {
   LayoutDashboardIcon,
   SettingsIcon,
   ShieldCheckIcon,
+  SparklesIcon,
   UserCircleIcon,
 } from "lucide-react";
 import * as React from "react";
@@ -69,6 +70,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Аккаунт",
       url: "/account",
       icon: UserCircleIcon,
+    },
+    {
+      title: "Тарифы",
+      url: "/pricing",
+      icon: SparklesIcon,
     },
     {
       title: "Тариф и оплата",
