@@ -4,7 +4,6 @@ import logging
 import hashlib
 import hmac
 from functools import wraps
-from datetime import datetime
 from typing import Callable, Optional, Dict, Any
 from flask import request, jsonify, g
 from flask_limiter import Limiter
@@ -20,7 +19,7 @@ limiter = Limiter(
     key_func=get_remote_address,
     # Берем базовый лимит из конфигурации безопасности,
     # чтобы не блокировать легитимный трафик (например, polling профилей).
-    default_limits=[RATE_LIMITS.get("default", "200 per minute")],
+    default_limits=[RATE_LIMITS.get("default", "1000 per minute")],
     storage_uri="memory://",  # Default fallback
 )
 

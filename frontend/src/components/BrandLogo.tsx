@@ -1,6 +1,6 @@
 import { Box, BoxProps, useTheme } from "@mui/material";
-import logoIcon from "../assets/logo-icon.svg";
 import logoIconDark from "../assets/logo-icon-dark.svg";
+import logoIcon from "../assets/logo-icon.svg";
 
 interface BrandLogoProps extends BoxProps {
   size?: "small" | "medium" | "large";
@@ -68,17 +68,24 @@ const BrandLogo: React.FC<BrandLogoProps> = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: size === "small" ? "10px" : "16px",
-        backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.04)",
-        border: "1px solid",
-        borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
-        backdropFilter: "blur(10px)",
-        boxShadow: isDark ? "0 4px 20px rgba(0, 0, 0, 0.3)" : "0 2px 8px rgba(0, 0, 0, 0.08)",
+        borderRadius: size === "small" ? "16px" : "24px",
+        background: isDark
+          ? "#1C1C1E"
+          : "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(242,242,247,0.84) 100%)",
+        border: isDark ? "none" : "1px solid",
+        borderColor: isDark ? "transparent" : "rgba(17,21,28,0.08)",
+        backdropFilter: "blur(14px)",
+        boxShadow: isDark
+          ? "0 18px 40px rgba(0, 0, 0, 0.28)"
+          : "0 18px 36px rgba(40, 34, 28, 0.08)",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         "&:hover": {
-          backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.06)",
-          borderColor: isDark ? "rgba(255, 255, 255, 0.16)" : "rgba(0, 0, 0, 0.12)",
-          boxShadow: isDark ? "0 8px 32px rgba(0, 0, 0, 0.4)" : "0 4px 16px rgba(0, 0, 0, 0.12)",
+          borderColor: isDark ? "transparent" : "rgba(17,17,17,0.14)",
+          background: isDark ? "#2C2C2E" : undefined,
+          boxShadow: isDark
+            ? "0 24px 52px rgba(0, 0, 0, 0.36)"
+            : "0 22px 44px rgba(40, 34, 28, 0.12)",
+          transform: "translateY(-1px)",
         },
         ...sx,
       }}

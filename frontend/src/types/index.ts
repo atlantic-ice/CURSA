@@ -45,7 +45,11 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
-  updateUser: (user: Partial<User>) => void;
+  updateUser: (userPatch: Partial<User>) => void;
+}
+
+export interface ColorModeContextType {
+  toggleColorMode: () => void;
 }
 
 // ============================================================================
@@ -152,6 +156,12 @@ export type IssueCategory =
 export type IssueSeverity = "critical" | "error" | "warning" | "info";
 
 export type AutocorrectStatus = "pending" | "applied" | "failed" | "skipped";
+
+export interface BackendCheckIssue extends Partial<Omit<ValidationIssue, "severity">> {
+  severity?: string;
+  auto_fixable?: boolean;
+  type?: string;
+}
 
 export interface IssuesBySeverity {
   critical: ValidationIssue[];
@@ -315,8 +325,42 @@ export interface ValidationReport {
   };
   // Backend compatibility fields
   issues?: ValidationIssue[];
+  document_token?: string;
+  original_preview_path?: string;
   corrected_document_url?: string;
   corrected_file_path?: string;
+  temp_path?: string;
+  success?: boolean;
+  filename?: string;
+  check_results?: {
+    score?: number;
+    total_issues_count?: number;
+    issues?: BackendCheckIssue[];
+    profile?: {
+      id?: string;
+      name?: string;
+    };
+  };
+  report?: {
+    passes_completed?: number;
+    total_issues_found?: number;
+    total_issues_fixed?: number;
+    remaining_issues?: number;
+    success_rate?: number;
+    duration_seconds?: number;
+    actions_by_phase?: Record<string, number>;
+    actions_by_type?: Record<string, number>;
+    verification_results?: Record<string, { passed?: boolean; message?: string }>;
+  };
+  improvement?: {
+    before_total_issues?: number;
+    after_total_issues?: number;
+    resolved_total_issues?: number;
+    before_font_issues?: number;
+    after_font_issues?: number;
+    resolved_font_issues?: number;
+  };
+  correction_success?: boolean;
   score?: number;
 }
 
@@ -340,7 +384,7 @@ export interface CheckHistoryEntry {
   document_name: string;
   profile_id: string;
   profile_name: string;
-  timestamp: string;
+  timestamp: string | number;
   issues_count: number;
   critical_count: number;
   status: ValidationStatus;
@@ -350,6 +394,10 @@ export interface CheckHistoryEntry {
   corrected_file_path?: string;
   reportData?: ValidationReport;
   fileName?: string;
+  profileId?: string;
+  profileName?: string;
+  totalIssues?: number;
+  correctedFilePath?: string;
 }
 
 // Type aliases for backward compatibility
@@ -363,11 +411,9 @@ export type LocationState = {
 
 export interface CheckHistoryContextType {
   history: CheckHistoryEntry[];
-  isLoading: boolean;
   addToHistory: (entry: Omit<CheckHistoryEntry, "id" | "timestamp">) => void;
-  fetchHistory: (limit?: number) => Promise<CheckHistoryEntry[]>;
+  removeFromHistory: (id: string | number) => void;
   clearHistory: () => void;
-  removeEntry: (id: string) => void;
 }
 
 // ============================================================================

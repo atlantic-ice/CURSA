@@ -1,568 +1,389 @@
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CloseIcon from "@mui/icons-material/Close";
-import DescriptionIcon from "@mui/icons-material/Description";
-import DonutLargeIcon from "@mui/icons-material/DonutLarge";
-import ErrorIcon from "@mui/icons-material/Error";
-import SchoolIcon from "@mui/icons-material/School";
-import TimelineIcon from "@mui/icons-material/Timeline";
-import TrendingDownIcon from "@mui/icons-material/TrendingDown";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import WarningIcon from "@mui/icons-material/Warning";
-import {
-  alpha,
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Grid,
-  IconButton,
-  LinearProgress,
-  Paper,
-  Stack,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-  Typography,
-  useTheme,
-} from "@mui/material";
 import { motion } from "framer-motion";
+import {
+  BarChart3,
+  BookOpenText,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  GraduationCap,
+  LayoutDashboard,
+  TriangleAlert,
+  X,
+  XCircle,
+} from "lucide-react";
 import PropTypes from "prop-types";
 import { useMemo, useState } from "react";
 
-const StatCard = ({ title, value, subtitle, icon, color, trend, onClick }) => {
-  return (
-    <motion.div whileHover={{ scale: 1.02, y: -2 }} transition={{ duration: 0.2 }}>
-      <Card
-        elevation={0}
-        onClick={onClick}
-        sx={{
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: 1,
-          cursor: onClick ? "pointer" : "default",
-          height: "100%",
-          bgcolor: "rgba(255,255,255,0.02)",
-          transition: "border-color 0.15s",
-          "&:hover": onClick ? { borderColor: "rgba(255,255,255,0.2)" } : {},
-        }}
-      >
-        <CardContent sx={{ p: 2.5 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              mb: 2,
-            }}
-          >
-            <Box
-              sx={{
-                p: 1,
-                borderRadius: 1,
-                bgcolor: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              {icon}
-            </Box>
-            {trend !== undefined && (
-              <Chip
-                size="small"
-                icon={
-                  trend >= 0 ? (
-                    <TrendingUpIcon fontSize="small" />
-                  ) : (
-                    <TrendingDownIcon fontSize="small" />
-                  )
-                }
-                label={`${trend >= 0 ? "+" : ""}${trend}%`}
-                color={trend >= 0 ? "success" : "error"}
-                variant="outlined"
-                sx={{ height: 22 }}
-              />
-            )}
-          </Box>
-          <Typography variant="h3" fontWeight={800} color="text.primary">
-            {value}
-          </Typography>
-          <Typography variant="subtitle2" fontWeight={600} color="text.primary" sx={{ mt: 0.5 }}>
-            {title}
-          </Typography>
-          {subtitle && (
-            <Typography variant="caption" color="text.secondary">
-              {subtitle}
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+
+const hashStatus = (value) => {
+  const score =
+    String(value || "")
+      .split("")
+      .reduce((sum, char) => sum + char.charCodeAt(0), 0) % 10;
+  if (score >= 8) return "error";
+  if (score >= 5) return "warning";
+  return "valid";
 };
 
-const BarChart = ({ data, color, maxValue }) => {
-  return (
-    <Box sx={{ display: "flex", alignItems: "flex-end", gap: 0.5, height: 60 }}>
-      {data.map((item, idx) => (
-        <Tooltip key={idx} title={`${item.label}: ${item.value}`}>
-          <Box
-            sx={{
-              flex: 1,
-              height: `${(item.value / maxValue) * 100}%`,
-              minHeight: 4,
-              bgcolor: `rgba(255,255,255,${0.1 + (item.value / maxValue) * 0.45})`,
-              borderRadius: "2px 2px 0 0",
-              transition: "height 0.3s ease",
-              cursor: "pointer",
-              "&:hover": { bgcolor: "rgba(255,255,255,0.7)" },
-            }}
-          />
-        </Tooltip>
-      ))}
-    </Box>
-  );
-};
+const StatCard = ({ title, value, subtitle, icon }) => (
+  <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.18 }}>
+    <Card className="rounded-[1.5rem] border-border/70 bg-muted/25">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-background text-muted-foreground">
+            {icon}
+          </div>
+        </div>
+        <p className="mt-4 text-3xl font-black tracking-[-0.04em] text-foreground">{value}</p>
+        <p className="mt-1 text-sm font-semibold text-foreground">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+      </CardContent>
+    </Card>
+  </motion.div>
+);
 
-const DonutChart = ({ segments, size = 120 }) => {
-  const theme = useTheme();
-  const total = segments.reduce((sum, s) => sum + s.value, 0);
+const DonutChart = ({ segments, size = 132 }) => {
+  const total = segments.reduce((sum, segment) => sum + segment.value, 0) || 1;
   let currentAngle = -90;
 
   return (
-    <Box sx={{ position: "relative", width: size, height: size, mx: "auto" }}>
+    <div className="relative mx-auto" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {segments.map((segment, idx) => {
+        {segments.map((segment) => {
           const angle = (segment.value / total) * 360;
           const startAngle = currentAngle;
           currentAngle += angle;
 
-          const radius = size / 2 - 10;
+          const radius = size / 2 - 8;
           const cx = size / 2;
           const cy = size / 2;
-
           const startRad = (startAngle * Math.PI) / 180;
           const endRad = ((startAngle + angle) * Math.PI) / 180;
-
           const x1 = cx + radius * Math.cos(startRad);
           const y1 = cy + radius * Math.sin(startRad);
           const x2 = cx + radius * Math.cos(endRad);
           const y2 = cy + radius * Math.sin(endRad);
-
           const largeArc = angle > 180 ? 1 : 0;
 
           return (
             <path
-              key={idx}
+              key={segment.label}
               d={`M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`}
               fill={segment.color}
-              stroke="#fff"
+              stroke="var(--background)"
               strokeWidth={2}
-              style={{ cursor: "pointer" }}
             />
           );
         })}
-        <circle cx={size / 2} cy={size / 2} r={size / 4} fill={theme.palette.background.paper} />
+        <circle cx={size / 2} cy={size / 2} r={size / 4} fill="var(--card)" />
       </svg>
-      <Box
-        sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          textAlign: "center",
-        }}
-      >
-        <Typography variant="h6" fontWeight={700}>
-          {total}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          всего
-        </Typography>
-      </Box>
-    </Box>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <p className="text-xl font-bold text-foreground">
+          {segments.reduce((sum, item) => sum + item.value, 0)}
+        </p>
+        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">всего</p>
+      </div>
+    </div>
   );
 };
 
 export default function ProfileStatistics({ profiles, onClose }) {
-  const theme = useTheme();
   const [viewType, setViewType] = useState("overview");
 
   const stats = useMemo(() => {
     const total = profiles.length;
-    const byCategory = {};
     const byMonth = {};
     const validationStats = { valid: 0, warnings: 0, errors: 0 };
     let totalRules = 0;
 
     profiles.forEach((profile) => {
-      // By category
-      const cat = profile.category || "custom";
-      byCategory[cat] = (byCategory[cat] || 0) + 1;
-
-      // By creation date
       const date = profile.created_at || profile.updated_at;
       if (date) {
-        const month = new Date(date).toLocaleString("ru", { month: "short" });
+        const month = new Date(date).toLocaleString("ru-RU", { month: "short" });
         byMonth[month] = (byMonth[month] || 0) + 1;
       }
+      if (profile.rules) totalRules += Object.keys(profile.rules).length;
 
-      // Count rules
-      if (profile.rules) {
-        totalRules += Object.keys(profile.rules).length;
-      }
-
-      // Validation status (mock)
-      const rand = Math.random();
-      if (rand > 0.8) validationStats.errors++;
-      else if (rand > 0.5) validationStats.warnings++;
-      else validationStats.valid++;
+      const status = hashStatus(profile.id || profile.name);
+      if (status === "valid") validationStats.valid += 1;
+      if (status === "warning") validationStats.warnings += 1;
+      if (status === "error") validationStats.errors += 1;
     });
-
-    const avgRules = total > 0 ? Math.round(totalRules / total) : 0;
 
     return {
       total,
-      byCategory,
+      avgRules: total > 0 ? Math.round(totalRules / total) : 0,
+      universitiesCount: profiles.filter((profile) => profile.category === "university").length,
+      customCount: profiles.filter((profile) => profile.category !== "university").length,
+      recent: [...profiles].slice(0, 5),
       byMonth,
       validationStats,
-      avgRules,
-      recent: profiles.slice(0, 5),
-      universitiesCount: profiles.filter((p) => p.category === "university").length,
-      customCount: profiles.filter((p) => p.category !== "university").length,
     };
   }, [profiles]);
 
-  const categoryData = useMemo(() => {
-    return [
-      { label: "ВУЗы", value: stats.universitiesCount, color: "#888" },
-      { label: "Пользов.", value: stats.customCount, color: "#555" },
-    ];
-  }, [stats, theme]);
+  const categoryData = useMemo(
+    () => [
+      { label: "ВУЗы", value: stats.universitiesCount, color: "rgba(59,130,246,0.8)" },
+      { label: "Пользов.", value: stats.customCount, color: "rgba(99,102,241,0.8)" },
+    ],
+    [stats.customCount, stats.universitiesCount],
+  );
 
-  const monthData = useMemo(() => {
-    const months = Object.entries(stats.byMonth).slice(-6);
-    return months.map(([label, value]) => ({ label, value }));
-  }, [stats]);
+  const monthData = useMemo(
+    () =>
+      Object.entries(stats.byMonth)
+        .slice(-6)
+        .map(([label, value]) => ({ label, value })),
+    [stats.byMonth],
+  );
 
-  const maxMonthValue = Math.max(...monthData.map((m) => m.value), 1);
+  const maxMonthValue = Math.max(...monthData.map((item) => item.value), 1);
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        borderRadius: 3,
-        bgcolor: alpha(theme.palette.background.paper, 0.6),
-        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        overflow: "hidden",
-      }}
-    >
-      {/* Header */}
-      <Box
-        sx={{
-          p: 2,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <BarChartIcon sx={{ color: "rgba(255,255,255,0.45)" }} />
-          <Typography variant="h6" fontWeight={700}>
-            Статистика профилей
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          <ToggleButtonGroup
-            value={viewType}
-            exclusive
-            onChange={(e, v) => v && setViewType(v)}
-            size="small"
-          >
-            <ToggleButton value="overview">
-              <TimelineIcon fontSize="small" />
-            </ToggleButton>
-            <ToggleButton value="details">
-              <DonutLargeIcon fontSize="small" />
-            </ToggleButton>
-          </ToggleButtonGroup>
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </Box>
+    <Card className="rounded-[2rem] border-border/70 bg-card/90 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
+      <CardHeader className="border-b border-border/60 bg-muted/25">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
+              Статистика профилей
+            </CardTitle>
+            <CardDescription>
+              Обзор библиотеки профилей, активности и статуса качества.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-full border border-border/70 bg-background p-1">
+              <Button
+                variant={viewType === "overview" ? "secondary" : "ghost"}
+                size="sm"
+                className="rounded-full"
+                onClick={() => setViewType("overview")}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewType === "details" ? "secondary" : "ghost"}
+                size="sm"
+                className="rounded-full"
+                onClick={() => setViewType("details")}
+              >
+                <BookOpenText className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
 
-      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
-        {/* Main Stats */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={6} sm={3}>
-            <StatCard
-              title="Всего профилей"
-              value={stats.total}
-              icon={<DescriptionIcon />}
-              color="primary"
-              subtitle="активных"
-            />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard
-              title="Профили ВУЗов"
-              value={stats.universitiesCount}
-              icon={<SchoolIcon />}
-              color="info"
-              subtitle="университеты"
-            />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard
-              title="Пользовательские"
-              value={stats.customCount}
-              icon={<AssignmentIcon />}
-              color="secondary"
-              subtitle="созданные"
-            />
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <StatCard
-              title="Правил в среднем"
-              value={stats.avgRules}
-              icon={<TrendingUpIcon />}
-              color="success"
-              subtitle="на профиль"
-            />
-          </Grid>
-        </Grid>
+      <CardContent className="space-y-5 p-6">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            title="Всего профилей"
+            value={stats.total}
+            subtitle="активных"
+            icon={<FileText className="h-4 w-4" />}
+          />
+          <StatCard
+            title="Профили ВУЗов"
+            value={stats.universitiesCount}
+            subtitle="университеты"
+            icon={<GraduationCap className="h-4 w-4" />}
+          />
+          <StatCard
+            title="Пользовательские"
+            value={stats.customCount}
+            subtitle="созданные вручную"
+            icon={<LayoutDashboard className="h-4 w-4" />}
+          />
+          <StatCard
+            title="Правил в среднем"
+            value={stats.avgRules}
+            subtitle="на профиль"
+            icon={<BarChart3 className="h-4 w-4" />}
+          />
+        </div>
 
-        <Grid container spacing={3}>
-          {/* Category Distribution */}
-          <Grid item xs={12} md={6}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                bgcolor: alpha(theme.palette.background.default, 0.5),
-                height: "100%",
-              }}
-            >
-              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                Распределение по категориям
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 3, mt: 2 }}>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="rounded-[1.5rem] border-border/70 bg-muted/20">
+            <CardContent className="p-5">
+              <p className="text-sm font-semibold text-foreground">Распределение по категориям</p>
+              <div className="mt-4 flex flex-col gap-5 md:flex-row md:items-center">
                 <DonutChart segments={categoryData} />
-                <Box sx={{ flex: 1 }}>
-                  {categoryData.map((item, idx) => (
-                    <Box key={idx} sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                      <Box
-                        sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: item.color }}
+                <div className="flex-1 space-y-3">
+                  {categoryData.map((item) => (
+                    <div key={item.label} className="flex items-center gap-3 text-sm">
+                      <span
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: item.color }}
                       />
-                      <Typography variant="body2" sx={{ flex: 1 }}>
-                        {item.label}
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        {item.value}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <span className="flex-1 text-foreground">{item.label}</span>
+                      <span className="font-semibold text-foreground">{item.value}</span>
+                      <span className="text-xs text-muted-foreground">
                         ({stats.total > 0 ? Math.round((item.value / stats.total) * 100) : 0}%)
-                      </Typography>
-                    </Box>
+                      </span>
+                    </div>
                   ))}
-                </Box>
-              </Box>
-            </Paper>
-          </Grid>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Validation Status */}
-          <Grid item xs={12} md={6}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                bgcolor: alpha(theme.palette.background.default, 0.5),
-                height: "100%",
-              }}
-            >
-              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                Статус валидации
-              </Typography>
-              <Stack spacing={2} sx={{ mt: 2 }}>
-                <Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <CheckCircleIcon fontSize="small" color="success" />
-                      <Typography variant="body2">Валидные</Typography>
-                    </Box>
-                    <Typography variant="body2" fontWeight={600}>
-                      {stats.validationStats.valid}
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={(stats.validationStats.valid / stats.total) * 100 || 0}
-                    sx={{
-                      height: 6,
-                      borderRadius: 0,
-                      bgcolor: "rgba(255,255,255,0.08)",
-                      "& .MuiLinearProgress-bar": { bgcolor: "rgba(255,255,255,0.65)" },
-                    }}
-                  />
-                </Box>
-                <Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <WarningIcon fontSize="small" color="warning" />
-                      <Typography variant="body2">С предупреждениями</Typography>
-                    </Box>
-                    <Typography variant="body2" fontWeight={600}>
-                      {stats.validationStats.warnings}
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={(stats.validationStats.warnings / stats.total) * 100 || 0}
-                    sx={{
-                      height: 6,
-                      borderRadius: 0,
-                      bgcolor: "rgba(255,255,255,0.08)",
-                      "& .MuiLinearProgress-bar": { bgcolor: "rgba(255,255,255,0.35)" },
-                    }}
-                  />
-                </Box>
-                <Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <ErrorIcon fontSize="small" color="error" />
-                      <Typography variant="body2">С ошибками</Typography>
-                    </Box>
-                    <Typography variant="body2" fontWeight={600}>
-                      {stats.validationStats.errors}
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={(stats.validationStats.errors / stats.total) * 100 || 0}
-                    sx={{
-                      height: 6,
-                      borderRadius: 0,
-                      bgcolor: "rgba(255,255,255,0.08)",
-                      "& .MuiLinearProgress-bar": { bgcolor: "rgba(255,255,255,0.2)" },
-                    }}
-                  />
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-
-          {/* Activity Chart */}
-          <Grid item xs={12}>
-            <Paper
-              elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.background.default, 0.5) }}
-            >
-              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                Активность по месяцам
-              </Typography>
-              {monthData.length > 0 ? (
-                <Box sx={{ mt: 2 }}>
-                  <BarChart data={monthData} color="primary" maxValue={maxMonthValue} />
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
-                    {monthData.map((item, idx) => (
-                      <Typography
-                        key={idx}
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ flex: 1, textAlign: "center" }}
-                      >
+          <Card className="rounded-[1.5rem] border-border/70 bg-muted/20">
+            <CardContent className="p-5">
+              <p className="text-sm font-semibold text-foreground">Статус качества</p>
+              <div className="mt-4 space-y-4">
+                {[
+                  {
+                    label: "Валидные",
+                    value: stats.validationStats.valid,
+                    icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
+                    color: "bg-emerald-500",
+                  },
+                  {
+                    label: "С предупреждениями",
+                    value: stats.validationStats.warnings,
+                    icon: <TriangleAlert className="h-4 w-4 text-amber-600" />,
+                    color: "bg-amber-500",
+                  },
+                  {
+                    label: "С ошибками",
+                    value: stats.validationStats.errors,
+                    icon: <XCircle className="h-4 w-4 text-destructive" />,
+                    color: "bg-destructive",
+                  },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                      <div className="flex items-center gap-2 text-foreground">
+                        {item.icon}
                         {item.label}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
-              ) : (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 2, textAlign: "center" }}
-                >
-                  Нет данных об активности
-                </Typography>
-              )}
-            </Paper>
-          </Grid>
-
-          {/* Recent Profiles */}
-          <Grid item xs={12}>
-            <Paper
-              elevation={0}
-              sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.background.default, 0.5) }}
-            >
-              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                Последние профили
-              </Typography>
-              <Stack spacing={1} sx={{ mt: 2 }}>
-                {stats.recent.map((profile, idx) => (
-                  <motion.div
-                    key={profile.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        p: 1.5,
-                        borderRadius: 1,
-                        bgcolor: "rgba(255,255,255,0.02)",
-                        border: "1px solid transparent",
-                        "&:hover": {
-                          bgcolor: "rgba(255,255,255,0.04)",
-                          borderColor: "rgba(255,255,255,0.08)",
-                        },
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          bgcolor: "rgba(255,255,255,0.25)",
+                      </div>
+                      <span className="font-semibold text-foreground">{item.value}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`${item.color} h-full rounded-full`}
+                        style={{
+                          width: `${stats.total > 0 ? (item.value / stats.total) * 100 : 0}%`,
                         }}
                       />
-                      <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
-                        {profile.name}
-                      </Typography>
-                      <Chip
-                        label={profile.category === "university" ? "ВУЗ" : "Пользов."}
-                        size="small"
-                        variant="outlined"
-                      />
-                      {profile.updated_at && (
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(profile.updated_at).toLocaleDateString("ru")}
-                        </Typography>
-                      )}
-                    </Box>
-                  </motion.div>
+                    </div>
+                  </div>
                 ))}
-                {stats.recent.length === 0 && (
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    Нет профилей
-                  </Typography>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <Card className="rounded-[1.5rem] border-border/70 bg-muted/20">
+            <CardContent className="p-5">
+              <p className="text-sm font-semibold text-foreground">Активность по месяцам</p>
+              {monthData.length > 0 ? (
+                <div className="mt-5">
+                  <div className="flex h-48 items-end gap-2">
+                    {monthData.map((item) => (
+                      <div key={item.label} className="flex flex-1 flex-col items-center gap-2">
+                        <div
+                          className="w-full rounded-t-xl bg-primary/70 transition-all"
+                          style={{
+                            height: `${(item.value / maxMonthValue) * 100}%`,
+                            minHeight: 10,
+                          }}
+                        />
+                        <span className="text-xs text-muted-foreground">{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 text-sm text-muted-foreground">Нет данных об активности.</div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[1.5rem] border-border/70 bg-muted/20">
+            <CardContent className="p-5">
+              <p className="text-sm font-semibold text-foreground">Последние профили</p>
+              <div className="mt-4 space-y-2">
+                {stats.recent.length > 0 ? (
+                  stats.recent.map((profile) => (
+                    <div
+                      key={profile.id}
+                      className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/70 px-3 py-3"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                        <Clock3 className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {profile.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile.updated_at
+                            ? new Date(profile.updated_at).toLocaleDateString("ru-RU")
+                            : "Без даты"}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="rounded-full">
+                        {profile.category === "university" ? "ВУЗ" : "Пользов."}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">Нет профилей.</p>
                 )}
-              </Stack>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
-    </Paper>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {viewType === "details" ? (
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[1.5rem] border border-emerald-500/15 bg-emerald-500/5 p-4 text-sm">
+              <div className="flex items-center gap-2 font-semibold text-emerald-700 dark:text-emerald-300">
+                <CheckCircle2 className="h-4 w-4" /> Валидные профили
+              </div>
+              <p className="mt-2 text-muted-foreground">
+                Ориентировочный стабильный статус по библиотеке: {stats.validationStats.valid} из{" "}
+                {stats.total}.
+              </p>
+            </div>
+            <div className="rounded-[1.5rem] border border-amber-500/15 bg-amber-500/5 p-4 text-sm">
+              <div className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300">
+                <TriangleAlert className="h-4 w-4" /> Требуют внимания
+              </div>
+              <p className="mt-2 text-muted-foreground">
+                Профили с предупреждениями: {stats.validationStats.warnings}.
+              </p>
+            </div>
+            <div className="rounded-[1.5rem] border border-destructive/15 bg-destructive/5 p-4 text-sm">
+              <div className="flex items-center gap-2 font-semibold text-destructive">
+                <XCircle className="h-4 w-4" /> Потенциальные ошибки
+              </div>
+              <p className="mt-2 text-muted-foreground">
+                Профили с критичными отклонениями: {stats.validationStats.errors}.
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
+
+StatCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  subtitle: PropTypes.string.isRequired,
+  icon: PropTypes.node.isRequired,
+};
 
 ProfileStatistics.propTypes = {
   profiles: PropTypes.array.isRequired,

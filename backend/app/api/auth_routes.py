@@ -99,7 +99,7 @@ def _is_email_verification_required() -> bool:
 
 
 @bp.route("/register", methods=["POST"])
-@rate_limit("5 per hour")
+@rate_limit("20 per hour")  # Увеличено для легитимных попыток регистрации
 def register():
     """Register new user with email and password"""
     try:
@@ -258,7 +258,7 @@ def login():
 
 @bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
-@rate_limit("30 per hour")
+@rate_limit("100 per hour")  # Часто вызывается автоматически
 def refresh():
     """Refresh access token"""
     try:
@@ -277,7 +277,7 @@ def refresh():
 
 @bp.route("/logout", methods=["POST"])
 @jwt_required()
-@rate_limit("30 per hour")
+@rate_limit("100 per hour")  # Частое действие при переключении аккаунтов
 def logout():
     """Logout user (revoke token)"""
     try:
@@ -300,7 +300,7 @@ def logout():
 
 @bp.route("/me", methods=["PUT"])
 @jwt_required()
-@rate_limit("30 per hour")
+@rate_limit("100 per hour")  # Частое обновление профиля
 def update_profile():
     """Update current user profile fields"""
     try:

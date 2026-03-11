@@ -3,7 +3,7 @@ import { ChevronDown, Download, FileText, SlidersHorizontal } from "lucide-react
 import { FC, useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { CheckHistoryContext } from "../App.js";
+import { CheckHistoryContext } from "../App";
 import AppPageLayout from "../components/layout/AppPageLayout";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";

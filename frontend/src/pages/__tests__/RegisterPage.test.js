@@ -1,20 +1,56 @@
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { AuthContext, ColorModeContext } from "../../App";
 import RegisterPage from "../RegisterPage";
 
-// Мок для framer-motion
+const mockNavigate = jest.fn();
+const mockLogin = jest.fn();
+const mockToggleColorMode = jest.fn();
+
+jest.mock(
+  "react-router-dom",
+  () => ({
+    MemoryRouter: ({ children }) => <>{children}</>,
+    Link: ({ children, to, ...props }) => (
+      <a href={to} {...props}>
+        {children}
+      </a>
+    ),
+    useNavigate: () => mockNavigate,
+  }),
+  { virtual: true },
+);
+
+jest.mock("../../App", () => {
+  const React = require("react");
+  return {
+    AuthContext: React.createContext({ login: async () => {} }),
+    ColorModeContext: React.createContext({ toggleColorMode: () => {} }),
+  };
+});
+
+jest.mock("../../api/client", () => ({
+  authApi: {
+    register: jest.fn(),
+  },
+}));
+
 jest.mock("framer-motion", () => ({
   motion: {
     div: ({ children, ...props }) => <div {...props}>{children}</div>,
   },
 }));
 
-// Мок для fetch
-global.fetch = jest.fn();
+describe("RegisterPage", () => {
+  beforeAll(() => {
+    global.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  });
 
-describe("RegisterPage - Navigation", () => {
   const renderRegisterPage = () => {
     const theme = createTheme({
       palette: {
@@ -24,9 +60,11 @@ describe("RegisterPage - Navigation", () => {
 
     return render(
       <ThemeProvider theme={theme}>
-        <MemoryRouter>
-          <RegisterPage />
-        </MemoryRouter>
+        <ColorModeContext.Provider value={{ toggleColorMode: mockToggleColorMode }}>
+          <AuthContext.Provider value={{ login: mockLogin }}>
+            <RegisterPage />
+          </AuthContext.Provider>
+        </ColorModeContext.Provider>
       </ThemeProvider>,
     );
   };
@@ -35,25 +73,32 @@ describe("RegisterPage - Navigation", () => {
     jest.clearAllMocks();
   });
 
-  test("renders back button with icon", () => {
+  test("renders redesigned registration shell and form", () => {
     renderRegisterPage();
 
-    // ArrowBackIcon в IconButton должен присутствовать
-    const buttons = screen.getAllByRole("button");
-    // Проверяем что есть несколько кнопок (включая back button)
-    expect(buttons.length).toBeGreaterThan(0);
-  });
-
-  test("renders registration form elements", () => {
-    renderRegisterPage();
-
-    expect(screen.getByText(/Create Account/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Create Account/i })).toBeInTheDocument();
+    expect(screen.getByText(/добро пожаловать в cursa/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/m@example.com/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /создать аккаунт/i })).toBeInTheDocument();
   });
 
   test("renders link to login page", () => {
     renderRegisterPage();
 
-    expect(screen.getByText(/Already have an account\?/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /войти/i })).toHaveAttribute("href", "/login");
+  });
+
+  test("opens completion dialog after first signup step", () => {
+    renderRegisterPage();
+
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: "m@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /создать аккаунт/i }));
+
+    expect(
+      screen.getByRole("heading", { name: /завершите создание аккаунта/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/имя/i)).toBeInTheDocument();
   });
 });

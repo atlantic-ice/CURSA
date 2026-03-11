@@ -1,41 +1,25 @@
-import CloseIcon from "@mui/icons-material/Close";
-import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import DeleteIcon from "@mui/icons-material/Delete";
-import DescriptionIcon from "@mui/icons-material/Description";
-import ErrorIcon from "@mui/icons-material/Error";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import FileUploadIcon from "@mui/icons-material/FileUpload";
-import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
-import {
-  Alert,
-  alpha,
-  Box,
-  Button,
-  Checkbox,
-  Chip,
-  IconButton,
-  LinearProgress,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemSecondaryAction,
-  ListItemText,
-  Paper,
-  Stack,
-  Tab,
-  Tabs,
-  Tooltip,
-  Typography,
-  useTheme,
-} from "@mui/material";
-import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
+import { AlertTriangle, Clipboard, Download, FileJson, Trash2, Upload, X } from "lucide-react";
 import PropTypes from "prop-types";
 import { useRef, useState } from "react";
 
-const VALID_FIELDS = ["name", "description", "category", "version", "rules", "university"];
+import { getApiErrorMessage, profilesApi } from "../api/client";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Checkbox } from "./ui/checkbox";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+
+const downloadJsonFile = (payload, fileName) => {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
 
 const validateProfileData = (data) => {
   const errors = [];
@@ -56,35 +40,20 @@ const validateProfileData = (data) => {
 };
 
 export default function ProfileImportExport({ profiles, onImport, onClose, onRefresh }) {
-  const theme = useTheme();
   const fileInputRef = useRef(null);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState("import");
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [pendingFiles, setPendingFiles] = useState([]);
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [selectedProfiles, setSelectedProfiles] = useState([]);
-  const [exportFormat, setExportFormat] = useState("json");
   const [dragOver, setDragOver] = useState(false);
 
-  const handleFileSelect = async (event) => {
-    const files = Array.from(event.target.files || []);
-    processFiles(files);
-  };
-
-  const handleDrop = (event) => {
-    event.preventDefault();
-    setDragOver(false);
-    const files = Array.from(event.dataTransfer.files);
-    processFiles(files);
-  };
-
   const processFiles = async (files) => {
-    const jsonFiles = files.filter((f) => f.name.endsWith(".json"));
+    const jsonFiles = files.filter((file) => file.name.endsWith(".json"));
     if (jsonFiles.length === 0) {
-      setError("Пожалуйста, выберите JSON файлы");
+      setError("Пожалуйста, выберите JSON-файлы.");
       return;
     }
 
@@ -94,30 +63,31 @@ export default function ProfileImportExport({ profiles, onImport, onClose, onRef
         const text = await file.text();
         const data = JSON.parse(text);
         const validation = validateProfileData(data);
-        processed.push({
-          file,
-          name: file.name,
-          data,
-          validation,
-          selected: validation.valid,
-        });
+        processed.push({ file, name: file.name, data, validation, selected: validation.valid });
       } catch (err) {
         processed.push({
           file,
           name: file.name,
           data: null,
-          validation: { valid: false, errors: ["Некорректный JSON формат"], warnings: [] },
+          validation: { valid: false, errors: ["Некорректный JSON-формат"], warnings: [] },
           selected: false,
         });
       }
     }
+
     setPendingFiles(processed);
   };
 
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setDragOver(false);
+    void processFiles(Array.from(event.dataTransfer.files));
+  };
+
   const handleImport = async () => {
-    const toImport = pendingFiles.filter((f) => f.selected && f.validation.valid);
-    if (toImport.length === 0) {
-      setError("Нет валидных файлов для импорта");
+    const filesToImport = pendingFiles.filter((item) => item.selected && item.validation.valid);
+    if (filesToImport.length === 0) {
+      setError("Нет валидных файлов для импорта.");
       return;
     }
 
@@ -127,59 +97,51 @@ export default function ProfileImportExport({ profiles, onImport, onClose, onRef
 
     let successCount = 0;
     let failCount = 0;
+    let lastCreated = null;
 
-    for (const item of toImport) {
+    for (const item of filesToImport) {
       try {
-        await axios.post("/api/profiles", item.data);
-        successCount++;
+        lastCreated = await profilesApi.create(item.data);
+        successCount += 1;
       } catch (err) {
-        failCount++;
+        failCount += 1;
       }
     }
 
     setImporting(false);
     if (successCount > 0) {
-      setSuccess(`Успешно импортировано: ${successCount} профиль(ей)`);
-      onRefresh && onRefresh();
+      setSuccess(`Успешно импортировано: ${successCount}`);
       setPendingFiles([]);
+      if (onRefresh) onRefresh();
+      if (onImport && lastCreated) onImport(lastCreated);
     }
     if (failCount > 0) {
-      setError(`Ошибка импорта: ${failCount} профиль(ей)`);
+      setError(`Не удалось импортировать: ${failCount}`);
     }
   };
 
   const handleExport = async () => {
     if (selectedProfiles.length === 0) return;
-
     setExporting(true);
     setError(null);
+    setSuccess(null);
 
     try {
-      if (selectedProfiles.length === 1) {
-        const profile = profiles.find((p) => p.id === selectedProfiles[0]);
-        const blob = new Blob([JSON.stringify(profile, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${profile.name.replace(/\s+/g, "_")}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+      const selectedData = await Promise.all(
+        selectedProfiles.map((profileId) => profilesApi.getById(profileId)),
+      );
+      if (selectedData.length === 1) {
+        const [profile] = selectedData;
+        downloadJsonFile(profile, `${profile.name.replace(/\s+/g, "_")}.json`);
       } else {
-        const selectedData = profiles.filter((p) => selectedProfiles.includes(p.id));
-        const blob = new Blob([JSON.stringify(selectedData, null, 2)], {
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `profiles_export_${new Date().toISOString().split("T")[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadJsonFile(
+          selectedData,
+          `profiles_export_${new Date().toISOString().split("T")[0]}.json`,
+        );
       }
-      setSuccess("Экспорт завершён");
-      setExportDialogOpen(false);
+      setSuccess("Экспорт завершён.");
     } catch (err) {
-      setError("Ошибка экспорта");
+      setError(getApiErrorMessage(err, "Ошибка экспорта"));
     } finally {
       setExporting(false);
     }
@@ -187,343 +149,267 @@ export default function ProfileImportExport({ profiles, onImport, onClose, onRef
 
   const copyToClipboard = async (profile) => {
     try {
-      await navigator.clipboard.writeText(JSON.stringify(profile, null, 2));
-      setSuccess(`Профиль "${profile.name}" скопирован в буфер`);
+      const fullProfile = await profilesApi.getById(profile.id);
+      await navigator.clipboard.writeText(JSON.stringify(fullProfile, null, 2));
+      setSuccess(`Профиль "${profile.name}" скопирован в буфер.`);
     } catch (err) {
-      setError("Ошибка копирования");
+      setError("Ошибка копирования JSON.");
     }
   };
 
   const toggleFileSelection = (index) => {
-    setPendingFiles((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, selected: !f.selected } : f)),
+    setPendingFiles((previous) =>
+      previous.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, selected: !item.selected } : item,
+      ),
     );
   };
 
   const removeFile = (index) => {
-    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+    setPendingFiles((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const toggleProfileSelection = (id) => {
-    setSelectedProfiles((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+    setSelectedProfiles((previous) =>
+      previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id],
     );
   };
 
   const selectAllProfiles = () => {
-    if (selectedProfiles.length === profiles.length) {
-      setSelectedProfiles([]);
-    } else {
-      setSelectedProfiles(profiles.map((p) => p.id));
-    }
+    setSelectedProfiles((previous) =>
+      previous.length === profiles.length ? [] : profiles.map((profile) => profile.id),
+    );
   };
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        borderRadius: 3,
-        bgcolor: alpha(theme.palette.background.paper, 0.6),
-        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        overflow: "hidden",
-      }}
-    >
-      {/* Header */}
-      <Box
-        sx={{
-          p: 2,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          bgcolor: alpha(theme.palette.warning.main, 0.03),
-        }}
-      >
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <CloudUploadIcon color="warning" />
-            <Typography variant="h6" fontWeight={700}>
-              Импорт / Экспорт
-            </Typography>
-          </Box>
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </Box>
+    <TooltipProvider>
+      <Card className="rounded-[2rem] border-border/70 bg-card/90 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
+        <CardHeader className="border-b border-border/60 bg-muted/25">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Upload className="h-5 w-5 text-muted-foreground" />
+                Импорт и экспорт
+              </CardTitle>
+              <CardDescription>
+                Загружайте JSON-профили или выгружайте выбранные шаблоны из библиотеки.
+              </CardDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
 
-      {(importing || exporting) && <LinearProgress />}
+        <CardContent className="space-y-5 p-6">
+          <AnimatePresence>
+            {error ? (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-start gap-3 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </motion.div>
+            ) : null}
+            {success ? (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300"
+              >
+                {success}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
 
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-          >
-            <Alert severity="error" onClose={() => setError(null)} sx={{ m: 2, mb: 0 }}>
-              {error}
-            </Alert>
-          </motion.div>
-        )}
-        {success && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-          >
-            <Alert severity="success" onClose={() => setSuccess(null)} sx={{ m: 2, mb: 0 }}>
-              {success}
-            </Alert>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2 rounded-2xl">
+              <TabsTrigger value="import" className="rounded-xl">
+                Импорт
+              </TabsTrigger>
+              <TabsTrigger value="export" className="rounded-xl">
+                Экспорт
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-      <Tabs
-        value={activeTab}
-        onChange={(e, v) => setActiveTab(v)}
-        sx={{ px: 2, borderBottom: 1, borderColor: "divider" }}
-      >
-        <Tab icon={<CloudUploadIcon />} iconPosition="start" label="Импорт" />
-        <Tab icon={<CloudDownloadIcon />} iconPosition="start" label="Экспорт" />
-      </Tabs>
-
-      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
-        {activeTab === 0 && (
-          <Box>
-            {/* Drop Zone */}
-            <Box
-              onDrop={handleDrop}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onClick={() => fileInputRef.current?.click()}
-              sx={{
-                border: `2px dashed ${dragOver ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.12)"}`,
-                borderRadius: 1,
-                p: 4,
-                textAlign: "center",
-                cursor: "pointer",
-                bgcolor: dragOver ? "rgba(255,255,255,0.04)" : "transparent",
-                transition: "all 0.2s",
-                "&:hover": {
-                  borderColor: "rgba(255,255,255,0.25)",
-                  bgcolor: "rgba(255,255,255,0.02)",
-                },
-              }}
-            >
-              <FileUploadIcon
-                sx={{
-                  fontSize: 48,
-                  color: dragOver ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)",
-                  mb: 1,
+          {activeTab === "import" ? (
+            <div className="space-y-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  void processFiles(Array.from(event.target.files || []));
                 }}
               />
-              <Typography
-                variant="h6"
-                fontWeight={600}
-                color={dragOver ? "text.primary" : "text.secondary"}
-              >
-                {dragOver ? "Отпустите файлы" : "Перетащите JSON файлы сюда"}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                или нажмите для выбора файлов
-              </Typography>
-            </Box>
 
-            {/* Pending Files */}
-            {pendingFiles.length > 0 && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                  Файлы для импорта (
-                  {pendingFiles.filter((f) => f.selected && f.validation.valid).length} из{" "}
-                  {pendingFiles.length})
-                </Typography>
-                <List
-                  sx={{ bgcolor: alpha(theme.palette.background.default, 0.5), borderRadius: 2 }}
-                >
-                  <AnimatePresence>
-                    {pendingFiles.map((item, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                      >
-                        <ListItem
-                          sx={{
-                            borderBottom:
-                              idx < pendingFiles.length - 1
-                                ? `1px solid ${theme.palette.divider}`
-                                : "none",
-                          }}
-                        >
-                          <Checkbox
-                            checked={item.selected && item.validation.valid}
-                            onChange={() => toggleFileSelection(idx)}
-                            disabled={!item.validation.valid}
-                          />
-                          <ListItemIcon>
-                            {item.validation.valid ? (
-                              <InsertDriveFileIcon color="primary" />
-                            ) : (
-                              <ErrorIcon color="error" />
-                            )}
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                <Typography fontWeight={600}>
-                                  {item.data?.name || item.name}
-                                </Typography>
-                                {item.validation.valid ? (
-                                  <Chip
-                                    label="Валидный"
-                                    size="small"
-                                    color="success"
-                                    variant="outlined"
-                                  />
-                                ) : (
-                                  <Chip
-                                    label="Ошибка"
-                                    size="small"
-                                    color="error"
-                                    variant="outlined"
-                                  />
-                                )}
-                              </Box>
-                            }
-                            secondary={
-                              <Box>
-                                {item.validation.errors.map((err, i) => (
-                                  <Typography
-                                    key={i}
-                                    variant="caption"
-                                    color="error.main"
-                                    display="block"
-                                  >
-                                    • {err}
-                                  </Typography>
-                                ))}
-                                {item.validation.warnings.map((warn, i) => (
-                                  <Typography
-                                    key={i}
-                                    variant="caption"
-                                    color="warning.main"
-                                    display="block"
-                                  >
-                                    ⚠ {warn}
-                                  </Typography>
-                                ))}
-                              </Box>
-                            }
-                          />
-                          <ListItemSecondaryAction>
-                            <IconButton onClick={() => removeFile(idx)} size="small">
-                              <DeleteIcon />
-                            </IconButton>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </List>
-                <Button
-                  variant="contained"
-                  fullWidth
-                  size="large"
-                  startIcon={<CloudUploadIcon />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleImport();
-                  }}
-                  disabled={
-                    importing ||
-                    pendingFiles.filter((f) => f.selected && f.validation.valid).length === 0
-                  }
-                  sx={{ mt: 2 }}
-                >
-                  {importing
-                    ? "Импорт..."
-                    : `Импортировать (${pendingFiles.filter((f) => f.selected && f.validation.valid).length})`}
-                </Button>
-              </Box>
-            )}
-          </Box>
-        )}
-
-        {activeTab === 1 && (
-          <Box>
-            <Box
-              sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}
-            >
-              <Typography variant="subtitle2" fontWeight={700}>
-                Выберите профили для экспорта
-              </Typography>
-              <Button size="small" onClick={selectAllProfiles}>
-                {selectedProfiles.length === profiles.length ? "Снять выбор" : "Выбрать все"}
-              </Button>
-            </Box>
-
-            <List
-              sx={{ bgcolor: alpha(theme.palette.background.default, 0.5), borderRadius: 2, mb: 2 }}
-            >
-              {profiles.map((profile, idx) => (
-                <ListItem
-                  key={profile.id}
-                  sx={{
-                    borderBottom:
-                      idx < profiles.length - 1 ? `1px solid ${theme.palette.divider}` : "none",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => toggleProfileSelection(profile.id)}
-                >
-                  <Checkbox checked={selectedProfiles.includes(profile.id)} />
-                  <ListItemIcon>
-                    <DescriptionIcon color="primary" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={<Typography fontWeight={600}>{profile.name}</Typography>}
-                    secondary={profile.description || "Без описания"}
-                  />
-                  <ListItemSecondaryAction>
-                    <Tooltip title="Копировать JSON">
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copyToClipboard(profile);
-                        }}
-                        size="small"
-                      >
-                        <ContentCopyIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="contained"
-                fullWidth
-                size="large"
-                startIcon={<FileDownloadIcon />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleExport();
+              <button
+                type="button"
+                onDrop={handleDrop}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setDragOver(true);
                 }}
-                disabled={exporting || selectedProfiles.length === 0}
+                onDragLeave={() => setDragOver(false)}
+                onClick={() => fileInputRef.current?.click()}
+                className={[
+                  "flex w-full flex-col items-center justify-center gap-3 rounded-[1.75rem] border-2 border-dashed px-6 py-10 text-center transition-colors",
+                  dragOver
+                    ? "border-primary bg-accent/60"
+                    : "border-border/70 bg-muted/15 hover:bg-accent/40",
+                ].join(" ")}
               >
+                <Upload className="h-10 w-10 text-muted-foreground" />
+                <div>
+                  <p className="text-base font-semibold text-foreground">
+                    {dragOver ? "Отпустите файлы для импорта" : "Перетащите JSON-файлы сюда"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    или нажмите, чтобы выбрать их вручную
+                  </p>
+                </div>
+              </button>
+
+              {pendingFiles.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-foreground">
+                      Файлы для импорта:{" "}
+                      {pendingFiles.filter((item) => item.selected && item.validation.valid).length}{" "}
+                      из {pendingFiles.length}
+                    </p>
+                    <Button
+                      onClick={handleImport}
+                      disabled={
+                        importing ||
+                        pendingFiles.filter((item) => item.selected && item.validation.valid)
+                          .length === 0
+                      }
+                    >
+                      <Upload className="h-4 w-4" />
+                      {importing ? "Импорт..." : "Импортировать"}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {pendingFiles.map((item, index) => (
+                      <div
+                        key={`${item.name}-${index}`}
+                        className="flex items-start gap-3 rounded-2xl border border-border/70 bg-muted/20 p-4"
+                      >
+                        <Checkbox
+                          checked={item.selected && item.validation.valid}
+                          onCheckedChange={() => toggleFileSelection(index)}
+                          disabled={!item.validation.valid}
+                          className="mt-1"
+                        />
+                        <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-background/80 text-muted-foreground">
+                          <FileJson className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-foreground">
+                              {item.data?.name || item.name}
+                            </p>
+                            <Badge
+                              variant={item.validation.valid ? "secondary" : "destructive"}
+                              className="rounded-full"
+                            >
+                              {item.validation.valid ? "Валидный" : "Ошибка"}
+                            </Badge>
+                          </div>
+                          <div className="mt-2 space-y-1 text-xs">
+                            {item.validation.errors.map((validationError, itemIndex) => (
+                              <p key={`error-${itemIndex}`} className="text-destructive">
+                                • {validationError}
+                              </p>
+                            ))}
+                            {item.validation.warnings.map((warning, itemIndex) => (
+                              <p
+                                key={`warning-${itemIndex}`}
+                                className="text-amber-600 dark:text-amber-400"
+                              >
+                                ⚠ {warning}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => removeFile(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">
+                  Выберите профили для экспорта
+                </p>
+                <Button variant="outline" size="sm" onClick={selectAllProfiles}>
+                  {selectedProfiles.length === profiles.length ? "Снять выбор" : "Выбрать все"}
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                {profiles.map((profile) => (
+                  <div
+                    key={profile.id}
+                    className="flex items-start gap-3 rounded-2xl border border-border/70 bg-muted/20 p-4"
+                  >
+                    <Checkbox
+                      checked={selectedProfiles.includes(profile.id)}
+                      onCheckedChange={() => toggleProfileSelection(profile.id)}
+                      className="mt-1"
+                    />
+                    <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-background/80 text-muted-foreground">
+                      <FileJson className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground">{profile.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {profile.description || "Без описания"}
+                      </p>
+                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(profile)}
+                        >
+                          <Clipboard className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Скопировать JSON</TooltipContent>
+                    </Tooltip>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                onClick={handleExport}
+                disabled={exporting || selectedProfiles.length === 0}
+                className="w-full rounded-2xl"
+              >
+                <Download className="h-4 w-4" />
                 {exporting ? "Экспорт..." : `Экспортировать (${selectedProfiles.length})`}
               </Button>
-            </Stack>
-          </Box>
-        )}
-      </Box>
-    </Paper>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }
 

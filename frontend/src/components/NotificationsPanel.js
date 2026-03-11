@@ -19,14 +19,9 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
-const isLocal =
-  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-const API_BASE = isLocal
-  ? "http://localhost:5000"
-  : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
+import { getApiErrorMessage, notificationsApi } from "../api/client";
 
 const NotificationsPanel = ({ onNotificationRead }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -36,86 +31,83 @@ const NotificationsPanel = ({ onNotificationRead }) => {
   const [totalCount, setTotalCount] = useState(0);
 
   // Получение уведомлений
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `${API_BASE}/api/document/admin/alerts/notifications?limit=10`,
-      );
-      if (response.data.success) {
-        setNotifications(response.data.notifications);
-        setUnreadCount(response.data.unread_count);
-        setTotalCount(response.data.total_count);
+      const response = await notificationsApi.list(10);
+      if (response.success) {
+        setNotifications(response.notifications || []);
+        setUnreadCount(response.unread_count || 0);
+        setTotalCount(response.total_count || 0);
       }
     } catch (error) {
-      console.error("Ошибка при получении уведомлений:", error);
+      console.error("Ошибка при получении уведомлений:", getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Загрузка уведомлений при монтировании компонента
   useEffect(() => {
-    fetchNotifications();
+    void fetchNotifications();
     // Устанавливаем интервал для периодического обновления уведомлений
-    const interval = setInterval(fetchNotifications, 60000); // Обновление каждую минуту
+    const interval = setInterval(() => {
+      void fetchNotifications();
+    }, 60000); // Обновление каждую минуту
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchNotifications]);
 
   // Отметка уведомления как прочитанного
   const markAsRead = async (notificationId) => {
     try {
-      const response = await axios.post(
-        `${API_BASE}/api/document/admin/alerts/notifications/${notificationId}/read`,
-      );
-      if (response.data.success) {
+      const response = await notificationsApi.markAsRead(notificationId);
+      if (response.success) {
         // Обновляем список уведомлений
-        fetchNotifications();
+        await fetchNotifications();
         // Уведомляем родительский компонент, что были прочитаны уведомления
         if (onNotificationRead) {
           onNotificationRead();
         }
       }
     } catch (error) {
-      console.error("Ошибка при отметке уведомления как прочитанного:", error);
+      console.error("Ошибка при отметке уведомления как прочитанного:", getApiErrorMessage(error));
     }
   };
 
   // Отметка всех уведомлений как прочитанных
   const markAllAsRead = async () => {
     try {
-      const response = await axios.post(
-        `${API_BASE}/api/document/admin/alerts/notifications/read-all`,
-      );
-      if (response.data.success) {
+      const response = await notificationsApi.markAllAsRead();
+      if (response.success) {
         // Обновляем список уведомлений
-        fetchNotifications();
+        await fetchNotifications();
         // Уведомляем родительский компонент, что были прочитаны уведомления
         if (onNotificationRead) {
           onNotificationRead();
         }
       }
     } catch (error) {
-      console.error("Ошибка при отметке всех уведомлений как прочитанных:", error);
+      console.error(
+        "Ошибка при отметке всех уведомлений как прочитанных:",
+        getApiErrorMessage(error),
+      );
     }
   };
 
   // Очистка всех уведомлений
   const clearAll = async () => {
     try {
-      const response = await axios.post(
-        `${API_BASE}/api/document/admin/alerts/notifications/clear`,
-      );
-      if (response.data.success) {
+      const response = await notificationsApi.clearAll();
+      if (response.success) {
         // Обновляем список уведомлений
-        fetchNotifications();
+        await fetchNotifications();
         // Уведомляем родительский компонент, что были очищены уведомления
         if (onNotificationRead) {
           onNotificationRead();
         }
       }
     } catch (error) {
-      console.error("Ошибка при очистке уведомлений:", error);
+      console.error("Ошибка при очистке уведомлений:", getApiErrorMessage(error));
     }
   };
 

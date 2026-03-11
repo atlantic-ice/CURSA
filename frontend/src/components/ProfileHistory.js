@@ -1,354 +1,332 @@
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { AnimatePresence, motion } from "framer-motion";
 import {
-    Box,
-    Paper,
-    Typography,
-    List,
-    ListItem,
-    ListItemButton,
-    ListItemText,
-    ListItemIcon,
-    IconButton,
-    Chip,
-    CircularProgress,
-    Divider,
-    Tooltip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    useTheme,
-    alpha,
-    Collapse,
-    Alert
-} from '@mui/material';
-import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  History,
+  Loader2,
+  RefreshCw,
+  RotateCcw,
+} from "lucide-react";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useState } from "react";
 
-// Icons
-import HistoryIcon from '@mui/icons-material/History';
-import RestoreIcon from '@mui/icons-material/Restore';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import RefreshIcon from '@mui/icons-material/Refresh';
-
-const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const API_BASE = isLocal ? '' : (process.env.REACT_APP_API_BASE || 'https://cursa.onrender.com');
+import { getApiErrorMessage, profilesApi } from "../api/client";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent } from "./ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Separator } from "./ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 export default function ProfileHistory({ profileId, profileName, isSystemProfile, onRestore }) {
-    const theme = useTheme();
-    const [loading, setLoading] = useState(false);
-    const [versions, setVersions] = useState([]);
-    const [expanded, setExpanded] = useState(false);
-    const [previewOpen, setPreviewOpen] = useState(false);
-    const [previewData, setPreviewData] = useState(null);
-    const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
-    const [selectedVersion, setSelectedVersion] = useState(null);
-    const [restoring, setRestoring] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [versions, setVersions] = useState([]);
+  const [expanded, setExpanded] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState(null);
+  const [restoring, setRestoring] = useState(false);
+  const [error, setError] = useState(null);
 
-    const fetchHistory = async () => {
-        if (!profileId) return;
-        
-        setLoading(true);
-        try {
-            const res = await axios.get(`${API_BASE}/api/profiles/${profileId}/history`);
-            setVersions(res.data.versions || []);
-        } catch (err) {
-            console.error('Error fetching history:', err);
-            setVersions([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const fetchHistory = useCallback(async () => {
+    if (!profileId) return;
 
-    useEffect(() => {
-        if (expanded && profileId) {
-            fetchHistory();
-        }
-    }, [profileId, expanded]);
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await profilesApi.listHistory(profileId);
+      setVersions(res.versions || []);
+    } catch (err) {
+      console.error("Error fetching history:", err);
+      setError(getApiErrorMessage(err, "Не удалось загрузить историю версий"));
+      setVersions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [profileId]);
 
-    const formatDate = (timestamp) => {
-        if (!timestamp) return 'Неизвестно';
-        const date = new Date(timestamp);
-        return date.toLocaleString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
+  useEffect(() => {
+    if (expanded && profileId) {
+      void fetchHistory();
+    }
+  }, [expanded, fetchHistory, profileId]);
 
-    const handlePreview = async (version) => {
-        try {
-            const res = await axios.get(
-                `${API_BASE}/api/profiles/${profileId}/history/${version.filename}`
-            );
-            setPreviewData(res.data);
-            setPreviewOpen(true);
-        } catch (err) {
-            console.error('Error loading version:', err);
-            alert('Не удалось загрузить версию');
-        }
-    };
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "Неизвестно";
+    const date = new Date(timestamp);
+    return date.toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
-    const handleRestoreClick = (version) => {
-        setSelectedVersion(version);
-        setRestoreConfirmOpen(true);
-    };
+  const handlePreview = async (version) => {
+    try {
+      setError(null);
+      const res = await profilesApi.getHistoryVersion(profileId, version.filename);
+      setPreviewData(res);
+      setPreviewOpen(true);
+    } catch (err) {
+      console.error("Error loading version:", err);
+      setError(getApiErrorMessage(err, "Не удалось загрузить версию"));
+    }
+  };
 
-    const handleRestoreConfirm = async () => {
-        if (!selectedVersion) return;
-        
-        setRestoring(true);
-        try {
-            await axios.post(
-                `${API_BASE}/api/profiles/${profileId}/restore/${selectedVersion.filename}`
-            );
-            setRestoreConfirmOpen(false);
-            setSelectedVersion(null);
-            if (onRestore) {
-                onRestore();
-            }
-            fetchHistory();
-        } catch (err) {
-            console.error('Error restoring:', err);
-            alert('Ошибка при восстановлении: ' + (err.response?.data?.error || err.message));
-        } finally {
-            setRestoring(false);
-        }
-    };
+  const handleRestoreClick = (version) => {
+    setSelectedVersion(version);
+    setRestoreConfirmOpen(true);
+  };
 
-    if (!profileId) return null;
+  const handleRestoreConfirm = async () => {
+    if (!selectedVersion) return;
 
-    return (
-        <>
-            <Paper
-                elevation={0}
-                sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    bgcolor: alpha(theme.palette.background.paper, 0.4),
-                    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-                }}
+    setRestoring(true);
+    try {
+      setError(null);
+      await profilesApi.restoreVersion(profileId, selectedVersion.filename);
+      setRestoreConfirmOpen(false);
+      setSelectedVersion(null);
+      if (onRestore) {
+        onRestore();
+      }
+      await fetchHistory();
+    } catch (err) {
+      console.error("Error restoring:", err);
+      setError(getApiErrorMessage(err, "Ошибка при восстановлении версии"));
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  if (!profileId) return null;
+
+  return (
+    <TooltipProvider>
+      <>
+        <Card className="rounded-[1.75rem] border-border/70 bg-card/90 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
+          <CardContent className="p-5">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 text-left"
+              onClick={() => setExpanded((previous) => !previous)}
             >
-                <Box 
-                    sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        cursor: 'pointer'
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-muted-foreground">
+                  <History className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">История версий</p>
+                  <p className="text-xs text-muted-foreground">
+                    Снимки изменений и восстановление прошлых состояний.
+                  </p>
+                </div>
+                {versions.length > 0 ? (
+                  <Badge variant="secondary" className="rounded-full">
+                    {versions.length}
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2">
+                {expanded ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      fetchHistory();
                     }}
-                    onClick={() => setExpanded(!expanded)}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <HistoryIcon color="action" fontSize="small" />
-                        <Typography variant="subtitle2" fontWeight={600}>
-                            История версий
-                        </Typography>
-                        {versions.length > 0 && (
-                            <Chip 
-                                label={versions.length} 
-                                size="small" 
-                                sx={{ height: 20, fontSize: '0.7rem' }}
-                            />
-                        )}
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        {expanded && (
-                            <Tooltip title="Обновить">
-                                <IconButton 
-                                    size="small" 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        fetchHistory();
-                                    }}
-                                >
-                                    <RefreshIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        )}
-                        {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </Box>
-                </Box>
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                ) : null}
+                {expanded ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </button>
 
-                <Collapse in={expanded}>
-                    <Box sx={{ mt: 2 }}>
-                        {loading ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                                <CircularProgress size={24} />
-                            </Box>
-                        ) : versions.length === 0 ? (
-                            <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                                История версий пуста
-                            </Typography>
-                        ) : (
-                            <List dense disablePadding>
-                                <AnimatePresence>
-                                    {versions.map((version, idx) => (
-                                        <motion.div
-                                            key={version.filename}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: idx * 0.05 }}
-                                        >
-                                            <ListItem
-                                                disablePadding
-                                                secondaryAction={
-                                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                                        <Tooltip title="Просмотр">
-                                                            <IconButton 
-                                                                size="small"
-                                                                onClick={() => handlePreview(version)}
-                                                            >
-                                                                <VisibilityIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                        {!isSystemProfile && (
-                                                            <Tooltip title="Восстановить">
-                                                                <IconButton 
-                                                                    size="small"
-                                                                    color="primary"
-                                                                    onClick={() => handleRestoreClick(version)}
-                                                                >
-                                                                    <RestoreIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                        )}
-                                                    </Box>
-                                                }
-                                            >
-                                                <ListItemButton sx={{ borderRadius: 1, py: 0.5 }}>
-                                                    <ListItemIcon sx={{ minWidth: 32 }}>
-                                                        <AccessTimeIcon fontSize="small" color="action" />
-                                                    </ListItemIcon>
-                                                    <ListItemText
-                                                        primary={formatDate(version.timestamp)}
-                                                        secondary={version.version ? `v${version.version}` : null}
-                                                        primaryTypographyProps={{ variant: 'body2' }}
-                                                        secondaryTypographyProps={{ variant: 'caption' }}
-                                                    />
-                                                </ListItemButton>
-                                            </ListItem>
-                                            {idx < versions.length - 1 && (
-                                                <Divider sx={{ my: 0.5 }} />
-                                            )}
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
-                            </List>
-                        )}
-                    </Box>
-                </Collapse>
-            </Paper>
+            {expanded ? (
+              <div className="mt-4 space-y-3">
+                {error ? (
+                  <div className="flex items-start gap-2 rounded-2xl border border-destructive/15 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                ) : null}
 
-            {/* Preview Dialog */}
-            <Dialog
-                open={previewOpen}
-                onClose={() => setPreviewOpen(false)}
-                maxWidth="md"
-                fullWidth
-            >
-                <DialogTitle>
-                    Просмотр версии
-                    {previewData && (
-                        <Typography variant="caption" display="block" color="text.secondary">
-                            {formatDate(previewData._version_timestamp)}
-                        </Typography>
-                    )}
-                </DialogTitle>
-                <DialogContent dividers>
-                    {previewData && (
-                        <Box sx={{ 
-                            fontFamily: 'monospace', 
-                            fontSize: '0.85rem',
-                            bgcolor: alpha(theme.palette.background.default, 0.5),
-                            p: 2,
-                            borderRadius: 1,
-                            maxHeight: 400,
-                            overflow: 'auto'
-                        }}>
-                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                                {JSON.stringify(previewData, null, 2)}
-                            </pre>
-                        </Box>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setPreviewOpen(false)}>
-                        Закрыть
-                    </Button>
-                    {!isSystemProfile && previewData && (
-                        <Button 
-                            variant="contained" 
-                            startIcon={<RestoreIcon />}
-                            onClick={() => {
-                                setPreviewOpen(false);
-                                handleRestoreClick({ 
-                                    filename: previewData._version_timestamp?.replace(/[:-]/g, '').replace('T', '_').split('.')[0] + '.json',
-                                    timestamp: previewData._version_timestamp
-                                });
-                            }}
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Загрузка истории...
+                  </div>
+                ) : versions.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+                    История версий пуста.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <AnimatePresence>
+                      {versions.map((version, index) => (
+                        <motion.div
+                          key={version.filename}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.04 }}
+                          className="rounded-2xl border border-border/60 bg-muted/25 p-3"
                         >
-                            Восстановить
-                        </Button>
-                    )}
-                </DialogActions>
-            </Dialog>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">
+                                {formatDate(version.timestamp)}
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {version.version ? `v${version.version}` : "Снимок профиля"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handlePreview(version)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Просмотр</TooltipContent>
+                              </Tooltip>
+                              {!isSystemProfile ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleRestoreClick(version)}
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Восстановить</TooltipContent>
+                                </Tooltip>
+                              ) : null}
+                            </div>
+                          </div>
+                          {index < versions.length - 1 ? <Separator className="mt-3" /> : null}
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
-            {/* Restore Confirmation Dialog */}
-            <Dialog
-                open={restoreConfirmOpen}
-                onClose={() => setRestoreConfirmOpen(false)}
-            >
-                <DialogTitle>Восстановить версию?</DialogTitle>
-                <DialogContent>
-                    <Alert severity="warning" sx={{ mb: 2 }}>
-                        Текущая версия будет сохранена в историю
-                    </Alert>
-                    <Typography>
-                        Восстановить профиль "{profileName}" из версии от{' '}
-                        {selectedVersion && formatDate(selectedVersion.timestamp)}?
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button 
-                        onClick={() => setRestoreConfirmOpen(false)}
-                        disabled={restoring}
-                    >
-                        Отмена
-                    </Button>
-                    <Button 
-                        variant="contained" 
-                        onClick={handleRestoreConfirm}
-                        disabled={restoring}
-                        startIcon={restoring ? <CircularProgress size={16} /> : <RestoreIcon />}
-                    >
-                        Восстановить
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </>
-    );
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Просмотр версии</DialogTitle>
+              <DialogDescription>
+                {previewData
+                  ? formatDate(previewData._version_timestamp)
+                  : "Загрузка снимка профиля."}
+              </DialogDescription>
+            </DialogHeader>
+            {previewData ? (
+              <div className="max-h-[400px] overflow-auto rounded-2xl border border-border/70 bg-muted/30 p-4">
+                <pre className="whitespace-pre-wrap font-mono text-xs leading-6 text-foreground">
+                  {JSON.stringify(previewData, null, 2)}
+                </pre>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+                Закрыть
+              </Button>
+              {!isSystemProfile && previewData ? (
+                <Button
+                  onClick={() => {
+                    setPreviewOpen(false);
+                    handleRestoreClick({
+                      filename:
+                        previewData._version_timestamp
+                          ?.replace(/[:-]/g, "")
+                          .replace("T", "_")
+                          .split(".")[0] + ".json",
+                      timestamp: previewData._version_timestamp,
+                    });
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Восстановить
+                </Button>
+              ) : null}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Восстановить версию?</DialogTitle>
+              <DialogDescription>
+                Текущая версия будет сохранена в историю. Восстановить профиль "{profileName}" из
+                версии от {selectedVersion ? formatDate(selectedVersion.timestamp) : "..."}?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="rounded-2xl border border-amber-500/15 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+              После восстановления текущая версия профиля не пропадёт, а будет добавлена в историю
+              как новый снимок.
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setRestoreConfirmOpen(false)}
+                disabled={restoring}
+              >
+                Отмена
+              </Button>
+              <Button onClick={handleRestoreConfirm} disabled={restoring}>
+                {restoring ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" />
+                )}
+                Восстановить
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    </TooltipProvider>
+  );
 }
 
 ProfileHistory.propTypes = {
-    /** ID профиля */
-    profileId: PropTypes.string.isRequired,
-    /** Название профиля */
-    profileName: PropTypes.string,
-    /** Системный ли профиль */
-    isSystemProfile: PropTypes.bool,
-    /** Колбэк восстановления */
-    onRestore: PropTypes.func,
+  profileId: PropTypes.string.isRequired,
+  profileName: PropTypes.string,
+  isSystemProfile: PropTypes.bool,
+  onRestore: PropTypes.func,
 };
 
 ProfileHistory.defaultProps = {
-    profileName: '',
-    isSystemProfile: false,
-    onRestore: undefined,
+  profileName: "",
+  isSystemProfile: false,
+  onRestore: undefined,
 };

@@ -5,9 +5,11 @@
  * Uses Google API client library and custom callback handler.
  */
 
-import React, { useEffect } from "react";
+import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+
+import { AuthContext } from "../../App";
+import { authApi, getApiErrorMessage } from "../../api/client";
 import styles from "./OAuthLogin.module.css";
 
 interface GoogleOAuthLoginProps {
@@ -16,13 +18,17 @@ interface GoogleOAuthLoginProps {
   className?: string;
 }
 
+interface GoogleOAuthAuthContextType {
+  loginWithToken: (accessToken: string, refreshToken: string) => Promise<void>;
+}
+
 export const GoogleOAuthLogin: React.FC<GoogleOAuthLoginProps> = ({
   onSuccess,
   onError,
   className = "",
 }) => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { loginWithToken } = useContext(AuthContext) as GoogleOAuthAuthContextType;
   const [loading, setLoading] = React.useState(false);
 
   useEffect(() => {
@@ -70,32 +76,13 @@ export const GoogleOAuthLogin: React.FC<GoogleOAuthLoginProps> = ({
       // In a real flow, you'd extract the code from the authorization flow
       // For now, we're demonstrating the implicit flow with the token
 
-      // Send to backend
-      const backendResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/auth/oauth/google/callback`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            code: response.credential, // In production, this would be auth code
-          }),
-        },
-      );
+      const data = await authApi.oauthCallback("google", response.credential);
 
-      if (!backendResponse.ok) {
-        throw new Error("OAuth authentication failed");
-      }
-
-      const data = await backendResponse.json();
-
-      // Store tokens and redirect
-      login(data.access_token, data.refresh_token, data.user_id);
+      await loginWithToken(data.access_token, data.refresh_token);
       onSuccess?.();
-      navigate("/dashboard");
+      navigate(data.is_new_user ? "/?welcome=true" : "/dashboard");
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Authentication failed";
+      const errorMsg = getApiErrorMessage(error, "Authentication failed");
       onError?.(errorMsg);
       console.error("Google OAuth error:", error);
     } finally {

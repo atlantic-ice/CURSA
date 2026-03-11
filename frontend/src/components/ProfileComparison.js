@@ -1,53 +1,33 @@
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CloseIcon from "@mui/icons-material/Close";
-import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
-import CropFreeIcon from "@mui/icons-material/CropFree";
-import ErrorIcon from "@mui/icons-material/Error";
-import FormatSizeIcon from "@mui/icons-material/FormatSize";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import SettingsIcon from "@mui/icons-material/Settings";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import TableChartIcon from "@mui/icons-material/TableChart";
-import TitleIcon from "@mui/icons-material/Title";
-import {
-  Alert,
-  alpha,
-  Badge,
-  Box,
-  Button,
-  Chip,
-  FormControl,
-  IconButton,
-  InputLabel,
-  LinearProgress,
-  MenuItem,
-  Paper,
-  Select,
-  Stack,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tabs,
-  Tooltip,
-  Typography,
-  useTheme,
-} from "@mui/material";
-import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  CheckCircle2,
+  CopyMinus,
+  SearchX,
+  ShieldAlert,
+  X,
+  XCircle,
+} from "lucide-react";
 import PropTypes from "prop-types";
 import { useEffect, useMemo, useState } from "react";
 
+import { getApiErrorMessage, profilesApi } from "../api/client";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+
 const CATEGORIES = [
-  { id: "font", label: "Шрифт", icon: <FormatSizeIcon fontSize="small" /> },
-  { id: "margins", label: "Поля", icon: <CropFreeIcon fontSize="small" /> },
-  { id: "paragraph", label: "Абзац", icon: <SettingsIcon fontSize="small" /> },
-  { id: "headings", label: "Заголовки", icon: <TitleIcon fontSize="small" /> },
-  { id: "tables", label: "Таблицы", icon: <TableChartIcon fontSize="small" /> },
-  { id: "bibliography", label: "Библиография", icon: <MenuBookIcon fontSize="small" /> },
+  { id: "all", label: "Все" },
+  { id: "font", label: "Шрифт" },
+  { id: "margins", label: "Поля" },
+  { id: "paragraph", label: "Абзац" },
+  { id: "headings", label: "Заголовки" },
+  { id: "tables", label: "Таблицы" },
+  { id: "bibliography", label: "Библиография" },
 ];
 
 const FIELD_LABELS = {
@@ -70,6 +50,7 @@ const FIELD_LABELS = {
   "headings.h2.alignment": "H2 - Выравнивание",
   "headings.h3.font_size": "H3 - Размер",
   "headings.h3.bold": "H3 - Жирный",
+  tables: "Таблицы",
   "tables.font_size": "Шрифт таблиц",
   "tables.line_spacing": "Интервал таблиц",
   "tables.borders": "Границы",
@@ -78,29 +59,18 @@ const FIELD_LABELS = {
   "bibliography.style": "Стиль",
   "bibliography.min_sources": "Мин. источников",
   "bibliography.max_age_years": "Макс. возраст",
-  "bibliography.require_foreign": "Иностранные",
-  "bibliography.foreign_min_percent": "Мин. % иностр.",
 };
 
 const getFieldCategory = (path) => {
   if (path.startsWith("font")) return "font";
   if (path.startsWith("margins")) return "margins";
-  if (path.includes("line_spacing") || path.includes("indent") || path.includes("alignment"))
+  if (path.includes("line_spacing") || path.includes("indent") || path.includes("alignment")) {
     return "paragraph";
+  }
   if (path.startsWith("headings")) return "headings";
   if (path.startsWith("tables") || path.startsWith("captions")) return "tables";
   if (path.startsWith("bibliography")) return "bibliography";
   return "other";
-};
-
-const formatValue = (value) => {
-  if (value === undefined || value === null) return "—";
-  if (typeof value === "boolean") return value ? "Да" : "Нет";
-  if (typeof value === "number") return value.toString();
-  if (value === "JUSTIFY") return "По ширине";
-  if (value === "LEFT") return "Слева";
-  if (value === "CENTER") return "По центру";
-  return String(value);
 };
 
 const flattenObject = (obj, prefix = "") => {
@@ -116,8 +86,17 @@ const flattenObject = (obj, prefix = "") => {
   return result;
 };
 
+const formatValue = (value) => {
+  if (value === undefined || value === null || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Да" : "Нет";
+  if (value === "JUSTIFY") return "По ширине";
+  if (value === "LEFT") return "Слева";
+  if (value === "CENTER") return "По центру";
+  if (Array.isArray(value)) return value.join(", ");
+  return String(value);
+};
+
 export default function ProfileComparison({ profiles, onClose }) {
-  const theme = useTheme();
   const [profile1Id, setProfile1Id] = useState("");
   const [profile2Id, setProfile2Id] = useState("");
   const [profile1Data, setProfile1Data] = useState(null);
@@ -126,7 +105,6 @@ export default function ProfileComparison({ profiles, onClose }) {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
   const [showOnlyDiff, setShowOnlyDiff] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState({});
 
   useEffect(() => {
     if (profiles.length >= 2) {
@@ -139,33 +117,25 @@ export default function ProfileComparison({ profiles, onClose }) {
     if (!profile1Id || !profile2Id) return;
     setLoading(true);
     setError(null);
-    setProfile1Data(null);
-    setProfile2Data(null);
     try {
-      // Загружаем полные данные обоих профилей
-      const [res1, res2] = await Promise.all([
-        axios.get(`/api/profiles/${profile1Id}`),
-        axios.get(`/api/profiles/${profile2Id}`),
+      const [data1, data2] = await Promise.all([
+        profilesApi.getById(profile1Id),
+        profilesApi.getById(profile2Id),
       ]);
-      setProfile1Data(res1.data);
-      setProfile2Data(res2.data);
+      setProfile1Data(data1);
+      setProfile2Data(data2);
     } catch (err) {
-      setError(
-        err.response?.data?.message || err.response?.data?.error || "Ошибка сравнения профилей",
-      );
+      setError(getApiErrorMessage(err, "Ошибка сравнения профилей"));
     } finally {
       setLoading(false);
     }
   };
 
   const handleSwap = () => {
-    const temp = profile1Id;
     setProfile1Id(profile2Id);
-    setProfile2Id(temp);
-    // Swap loaded data too
-    const tempData = profile1Data;
+    setProfile2Id(profile1Id);
     setProfile1Data(profile2Data);
-    setProfile2Data(tempData);
+    setProfile2Data(profile1Data);
   };
 
   const differences = useMemo(() => {
@@ -175,346 +145,269 @@ export default function ProfileComparison({ profiles, onClose }) {
     const flat2 = flattenObject(profile2Data.rules);
     const allKeys = new Set([...Object.keys(flat1), ...Object.keys(flat2)]);
 
-    const diffs = [];
-    for (const key of allKeys) {
-      const val1 = flat1[key];
-      const val2 = flat2[key];
-      const isDifferent = JSON.stringify(val1) !== JSON.stringify(val2);
-      diffs.push({
+    return [...allKeys]
+      .map((key) => ({
         path: key,
         label: FIELD_LABELS[key] || key,
-        value1: val1,
-        value2: val2,
+        value1: flat1[key],
+        value2: flat2[key],
         category: getFieldCategory(key),
-        isDifferent,
-      });
-    }
-    return diffs.sort((a, b) => a.category.localeCompare(b.category));
+        isDifferent: JSON.stringify(flat1[key]) !== JSON.stringify(flat2[key]),
+      }))
+      .sort((left, right) => left.category.localeCompare(right.category));
   }, [profile1Data, profile2Data]);
 
   const stats = useMemo(() => {
     const total = differences.length;
-    const different = differences.filter((d) => d.isDifferent).length;
+    const different = differences.filter((item) => item.isDifferent).length;
     const same = total - different;
-    return { total, different, same, percent: total > 0 ? Math.round((same / total) * 100) : 100 };
+    return {
+      total,
+      different,
+      same,
+      percent: total > 0 ? Math.round((same / total) * 100) : 100,
+    };
   }, [differences]);
 
   const filteredDifferences = useMemo(() => {
-    let result = differences;
-    if (activeTab !== "all") result = result.filter((d) => d.category === activeTab);
-    if (showOnlyDiff) result = result.filter((d) => d.isDifferent);
-    return result;
-  }, [differences, activeTab, showOnlyDiff]);
+    return differences.filter((item) => {
+      if (activeTab !== "all" && item.category !== activeTab) return false;
+      if (showOnlyDiff && !item.isDifferent) return false;
+      return true;
+    });
+  }, [activeTab, differences, showOnlyDiff]);
 
   const categoryStats = useMemo(() => {
-    const result = {};
-    CATEGORIES.forEach((cat) => {
-      const catDiffs = differences.filter((d) => d.category === cat.id);
-      result[cat.id] = {
-        total: catDiffs.length,
-        different: catDiffs.filter((d) => d.isDifferent).length,
-      };
+    const map = {};
+    CATEGORIES.forEach((category) => {
+      if (category.id === "all") return;
+      const items = differences.filter((item) => item.category === category.id);
+      map[category.id] = items.filter((item) => item.isDifferent).length;
     });
-    return result;
+    return map;
   }, [differences]);
 
-  const toggleCategory = (catId) => {
-    setExpandedCategories((prev) => ({ ...prev, [catId]: !prev[catId] }));
-  };
-
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        borderRadius: 3,
-        bgcolor: alpha(theme.palette.background.paper, 0.6),
-        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        overflow: "hidden",
-      }}
-    >
-      {/* Header */}
-      <Box
-        sx={{
-          p: 2,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          bgcolor: alpha(theme.palette.info.main, 0.03),
-        }}
-      >
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <CompareArrowsIcon color="info" />
-            <Typography variant="h6" fontWeight={700}>
-              Сравнение профилей
-            </Typography>
-          </Box>
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
-        </Box>
+    <TooltipProvider>
+      <Card className="rounded-[2rem] border-border/70 bg-card/90 shadow-[0_18px_48px_rgba(15,23,42,0.05)]">
+        <CardHeader className="border-b border-border/60 bg-muted/25">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
+                Сравнение профилей
+              </CardTitle>
+              <CardDescription>
+                Сопоставьте два шаблона по правилам оформления и найдите расхождения.
+              </CardDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <FormControl size="small" sx={{ minWidth: 200, flex: 1 }}>
-            <InputLabel>Профиль 1</InputLabel>
+          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto]">
             <Select
               value={profile1Id}
-              label="Профиль 1"
-              onChange={(e) => {
-                setProfile1Id(e.target.value);
+              onValueChange={(value) => {
+                setProfile1Id(value);
                 setProfile1Data(null);
               }}
             >
-              {profiles.map((p) => (
-                <MenuItem key={p.id} value={p.id} disabled={p.id === profile2Id}>
-                  {p.name}
-                </MenuItem>
-              ))}
+              <SelectTrigger className="rounded-2xl">
+                <SelectValue placeholder="Профиль 1" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((profile) => (
+                  <SelectItem
+                    key={profile.id}
+                    value={profile.id}
+                    disabled={profile.id === profile2Id}
+                  >
+                    {profile.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
-          </FormControl>
 
-          <Tooltip title="Поменять местами">
-            <IconButton
-              onClick={handleSwap}
-              sx={{
-                bgcolor: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 1,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.12)" },
-              }}
-            >
-              <SwapHorizIcon />
-            </IconButton>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={handleSwap}>
+                  <ArrowLeftRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Поменять местами</TooltipContent>
+            </Tooltip>
 
-          <FormControl size="small" sx={{ minWidth: 200, flex: 1 }}>
-            <InputLabel>Профиль 2</InputLabel>
             <Select
               value={profile2Id}
-              label="Профиль 2"
-              onChange={(e) => {
-                setProfile2Id(e.target.value);
+              onValueChange={(value) => {
+                setProfile2Id(value);
                 setProfile2Data(null);
               }}
             >
-              {profiles.map((p) => (
-                <MenuItem key={p.id} value={p.id} disabled={p.id === profile1Id}>
-                  {p.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <Button
-            variant="contained"
-            onClick={handleCompare}
-            disabled={!profile1Id || !profile2Id || loading}
-            startIcon={<CompareArrowsIcon />}
-          >
-            Сравнить
-          </Button>
-        </Box>
-      </Box>
-
-      {loading && <LinearProgress />}
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)} sx={{ m: 2, mb: 0 }}>
-          {error}
-        </Alert>
-      )}
-
-      {profile1Data && profile2Data && (
-        <Box sx={{ flexGrow: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          {/* Stats */}
-          <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
-            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-              <Box sx={{ textAlign: "center", minWidth: 100 }}>
-                <Typography variant="h4" fontWeight={700} color="#fff">
-                  {stats.percent}%
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Совпадение
-                </Typography>
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 200 }}>
-                <LinearProgress
-                  variant="determinate"
-                  value={stats.percent}
-                  sx={{
-                    height: 6,
-                    borderRadius: 0,
-                    bgcolor: "rgba(255,255,255,0.08)",
-                    "& .MuiLinearProgress-bar": { bgcolor: "rgba(255,255,255,0.7)" },
-                  }}
-                />
-              </Box>
-              <Stack direction="row" spacing={1}>
-                <Chip
-                  icon={<CheckCircleIcon />}
-                  label={`${stats.same} совпадает`}
-                  variant="outlined"
-                  size="small"
-                  sx={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }}
-                />
-                <Chip
-                  icon={<ErrorIcon />}
-                  label={`${stats.different} различий`}
-                  variant="outlined"
-                  size="small"
-                  sx={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)" }}
-                />
-              </Stack>
-              <Button
-                size="small"
-                variant={showOnlyDiff ? "contained" : "outlined"}
-                onClick={() => setShowOnlyDiff(!showOnlyDiff)}
-              >
-                Только различия
-              </Button>
-            </Stack>
-          </Box>
-
-          {/* Tabs */}
-          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-            <Tabs
-              value={activeTab}
-              onChange={(e, v) => setActiveTab(v)}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              <Tab
-                value="all"
-                label={
-                  <Badge badgeContent={stats.different} color="error" max={99}>
-                    <Box sx={{ pr: 1.5 }}>Все</Box>
-                  </Badge>
-                }
-              />
-              {CATEGORIES.map((cat) => (
-                <Tab
-                  key={cat.id}
-                  value={cat.id}
-                  icon={cat.icon}
-                  iconPosition="start"
-                  label={
-                    <Badge
-                      badgeContent={categoryStats[cat.id]?.different || 0}
-                      color="error"
-                      max={99}
-                    >
-                      <Box sx={{ pr: 1.5 }}>{cat.label}</Box>
-                    </Badge>
-                  }
-                />
-              ))}
-            </Tabs>
-          </Box>
-
-          {/* Comparison Table */}
-          <TableContainer sx={{ flexGrow: 1, overflow: "auto" }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700, width: 250 }}>Параметр</TableCell>
-                  <TableCell sx={{ fontWeight: 700, bgcolor: "rgba(255,255,255,0.03)" }}>
-                    {profile1Data.name}
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.secondary.main, 0.05) }}
+              <SelectTrigger className="rounded-2xl">
+                <SelectValue placeholder="Профиль 2" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((profile) => (
+                  <SelectItem
+                    key={profile.id}
+                    value={profile.id}
+                    disabled={profile.id === profile1Id}
                   >
-                    {profile2Data.name}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, width: 80, textAlign: "center" }}>
-                    Статус
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                <AnimatePresence>
-                  {filteredDifferences.map((diff, idx) => (
-                    <motion.tr
-                      key={diff.path}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ delay: idx * 0.02 }}
-                      component={TableRow}
-                      sx={{
-                        "&:hover": { bgcolor: alpha(theme.palette.action.hover, 0.05) },
-                        bgcolor: diff.isDifferent
-                          ? alpha(theme.palette.error.main, 0.02)
-                          : "transparent",
-                      }}
-                    >
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={diff.isDifferent ? 600 : 400}>
-                          {diff.label}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {diff.path}
-                        </Typography>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          bgcolor: "rgba(255,255,255,0.02)",
-                          fontFamily: "monospace",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {formatValue(diff.value1)}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          bgcolor: alpha(theme.palette.secondary.main, 0.02),
-                          fontFamily: "monospace",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {formatValue(diff.value2)}
-                      </TableCell>
-                      <TableCell align="center">
-                        {diff.isDifferent ? (
-                          <Tooltip title="Различие">
-                            <ErrorIcon color="error" fontSize="small" />
-                          </Tooltip>
-                        ) : (
-                          <Tooltip title="Совпадает">
-                            <CheckCircleIcon color="success" fontSize="small" />
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-                {filteredDifferences.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                      <Typography color="text.secondary">
-                        {showOnlyDiff ? "Различий не найдено" : "Выберите категорию"}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
+                    {profile.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-      {!profile1Data && !profile2Data && !loading && (
-        <Box
-          sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", p: 4 }}
-        >
-          <Box sx={{ textAlign: "center" }}>
-            <CompareArrowsIcon
-              sx={{ fontSize: 64, color: alpha(theme.palette.text.secondary, 0.3), mb: 2 }}
-            />
-            <Typography color="text.secondary">Выберите два профиля для сравнения</Typography>
-          </Box>
-        </Box>
-      )}
-    </Paper>
+            <Button
+              onClick={handleCompare}
+              disabled={!profile1Id || !profile2Id || loading}
+              className="rounded-2xl"
+            >
+              {loading ? "Сравниваем..." : "Сравнить"}
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-6">
+          {error ? (
+            <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          ) : null}
+
+          {profile1Data && profile2Data ? (
+            <div className="space-y-5">
+              <div className="grid gap-3 rounded-[1.5rem] border border-border/70 bg-muted/20 p-4 md:grid-cols-[auto_1fr_auto] md:items-center">
+                <div>
+                  <p className="text-3xl font-black tracking-[-0.04em] text-foreground">
+                    {stats.percent}%
+                  </p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                    Совпадение
+                  </p>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${stats.percent}%` }}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                  <Badge variant="outline" className="rounded-full">
+                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                    {stats.same} совпадает
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-destructive/30 text-destructive"
+                  >
+                    <ShieldAlert className="mr-1 h-3.5 w-3.5" />
+                    {stats.different} различий
+                  </Badge>
+                  <Button
+                    variant={showOnlyDiff ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setShowOnlyDiff((previous) => !previous)}
+                  >
+                    <CopyMinus className="h-4 w-4" />
+                    Только различия
+                  </Button>
+                </div>
+              </div>
+
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="flex h-auto flex-wrap justify-start gap-2 rounded-2xl bg-transparent p-0">
+                  {CATEGORIES.map((category) => (
+                    <TabsTrigger
+                      key={category.id}
+                      value={category.id}
+                      className="rounded-full border border-border/70 bg-background px-4 py-2 data-[state=active]:border-primary/30 data-[state=active]:bg-accent"
+                    >
+                      {category.label}
+                      {category.id !== "all" && categoryStats[category.id] ? (
+                        <span className="ml-2 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] text-destructive">
+                          {categoryStats[category.id]}
+                        </span>
+                      ) : null}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+
+              <div className="overflow-hidden rounded-[1.5rem] border border-border/70">
+                <div className="grid grid-cols-[minmax(220px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_90px] border-b border-border/70 bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <div>Параметр</div>
+                  <div>{profile1Data.name}</div>
+                  <div>{profile2Data.name}</div>
+                  <div className="text-center">Статус</div>
+                </div>
+                <div className="max-h-[560px] overflow-auto">
+                  <AnimatePresence>
+                    {filteredDifferences.length > 0 ? (
+                      filteredDifferences.map((difference, index) => (
+                        <motion.div
+                          key={difference.path}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.01 }}
+                          className={[
+                            "grid grid-cols-[minmax(220px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_90px] items-start gap-3 border-b border-border/60 px-4 py-3 text-sm last:border-b-0",
+                            difference.isDifferent ? "bg-destructive/5" : "bg-background",
+                          ].join(" ")}
+                        >
+                          <div>
+                            <p
+                              className={
+                                difference.isDifferent
+                                  ? "font-semibold text-foreground"
+                                  : "text-foreground"
+                              }
+                            >
+                              {difference.label}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">{difference.path}</p>
+                          </div>
+                          <div className="font-mono text-xs leading-6 text-foreground">
+                            {formatValue(difference.value1)}
+                          </div>
+                          <div className="font-mono text-xs leading-6 text-foreground">
+                            {formatValue(difference.value2)}
+                          </div>
+                          <div className="flex justify-center pt-1">
+                            {difference.isDifferent ? (
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            )}
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center text-sm text-muted-foreground">
+                        <SearchX className="h-8 w-8" />
+                        {showOnlyDiff
+                          ? "Различий не найдено."
+                          : "Нет данных для выбранной категории."}
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-[1.75rem] border border-dashed border-border/70 bg-muted/20 text-center text-muted-foreground">
+              <ArrowLeftRight className="h-10 w-10" />
+              <p className="text-sm">Выберите два профиля и запустите сравнение.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }
 

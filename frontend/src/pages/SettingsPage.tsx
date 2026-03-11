@@ -1,209 +1,148 @@
-import BrightnessMediumOutlinedIcon from "@mui/icons-material/BrightnessMediumOutlined";
-import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
-import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import KeyboardOutlinedIcon from "@mui/icons-material/KeyboardOutlined";
-import NightlightRoundOutlinedIcon from "@mui/icons-material/NightlightRoundOutlined";
-import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
-import WbSunnyOutlinedIcon from "@mui/icons-material/WbSunnyOutlined";
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Divider,
-  Snackbar,
-  Switch,
-  Typography,
-} from "@mui/material";
 import { motion } from "framer-motion";
-import { FC, ReactNode, useContext, useState } from "react";
+import { Download, Info, Keyboard, MoonStar, SunMedium, Trash2 } from "lucide-react";
+import { FC, ReactNode, useContext, useMemo, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
 
 import { AuthContext, CheckHistoryContext, ColorModeContext, UIActionsContext } from "../App";
-import usePageStyles from "../hooks/usePageStyles";
+import AppPageLayout from "../components/layout/AppPageLayout";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { Separator } from "../components/ui/separator";
+import { cn } from "../lib/utils";
+import type { HistoryItem, User } from "../types";
 
-/**
- * Section animation variants for Framer Motion
- */
-const sectionVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0 },
-};
+interface SettingsPageProps {
+  className?: string;
+}
 
-/**
- * Keyboard shortcuts data
- */
+interface SettingsHistoryContextType {
+  history: HistoryItem[];
+  clearHistory: () => void;
+}
+
+interface AuthContextType {
+  user: User | null;
+}
+
 interface Shortcut {
   keys: string[];
   description: string;
 }
 
-const SHORTCUTS: Shortcut[] = [
-  { keys: ["N"], description: "Загрузить новый документ" },
-  { keys: ["G", "D"], description: "Перейти в Панель (Dashboard)" },
-  { keys: ["G", "H"], description: "Перейти в Историю" },
-  { keys: ["G", "R"], description: "Перейти в Отчёты" },
-  { keys: ["G", "A"], description: "Открыть Аккаунт" },
-  { keys: ["G", "S"], description: "Открыть Настройки" },
-  { keys: ["?"], description: "Показать справку по сочетаниям" },
-  { keys: ["Esc"], description: "Закрыть диалог / сбросить поиск" },
-];
-
-/**
- * ShortcutKeyProps interface
- */
-interface ShortcutKeyProps {
-  label: string;
-  isDark: boolean;
-  borderColor: string;
-}
-
-/**
- * ShortcutKey Component - Renders a single keyboard shortcut key badge
- *
- * @param label - Key label text
- * @param isDark - Whether dark mode is enabled
- * @param borderColor - Border color from theme
- * @returns Styled key badge
- */
-const ShortcutKey: FC<ShortcutKeyProps> = ({ label, isDark, borderColor }) => (
-  <Box
-    sx={{
-      px: 1,
-      py: 0.2,
-      borderRadius: "5px",
-      bgcolor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-      border: "1px solid",
-      borderColor,
-      fontFamily: "monospace",
-      fontSize: "0.72rem",
-      fontWeight: 700,
-      color: isDark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)",
-      lineHeight: 1.6,
-      userSelect: "none",
-    }}
-  >
-    {label}
-  </Box>
-);
-
-/**
- * SnackbarState interface for notification state
- */
-interface SnackbarState {
-  open: boolean;
-  message: string;
-}
-
-/**
- * SettingRowProps interface
- */
 interface SettingRowProps {
   label: string;
-  description?: string;
+  description: string;
   action: ReactNode;
+  danger?: boolean;
 }
 
-/**
- * SettingRow Component - Renders a single settings row with label and action
- *
- * @param label - Setting label
- * @param description - Optional description text
- * @param action - Action component (button, switch, etc.)
- * @returns Styled settings row
- */
-const SettingRow: FC<SettingRowProps> = ({ label, description, action }) => {
-  const { textPrimary, textMuted, borderColor, surface } = usePageStyles();
+const SHORTCUTS: Shortcut[] = [
+  { keys: ["N"], description: "Загрузить новый документ" },
+  { keys: ["G", "D"], description: "Перейти в панель" },
+  { keys: ["G", "H"], description: "Открыть историю" },
+  { keys: ["G", "R"], description: "Перейти к отчётам" },
+  { keys: ["G", "A"], description: "Открыть аккаунт" },
+  { keys: ["G", "S"], description: "Открыть настройки" },
+  { keys: ["Ctrl", "K"], description: "Командная палитра" },
+  { keys: ["?"], description: "Справка по горячим клавишам" },
+];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+};
+
+const getTimestampValue = (item: HistoryItem): number => {
+  const raw = item.timestamp ?? item.id ?? 0;
+  if (typeof raw === "number") {
+    return raw;
+  }
+
+  const parsed = Date.parse(String(raw));
+  if (!Number.isNaN(parsed)) {
+    return parsed;
+  }
+
+  const numeric = Number(raw);
+  return Number.isNaN(numeric) ? 0 : numeric;
+};
+
+const getIssuesCount = (item: HistoryItem): number => {
   return (
-    <Box
-      sx={{
-        px: 2,
-        py: 1.75,
-        borderRadius: "10px",
-        bgcolor: surface,
-        border: "1px solid",
-        borderColor,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 2,
-      }}
-    >
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: "0.85rem", color: textPrimary, fontWeight: 500 }}>
-          {label}
-        </Typography>
-        {description && (
-          <Typography sx={{ fontSize: "0.72rem", color: textMuted, mt: 0.2 }}>
-            {description}
-          </Typography>
-        )}
-      </Box>
-      {action}
-    </Box>
+    item.totalIssues ??
+    item.issues_count ??
+    item.reportData?.check_results?.total_issues_count ??
+    item.validation_result?.summary?.total_issues ??
+    0
   );
 };
 
-/**
- * SettingsPageProps interface (no props required)
- */
-interface SettingsPageProps {}
+const SettingRow: FC<SettingRowProps> = ({ label, description, action, danger = false }) => {
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-4 rounded-2xl border px-4 py-4 md:flex-row md:items-center md:justify-between",
+        danger ? "border-red-500/20 bg-red-500/5" : "border-border/70 bg-background/60",
+      )}
+    >
+      <div className="space-y-1">
+        <p className={cn("text-sm font-semibold", danger ? "text-red-500" : "text-foreground")}>
+          {label}
+        </p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+      <div className="shrink-0">{action}</div>
+    </div>
+  );
+};
 
-/**
- * SettingsPage Component
- *
- * Application settings page with:
- * - Theme toggle (light/dark mode)
- * - Data export (history to CSV)
- * - History management (clear local history)
- * - Keyboard shortcuts reference
- * - About section with app info and statistics
- *
- * State management:
- * - clearDialogOpen: Clear history confirmation dialog visibility
- * - snackbar: Notification message display
- *
- * @returns React component with settings interface
- */
-const SettingsPage: FC<SettingsPageProps> = () => {
-  const { isDark, textPrimary, textMuted, borderColor, surface, contentPaddingX } = usePageStyles();
+const SettingsPage: FC<SettingsPageProps> = ({ className = "" }) => {
   const colorMode = useContext(ColorModeContext);
   const { openShortcuts } = useContext(UIActionsContext);
-  const { history, clearHistory } = useContext(CheckHistoryContext);
-  const { user } = useContext(AuthContext);
+  const { history, clearHistory } = useContext(CheckHistoryContext) as SettingsHistoryContextType;
+  const { user } = useContext(AuthContext) as AuthContextType;
 
-  const [clearDialogOpen, setClearDialogOpen] = useState<boolean>(false);
-  const [snack, setSnack] = useState<SnackbarState>({ open: false, message: "" });
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => localStorage.getItem("colorMode") === "dark");
 
-  /**
-   * Show snackbar notification
-   *
-   * @param msg - Notification message
-   */
-  const showSnack = (msg: string): void => {
-    setSnack({ open: true, message: msg });
-  };
+  const toastStyle = useMemo(
+    () => ({
+      background: isDark ? "#121214" : "#ffffff",
+      color: isDark ? "#ffffff" : "#111111",
+      border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(17,17,17,0.08)",
+      borderRadius: "16px",
+      boxShadow: isDark ? "0 20px 60px rgba(0,0,0,0.35)" : "0 18px 40px rgba(17,17,17,0.08)",
+    }),
+    [isDark],
+  );
 
-  /**
-   * Export history to CSV file
-   * Includes file name, date, issue count, score, and correction status
-   * Downloads as cursa_history_YYYY-MM-DD.csv
-   */
   const exportHistory = (): void => {
-    if (history.length === 0) return;
+    if (history.length === 0) {
+      return;
+    }
 
-    const rows: string[][] = [
+    const rows = [
       ["Файл", "Дата", "Проблем", "Балл", "Исправлен"],
-      ...history.map((h) => {
-        const issues = h.reportData?.check_results?.total_issues_count ?? h.totalIssues ?? 0;
-        const score = h.score ?? h.reportData?.score ?? "";
-        const corrected = h.correctedFilePath || h.reportData?.corrected_file_path ? "Да" : "Нет";
-        const date = new Date(h.timestamp || h.id).toLocaleString("ru-RU");
+      ...history.map((item) => {
+        const issues = getIssuesCount(item);
+        const score = item.score ?? item.reportData?.score ?? "";
+        const corrected =
+          item.correctedFilePath || item.corrected_file_path || item.reportData?.corrected_file_path
+            ? "Да"
+            : "Нет";
+        const date = new Date(getTimestampValue(item)).toLocaleString("ru-RU");
+
         return [
-          `"${(h.fileName || "").replace(/"/g, '""')}"`,
+          `"${(item.fileName || item.document_name || "").replace(/"/g, '""')}"`,
           `"${date}"`,
           String(issues),
           String(score),
@@ -212,421 +151,260 @@ const SettingsPage: FC<SettingsPageProps> = () => {
       }),
     ];
 
-    const csv = "\ufeff" + rows.map((r) => r.join(",")).join("\n");
+    const csv = "\ufeff" + rows.map((row) => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cursa_history_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
+    const anchor = document.createElement("a");
+
+    anchor.href = url;
+    anchor.download = `cursa_history_${new Date().toISOString().split("T")[0]}.csv`;
+    anchor.click();
     URL.revokeObjectURL(url);
-    showSnack("История экспортирована в CSV");
+    toast.success("История экспортирована", { style: toastStyle });
   };
 
-  /**
-   * Clear local history and close confirmation dialog
-   */
+  const handleToggleTheme = (): void => {
+    colorMode.toggleColorMode();
+    setIsDark((previous) => !previous);
+  };
+
   const handleClearHistory = (): void => {
     clearHistory();
     setClearDialogOpen(false);
-    showSnack("История очищена");
+    toast.success("История очищена", { style: toastStyle });
   };
 
   return (
-    <Box
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
-      <Box sx={{ flex: 1, overflowY: "auto" }} className="custom-scrollbar">
-        <Box sx={{ maxWidth: 560, mx: "auto", px: contentPaddingX, py: 4 }}>
-          {/* Page header */}
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 700,
-                letterSpacing: "-0.025em",
-                fontFamily: "'Wix Madefor Display', sans-serif",
-                color: textPrimary,
-                mb: 0.5,
-              }}
-            >
-              Настройки
-            </Typography>
-            <Typography sx={{ color: textMuted, fontSize: "0.875rem", mb: 4 }}>
-              Оформление, данные и клавиатурные сокращения
-            </Typography>
-          </motion.div>
+    <AppPageLayout className={className} title="Настройки" maxWidth="narrow">
+      <Toaster position="bottom-center" />
 
-          {/* ── Appearance ── */}
-          <motion.div
-            variants={sectionVariants}
-            initial="hidden"
-            animate="show"
-            transition={{ duration: 0.35, delay: 0 }}
-          >
-            <Box sx={{ py: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-                <BrightnessMediumOutlinedIcon sx={{ fontSize: 15, color: textMuted }} />
-                <Typography sx={{ fontWeight: 600, fontSize: "0.85rem", color: textPrimary }}>
-                  Оформление
-                </Typography>
-              </Box>
-              <SettingRow
-                label="Тёмная тема"
-                description={isDark ? "Включена — тёмный фон" : "Отключена — светлый фон"}
-                action={
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <WbSunnyOutlinedIcon sx={{ fontSize: 14, color: textMuted }} />
-                    <Switch
-                      checked={isDark}
-                      onChange={colorMode.toggleColorMode}
-                      size="small"
-                      sx={{ mx: 0.5 }}
-                    />
-                    <NightlightRoundOutlinedIcon sx={{ fontSize: 14, color: textMuted }} />
-                  </Box>
-                }
-              />
-            </Box>
-          </motion.div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_420px]">
+        <motion.section
+          initial="hidden"
+          animate="show"
+          variants={fadeUp}
+          transition={{ delay: 0.06 }}
+        >
+          <Card className="rounded-[30px] border-border/70 bg-card/92 shadow-surface">
+            <CardHeader className="p-6 pb-4">
+              <CardTitle className="text-xl">Системные параметры</CardTitle>
+              <CardDescription>
+                Персонализация интерфейса и операции с локальной историей.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5 p-6 pt-0">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-background/70 text-muted-foreground">
+                    {isDark ? <MoonStar className="size-4" /> : <SunMedium className="size-4" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Оформление</p>
+                    <p className="text-sm text-muted-foreground">
+                      Сейчас активна {isDark ? "тёмная" : "светлая"} тема.
+                    </p>
+                  </div>
+                </div>
 
-          <Divider sx={{ borderColor }} />
-
-          {/* ── Data ── */}
-          <motion.div
-            variants={sectionVariants}
-            initial="hidden"
-            animate="show"
-            transition={{ duration: 0.35, delay: 0.05 }}
-          >
-            <Box sx={{ py: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-                <StorageOutlinedIcon sx={{ fontSize: 15, color: textMuted }} />
-                <Typography sx={{ fontWeight: 600, fontSize: "0.85rem", color: textPrimary }}>
-                  Данные
-                </Typography>
-              </Box>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {/* Export history row */}
                 <SettingRow
-                  label="Экспортировать историю"
+                  label="Тема интерфейса"
+                  description={
+                    isDark
+                      ? "Тёмный режим включён и синхронизирован с новым shell."
+                      : "Светлый режим активен для текущего сеанса."
+                  }
+                  action={
+                    <Button variant="outline" className="rounded-xl" onClick={handleToggleTheme}>
+                      {isDark ? <SunMedium className="size-4" /> : <MoonStar className="size-4" />}
+                      {isDark ? "Светлая тема" : "Тёмная тема"}
+                    </Button>
+                  }
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">Данные</p>
+                  <p className="text-sm text-muted-foreground">
+                    Экспорт истории, очистка локальных записей и контроль объёма сохранённых
+                    результатов.
+                  </p>
+                </div>
+
+                <SettingRow
+                  label="Экспорт истории"
                   description={
                     history.length > 0
-                      ? `${history.length} записей · формат CSV`
-                      : "История проверок пуста"
+                      ? `${history.length} записей будут выгружены в CSV.`
+                      : "История проверок пока пуста."
                   }
                   action={
                     <Button
-                      size="small"
+                      variant="outline"
+                      className="rounded-xl"
                       disabled={history.length === 0}
-                      startIcon={<FileDownloadOutlinedIcon sx={{ fontSize: 13 }} />}
                       onClick={exportHistory}
-                      sx={{
-                        textTransform: "none",
-                        fontSize: "0.775rem",
-                        color: textMuted,
-                        border: "1px solid",
-                        borderColor,
-                        borderRadius: "8px",
-                        flexShrink: 0,
-                        "&:hover": { color: textPrimary },
-                      }}
                     >
-                      CSV
+                      <Download className="size-4" />
+                      Скачать CSV
                     </Button>
                   }
                 />
 
-                {/* Clear history row */}
-                <Box
-                  sx={{
-                    px: 2,
-                    py: 1.75,
-                    borderRadius: "10px",
-                    bgcolor: surface,
-                    border: "1px solid",
-                    borderColor: "rgba(239,68,68,0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 2,
-                  }}
-                >
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontSize: "0.85rem", color: "#ef4444", fontWeight: 500 }}>
-                      Очистить историю
-                    </Typography>
-                    <Typography sx={{ fontSize: "0.72rem", color: textMuted, mt: 0.2 }}>
-                      {history.length > 0
-                        ? `Удалить ${history.length} записей безвозвратно`
-                        : "История уже пуста"}
-                    </Typography>
-                  </Box>
-                  <Button
-                    size="small"
-                    disabled={history.length === 0}
-                    startIcon={<DeleteOutlinedIcon sx={{ fontSize: 13 }} />}
-                    onClick={(): void => setClearDialogOpen(true)}
-                    sx={{
-                      textTransform: "none",
-                      fontSize: "0.775rem",
-                      color: "#ef4444",
-                      border: "1px solid",
-                      borderColor: "rgba(239,68,68,0.25)",
-                      borderRadius: "8px",
-                      flexShrink: 0,
-                      "&:hover": { bgcolor: "rgba(239,68,68,0.06)" },
-                    }}
-                  >
-                    Очистить
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-          </motion.div>
-
-          <Divider sx={{ borderColor }} />
-
-          {/* ── Keyboard Shortcuts ── */}
-          <motion.div
-            variants={sectionVariants}
-            initial="hidden"
-            animate="show"
-            transition={{ duration: 0.35, delay: 0.1 }}
-          >
-            <Box sx={{ py: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-                <KeyboardOutlinedIcon sx={{ fontSize: 15, color: textMuted }} />
-                <Typography sx={{ fontWeight: 600, fontSize: "0.85rem", color: textPrimary }}>
-                  Клавиатурные сокращения
-                </Typography>
-                <Box sx={{ flex: 1 }} />
-                <Button
-                  size="small"
-                  onClick={openShortcuts}
-                  sx={{
-                    color: textMuted,
-                    textTransform: "none",
-                    fontSize: "0.75rem",
-                    minWidth: 0,
-                    px: 1,
-                    "&:hover": { color: textPrimary },
-                  }}
-                >
-                  Открыть справку (?)
-                </Button>
-              </Box>
-
-              {/* Shortcuts table */}
-              <Box
-                sx={{
-                  borderRadius: "10px",
-                  border: "1px solid",
-                  borderColor,
-                  overflow: "hidden",
-                }}
-              >
-                {SHORTCUTS.map((s, i) => (
-                  <Box
-                    key={i}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      px: 2,
-                      py: 1.25,
-                      borderBottom: i < SHORTCUTS.length - 1 ? "1px solid" : "none",
-                      borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
-                    }}
-                  >
-                    <Typography sx={{ fontSize: "0.82rem", color: textPrimary }}>
-                      {s.description}
-                    </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
-                      {s.keys.map((k, ki) => (
-                        <Box key={ki} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                          <ShortcutKey label={k} isDark={isDark} borderColor={borderColor} />
-                          {ki < s.keys.length - 1 && (
-                            <Typography sx={{ fontSize: "0.65rem", color: textMuted }}>
-                              →
-                            </Typography>
-                          )}
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-          </motion.div>
-
-          <Divider sx={{ borderColor }} />
-
-          {/* ── About ── */}
-          <motion.div
-            variants={sectionVariants}
-            initial="hidden"
-            animate="show"
-            transition={{ duration: 0.35, delay: 0.15 }}
-          >
-            <Box sx={{ py: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-                <InfoOutlinedIcon sx={{ fontSize: 15, color: textMuted }} />
-                <Typography sx={{ fontWeight: 600, fontSize: "0.85rem", color: textPrimary }}>
-                  О приложении
-                </Typography>
-              </Box>
-
-              {/* App info card */}
-              <Box
-                sx={{
-                  px: 2,
-                  py: 2.25,
-                  borderRadius: "10px",
-                  bgcolor: surface,
-                  border: "1px solid",
-                  borderColor,
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.5 }}>
-                  <Box
-                    sx={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: "10px",
-                      bgcolor: "primary.main",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "background.default",
-                      fontWeight: 800,
-                      fontSize: "0.9rem",
-                      fontFamily: "'Wix Madefor Display', sans-serif",
-                      flexShrink: 0,
-                    }}
-                  >
-                    C
-                  </Box>
-                  <Box>
-                    <Typography
-                      sx={{
-                        fontSize: "0.9rem",
-                        fontWeight: 700,
-                        color: textPrimary,
-                        mb: 0.15,
-                      }}
+                <SettingRow
+                  label="Очистить локальную историю"
+                  description={
+                    history.length > 0
+                      ? `Будут удалены ${history.length} сохранённых записей.`
+                      : "Локальная история уже пуста."
+                  }
+                  danger
+                  action={
+                    <Button
+                      variant="outline"
+                      className="rounded-xl border-red-500/25 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                      disabled={history.length === 0}
+                      onClick={() => setClearDialogOpen(true)}
                     >
-                      CURSA
-                    </Typography>
-                    <Typography sx={{ fontSize: "0.72rem", color: textMuted }}>
-                      Версия 2.0 · Нормоконтроль документов
-                    </Typography>
-                  </Box>
-                </Box>
-                <Typography
-                  sx={{
-                    fontSize: "0.78rem",
-                    color: textMuted,
-                    lineHeight: 1.65,
-                  }}
-                >
-                  Автоматическая проверка курсовых и дипломных работ на соответствие требованиям
-                  университетских профилей. Поддерживает форматирование, нумерацию, шрифты, отступы
-                  и структуру документов.
-                </Typography>
-              </Box>
+                      <Trash2 className="size-4" />
+                      Очистить
+                    </Button>
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.section>
 
-              {/* Statistics card */}
-              {user && (
-                <Box
-                  sx={{
-                    mt: 1,
-                    px: 2,
-                    py: 1.5,
-                    borderRadius: "10px",
-                    bgcolor: surface,
-                    border: "1px solid",
-                    borderColor,
-                  }}
+        <motion.section
+          initial="hidden"
+          animate="show"
+          variants={fadeUp}
+          transition={{ delay: 0.12 }}
+          className="space-y-6"
+        >
+          <Card className="rounded-[30px] border-border/70 bg-card/92 shadow-surface">
+            <CardHeader className="p-6 pb-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="text-xl">Горячие клавиши</CardTitle>
+                  <CardDescription>
+                    Основные последовательности для быстрого перемещения по приложению.
+                  </CardDescription>
+                </div>
+                <Button variant="ghost" className="rounded-xl px-3 text-sm" onClick={openShortcuts}>
+                  <Keyboard className="size-4" />
+                  Открыть
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 p-6 pt-0">
+              {SHORTCUTS.map((shortcut) => (
+                <div
+                  key={`${shortcut.description}-${shortcut.keys.join("-")}`}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/60 px-4 py-3"
                 >
-                  <Typography sx={{ fontSize: "0.75rem", color: textMuted }}>
-                    Выполнено проверок за всё время:{" "}
-                    <Box component="span" sx={{ color: textPrimary, fontWeight: 600 }}>
-                      {history.length}
-                    </Box>
-                  </Typography>
-                </Box>
+                  <p className="text-sm text-foreground">{shortcut.description}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {shortcut.keys.map((key) => (
+                      <Badge
+                        key={key}
+                        variant="outline"
+                        className="rounded-lg px-2 py-1 font-mono text-[11px] uppercase tracking-[0.18em]"
+                      >
+                        {key}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[30px] border-border/70 bg-card/92 shadow-surface">
+            <CardHeader className="p-6 pb-4">
+              <CardTitle className="text-xl">О приложении</CardTitle>
+              <CardDescription>
+                Короткая справка по текущей сборке и рабочему состоянию.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 p-6 pt-0">
+              <div className="flex items-center gap-4 rounded-2xl border border-border/70 bg-background/60 p-4">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                  <Info className="size-5" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">CURSA 2.0</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Система проверки курсовых и дипломных работ с единым shadcn-shell и локальной
+                    историей документов.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-border/70 bg-background/60 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                    Проверок сохранено
+                  </p>
+                  <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
+                    {history.length}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/60 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                    Пользователь
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-foreground">
+                    {user?.name || user?.email || "Гость"}
+                  </p>
+                </div>
+              </div>
+
+              {history.length > 0 && (
+                <div className="rounded-2xl border border-border/70 bg-background/60 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                    Последний отчёт
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-foreground">
+                    {history[0]?.fileName || history[0]?.document_name || "Без названия"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {new Date(getTimestampValue(history[0])).toLocaleString("ru-RU")} •{" "}
+                    {getIssuesCount(history[0])} замечаний
+                  </p>
+                </div>
               )}
-            </Box>
-          </motion.div>
-        </Box>
-      </Box>
+            </CardContent>
+          </Card>
+        </motion.section>
+      </div>
 
-      {/* Clear history confirmation dialog */}
-      <Dialog
-        open={clearDialogOpen}
-        onClose={(): void => setClearDialogOpen(false)}
-        PaperProps={{
-          sx: {
-            bgcolor: isDark ? "#1a1a1a" : "#fff",
-            borderRadius: "14px",
-            border: "1px solid",
-            borderColor,
-          },
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: "1rem", color: textPrimary, pb: 1 }}>
-          Очистить всю историю?
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: textMuted, fontSize: "0.875rem" }}>
-            Это удалит{" "}
-            <Box component="span" sx={{ color: textPrimary }}>
-              {history.length} записей
-            </Box>{" "}
-            из истории проверок локально. Действие нельзя отменить.
-          </DialogContentText>
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <DialogContent className="max-w-md border-border bg-card">
+          <DialogHeader>
+            <DialogTitle>Очистить локальную историю?</DialogTitle>
+            <DialogDescription>
+              Будут удалены {history.length} записей из локального хранилища. Это действие нельзя
+              отменить.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              className="bg-red-600 text-white hover:bg-red-600/90"
+              onClick={handleClearHistory}
+            >
+              Очистить
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button
-            onClick={(): void => setClearDialogOpen(false)}
-            sx={{ textTransform: "none", color: textMuted, borderRadius: 1 }}
-          >
-            Отмена
-          </Button>
-          <Button
-            onClick={handleClearHistory}
-            sx={{
-              textTransform: "none",
-              color: "#ef4444",
-              fontWeight: 600,
-              borderRadius: 1,
-              "&:hover": { bgcolor: "rgba(239,68,68,0.08)" },
-            }}
-          >
-            Очистить
-          </Button>
-        </DialogActions>
       </Dialog>
-
-      {/* Snackbar notification */}
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={2500}
-        onClose={(): void => setSnack((p) => ({ ...p, open: false }))}
-        message={snack.message}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      />
-    </Box>
+    </AppPageLayout>
   );
 };
 

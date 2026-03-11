@@ -1,192 +1,206 @@
-import AssessmentIcon from "@mui/icons-material/AssessmentOutlined";
-import DarkModeIcon from "@mui/icons-material/DarkModeOutlined";
-import DashboardIcon from "@mui/icons-material/DashboardOutlined";
-import HistoryIcon from "@mui/icons-material/HistoryOutlined";
-import HomeIcon from "@mui/icons-material/HomeOutlined";
-import LightModeIcon from "@mui/icons-material/LightModeOutlined";
-import LogoutIcon from "@mui/icons-material/LogoutOutlined";
-import SettingsIcon from "@mui/icons-material/SettingsOutlined";
-import TuneIcon from "@mui/icons-material/TuneOutlined";
 import {
-  Avatar,
-  Box,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  Tooltip,
-} from "@mui/material";
+  FileCheck2,
+  HelpCircle,
+  History,
+  LayoutDashboard,
+  LogIn,
+  MoreHorizontal,
+  PanelsTopLeft,
+  Search,
+  Settings,
+  Shield,
+} from "lucide-react";
 import { useContext } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
-import { AuthContext, ColorModeContext } from "../App";
-import usePageStyles from "../hooks/usePageStyles";
-import BrandLogo from "./BrandLogo";
 
-const LeftNav = ({ width = 64 }) => {
+import { AuthContext, UIActionsContext } from "../App";
+import { cn } from "../lib/utils";
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Button } from "./ui/button";
+
+const navGroups = [
+  {
+    label: "Рабочее пространство",
+    items: [
+      { label: "Главная", icon: FileCheck2, to: "/" },
+      { label: "Панель", icon: LayoutDashboard, to: "/dashboard" },
+      { label: "История", icon: History, to: "/history" },
+    ],
+  },
+  {
+    label: "Документы",
+    items: [
+      { label: "Профили", icon: PanelsTopLeft, to: "/profiles" },
+      { label: "Отчёты", icon: FileCheck2, to: "/reports" },
+    ],
+  },
+];
+
+const utilityItems = [
+  { label: "Настройки", icon: Settings, to: "/settings", type: "link" },
+  { label: "Помощь", icon: HelpCircle, action: "shortcuts", type: "action" },
+  { label: "Поиск", icon: Search, action: "palette", type: "action" },
+];
+
+const LeftNav = ({ width = 248 }) => {
   const location = useLocation();
   const { user } = useContext(AuthContext);
-  const items = [
-    { label: "Главная", icon: <HomeIcon />, to: "/" },
-    { label: "Панель", icon: <DashboardIcon />, to: "/dashboard" },
-    { label: "История", icon: <HistoryIcon />, to: "/history" },
-    { label: "Профили", icon: <TuneIcon />, to: "/profiles" },
-    { label: "Отчёты", icon: <AssessmentIcon />, to: "/reports" },
-    { label: "Настройки", icon: <SettingsIcon />, to: "/settings" },
-  ];
+  const { openPalette, openShortcuts } = useContext(UIActionsContext);
+  const userLabel = user?.first_name || user?.name || user?.email?.split("@")[0] || "Аккаунт";
+  const userInitial = (
+    user?.first_name?.[0] ||
+    user?.name?.[0] ||
+    user?.email?.[0] ||
+    "U"
+  ).toUpperCase();
 
-  const colorMode = useContext(ColorModeContext);
-  const { isDark, surface, surfaceHover } = usePageStyles();
+  const renderNavItem = (item, compact = false) => {
+    const active =
+      location.pathname === item.to ||
+      (item.to !== "/" && item.to && location.pathname.startsWith(item.to));
+    const Icon = item.icon;
+
+    return (
+      <RouterLink
+        key={item.to}
+        to={item.to}
+        className={cn(
+          "group flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[10px] transition-colors",
+          active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground/76 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+          compact && "py-1.5",
+        )}
+      >
+        <div
+          className={cn(
+            "flex size-6.5 shrink-0 items-center justify-center rounded-[8px]",
+            active
+              ? "text-sidebar-foreground/55"
+              : "text-sidebar-foreground/55 group-hover:bg-sidebar-accent group-hover:text-sidebar-accent-foreground",
+          )}
+        >
+          <Icon className="size-[14px]" strokeWidth={1.8} />
+        </div>
+        <div className={cn("min-w-0 flex-1 truncate font-medium", active && "font-semibold")}>
+          {item.label}
+        </div>
+      </RouterLink>
+    );
+  };
+
+  const renderUtilityItem = (item) => {
+    const Icon = item.icon;
+
+    if (item.type === "link") {
+      return renderNavItem(item, true);
+    }
+
+    return (
+      <button
+        key={item.label}
+        type="button"
+        onClick={() => (item.action === "palette" ? openPalette() : openShortcuts())}
+        className="group flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[12px] text-sidebar-foreground/76 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+      >
+        <div className="flex size-6.5 shrink-0 items-center justify-center rounded-[8px] text-sidebar-foreground/55 group-hover:bg-sidebar-accent group-hover:text-sidebar-accent-foreground">
+          <Icon className="size-[14px]" strokeWidth={1.8} />
+        </div>
+        <span className="font-medium">{item.label}</span>
+      </button>
+    );
+  };
 
   return (
-    <Box
-      sx={{
-        width,
-        height: "100vh",
-        borderRight: "1px solid",
-        borderColor: "divider",
-        bgcolor: "background.default",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        pt: 2,
-        flexShrink: 0,
-      }}
+    <aside
+      className="sticky top-0 flex h-screen flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-2.5 py-0 text-sidebar-foreground"
+      style={{ width, minWidth: width }}
     >
-      {/* Логотип */}
-      <Box sx={{ mb: 2.5, width: "100%", display: "flex", justifyContent: "center" }}>
-        <Box component={RouterLink} to="/" sx={{ textDecoration: "none", display: "flex" }}>
-          <BrandLogo size="small" />
-        </Box>
-      </Box>
-      <List sx={{ width: "100%", px: 0.5 }}>
-        {items.map((it) => {
-          const isActive =
-            location.pathname === it.to || (it.to !== "/" && location.pathname.startsWith(it.to));
-          return (
-            <Tooltip key={it.to} title={it.label} placement="right">
-              <ListItemButton
-                component={RouterLink}
-                to={it.to}
-                sx={{
-                  justifyContent: "center",
-                  py: 1.25,
-                  px: 0,
-                  minHeight: 48,
-                  borderRadius: "8px",
-                  mb: 0.25,
-                  bgcolor: isActive ? surface : "transparent",
-                  "&:hover": {
-                    bgcolor: surfaceHover,
-                  },
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 0,
-                    color: isActive ? "primary.main" : "text.secondary",
-                    "& svg": { fontSize: 20 },
-                  }}
-                >
-                  {it.icon}
-                </ListItemIcon>
-              </ListItemButton>
-            </Tooltip>
-          );
-        })}
-      </List>
-      <Box sx={{ flex: 1 }} />
-      <Box sx={{ pb: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
-        {/* User avatar / logout */}
+      <RouterLink
+        to="/"
+        className="flex h-14 items-center gap-2 rounded-none px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      >
+        <div className="flex size-6 items-center justify-center rounded-full border border-sidebar-border text-sidebar-foreground">
+          <div className="size-2 rounded-full border border-sidebar-foreground/70" />
+        </div>
+        <div className="min-w-0">
+          <div className="brand-heading truncate text-[14px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
+            CURSA
+          </div>
+        </div>
+      </RouterLink>
+
+      <div className="-mx-2.5 h-px bg-sidebar-border" />
+
+      <div className="flex-1 overflow-y-auto px-0 pt-3 pr-1">
+        <div className="flex flex-col gap-4">
+          {navGroups.map((group, index) => (
+            <div key={group.label} className="relative">
+              {index > 0 && <div className="-mx-2.5 mb-4 h-px bg-sidebar-border" />}
+              <div className="mb-1.5 px-2 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/50">
+                {group.label}
+              </div>
+              <nav className="space-y-0.5">{group.items.map((item) => renderNavItem(item))}</nav>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="-mx-2.5 mb-3 h-px bg-sidebar-border" />
+        <div className="space-y-0.5">{utilityItems.map((item) => renderUtilityItem(item))}</div>
+
         {user ? (
-          <Tooltip title={user.first_name || user.email || "Аккаунт"} placement="right">
-            <IconButton
-              size="small"
-              component={RouterLink}
-              to="/account"
-              sx={{
-                p: 0.5,
-                borderRadius: "8px",
-                bgcolor: location.pathname.startsWith("/account") ? surface : "transparent",
-                "&:hover": {
-                  bgcolor: surfaceHover,
-                },
-              }}
-            >
-              <Avatar
-                sx={{
-                  width: 28,
-                  height: 28,
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  bgcolor: location.pathname.startsWith("/account")
-                    ? "primary.main"
-                    : isDark
-                      ? "rgba(255,255,255,0.15)"
-                      : "rgba(0,0,0,0.12)",
-                  color: location.pathname.startsWith("/account")
-                    ? isDark
-                      ? "#000"
-                      : "#fff"
-                    : "text.primary",
-                  transition: "background 0.2s",
-                }}
-              >
-                {(user.first_name?.[0] || user.email?.[0] || "U").toUpperCase()}
+          <div className="mt-3 flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-sidebar-accent/70">
+            <RouterLink to="/account" className="flex min-w-0 flex-1 items-center gap-2">
+              <Avatar className="size-8 border border-sidebar-border">
+                <AvatarFallback className="bg-sidebar-accent text-xs text-sidebar-foreground">
+                  {userInitial}
+                </AvatarFallback>
               </Avatar>
-            </IconButton>
-          </Tooltip>
+              <div className="min-w-0">
+                <div className="truncate text-[13px] font-medium text-sidebar-foreground">
+                  {userLabel}
+                </div>
+                <div className="truncate text-[10px] text-sidebar-foreground/42">{user.email}</div>
+              </div>
+            </RouterLink>
+            <button
+              type="button"
+              onClick={openShortcuts}
+              className="flex size-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/42 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              aria-label="Дополнительные действия аккаунта"
+            >
+              <MoreHorizontal className="size-[14px]" strokeWidth={1.8} />
+            </button>
+          </div>
         ) : (
-          <Tooltip title="Войти" placement="right">
-            <IconButton
-              component={RouterLink}
-              to="/login"
-              size="small"
-              sx={{
-                color: "text.disabled",
-                borderRadius: "8px",
-                "&:hover": { color: "text.secondary" },
-              }}
-            >
-              <LogoutIcon sx={{ fontSize: 18, transform: "scaleX(-1)" }} />
-            </IconButton>
-          </Tooltip>
-        )}
-        {/* Admin gear — only for admin role */}
-        {user?.role === "admin" && (
-          <Tooltip title="Администратор" placement="right">
-            <IconButton
-              component={RouterLink}
-              to="/admin"
-              size="small"
-              sx={{
-                color: location.pathname.startsWith("/admin") ? "primary.main" : "text.disabled",
-                bgcolor: location.pathname.startsWith("/admin") ? surface : "transparent",
-                borderRadius: "8px",
-                "&:hover": {
-                  color: "text.secondary",
-                  bgcolor: surfaceHover,
-                },
-              }}
-            >
-              <SettingsIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
-        )}
-        <Tooltip title={isDark ? "Светлая тема" : "Тёмная тема"} placement="right">
-          <IconButton
-            size="small"
-            onClick={() => colorMode.toggleColorMode()}
-            sx={{ color: "text.secondary", "&:hover": { color: "text.primary" } }}
+          <Button
+            asChild
+            variant="outline"
+            className="mt-3 h-9 w-full justify-start rounded-xl border-sidebar-border bg-transparent px-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
-            {isDark ? (
-              <LightModeIcon sx={{ fontSize: 20 }} />
-            ) : (
-              <DarkModeIcon sx={{ fontSize: 20 }} />
-            )}
-          </IconButton>
-        </Tooltip>
-      </Box>
-    </Box>
+            <RouterLink to="/login">
+              <LogIn className="size-[14px]" strokeWidth={1.8} />
+              Войти
+            </RouterLink>
+          </Button>
+        )}
+
+        {user?.role === "admin" ? (
+          <Button
+            asChild
+            variant="ghost"
+            className="mt-1 h-9 w-full justify-start rounded-xl px-2 text-[13px] text-sidebar-foreground/76 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <RouterLink to="/admin">
+              <Shield className="size-[14px]" strokeWidth={1.8} />
+              Админ-панель
+            </RouterLink>
+          </Button>
+        ) : null}
+      </div>
+    </aside>
   );
 };
 

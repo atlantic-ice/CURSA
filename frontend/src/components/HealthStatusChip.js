@@ -1,13 +1,7 @@
 import { Box, Chip, Stack, Tooltip, Typography, alpha, useTheme } from "@mui/material";
-import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 
-const isLocal =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-const API_BASE = isLocal
-  ? "/api"
-  : (process.env.REACT_APP_API_BASE || "https://cursa.onrender.com") + "/api";
+import { healthApi } from "../api/client";
 
 const STATUS_CONFIG = {
   checking: { label: "Проверка", color: "default" },
@@ -33,12 +27,10 @@ const HealthStatusChip = () => {
 
     const fetchHealth = async () => {
       try {
-        const response = await axios.get(`${API_BASE}/health/detailed`, {
-          timeout: 4000,
-        });
+        const response = await healthApi.getDetailed();
         if (!isMounted) return;
-        setStatus(response.data?.status || "healthy");
-        setDetails(response.data || null);
+        setStatus(response?.status || "healthy");
+        setDetails(response || null);
       } catch (error) {
         if (!isMounted) return;
         setStatus("offline");

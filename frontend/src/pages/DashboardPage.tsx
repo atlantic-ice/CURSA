@@ -1,631 +1,454 @@
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import FileCopyOutlinedIcon from "@mui/icons-material/FileCopyOutlined";
-import NoteAddOutlinedIcon from "@mui/icons-material/NoteAddOutlined";
-import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
-import { Box, Button, Grid, IconButton, Theme, Tooltip, Typography, useTheme } from "@mui/material";
-import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Files,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 import { FC, useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  XAxis,
-} from "recharts";
-import { AuthContext, CheckHistoryContext } from "../App";
-import usePageStyles from "../hooks/usePageStyles";
-import type { User } from "../types";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
-// ============================================================================
-// Type Definitions
-// ============================================================================
+import { CheckHistoryContext } from "../App";
+import { Badge } from "../components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import type { CheckHistoryContextType, HistoryItem } from "../types";
 
 interface DashboardPageProps {
   className?: string;
 }
 
-interface AuthContextType {
-  user: User | null;
-}
-
-interface HistoryItem {
-  id?: string;
-  fileName: string;
-  timestamp: number;
-  totalIssues: number;
-  score: number;
-  status?: "Готово" | "Обработка" | "Ошибка";
-  reportData?: unknown;
-  profileId?: string;
-}
-
-interface CheckHistoryContextType {
-  history: HistoryItem[];
-}
-
-interface ChartDataPoint {
+interface ActivityPoint {
+  dateKey: string;
   label: string;
-  date: string;
+  fullDate: string;
   count: number;
-  isToday?: boolean;
+  trend: number;
 }
 
-interface StatCardProps {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  isDark: boolean;
-  trend?: number | null;
-}
-
-// ============================================================================
-// Variants & Animations
-// ============================================================================
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
-};
-
-// ============================================================================
-// Sub-Components
-// ============================================================================
-
-/**
- * Statistics card component
- */
-const StatCard: FC<StatCardProps> = ({ title, value, icon, isDark, trend }) => {
-  const hasTrend: boolean = trend !== null && trend !== undefined;
-  const trendUp: boolean = hasTrend && trend! > 0;
-  const trendDown: boolean = hasTrend && trend! < 0;
-  const trendColor: string = trendUp ? "#34d399" : trendDown ? "#f87171" : "rgba(128,128,128,0.7)";
-
-  return (
-    <motion.div variants={itemVariants}>
-      <Box
-        sx={{
-          p: 3,
-          borderRadius: 1,
-          border: "1px solid",
-          borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
-          transition: "border-color 0.2s, background 0.2s",
-          "&:hover": {
-            borderColor: isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.16)",
-            bgcolor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
-          },
-        }}
-      >
-        <Box>
-          <Typography
-            sx={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.4)",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              mb: 1,
-            }}
-          >
-            {title}
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: "2rem",
-              fontWeight: 700,
-              color: isDark ? "#fff" : "#000",
-              lineHeight: 1,
-              fontFamily: "'Wix Madefor Display', sans-serif",
-            }}
-          >
-            {value}
-          </Typography>
-          {hasTrend && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.3, mt: 0.8 }}>
-              {trendUp && <ArrowUpwardIcon sx={{ fontSize: 12, color: trendColor }} />}
-              {trendDown && <ArrowDownwardIcon sx={{ fontSize: 12, color: trendColor }} />}
-              <Typography sx={{ fontSize: "0.72rem", color: trendColor, fontWeight: 500 }}>
-                {trendUp ? `+${trend}` : trend} за неделю
-              </Typography>
-            </Box>
-          )}
-        </Box>
-        <Box
-          sx={{
-            color: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)",
-            "& svg": { fontSize: 36 },
-          }}
-        >
-          {icon}
-        </Box>
-      </Box>
-    </motion.div>
-  );
-};
-
-/**
- * Recent file item component
- */
-interface RecentFileItemProps {
-  name: string;
-  status: "Готово" | "Обработка" | "Ошибка";
-  date: string;
-  isDark: boolean;
-  onClick: () => void;
-}
-
-const RecentFileItem: FC<RecentFileItemProps> = ({ name, status, date, isDark, onClick }) => {
-  const isReady: boolean = status === "Готово";
-  return (
-    <motion.div variants={itemVariants}>
-      <Box
-        onClick={onClick}
-        sx={{
-          p: "14px 16px",
-          borderBottom: "1px solid",
-          borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)",
-          cursor: "pointer",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          transition: "background 0.15s",
-          "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)" },
-          "&:last-child": { borderBottom: "none" },
-        }}
-      >
-        <Box sx={{ flex: 1, overflow: "hidden", mr: 2 }}>
-          <Typography
-            sx={{
-              fontWeight: 500,
-              color: isDark ? "#fff" : "#000",
-              fontSize: "0.88rem",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              mb: 0.4,
-            }}
-          >
-            {name}
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: "0.75rem",
-              color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.4)",
-            }}
-          >
-            {date}
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
-          <Box
-            sx={{
-              px: 1.5,
-              py: 0.3,
-              borderRadius: 0.5,
-              border: "1px solid",
-              borderColor: isReady ? "rgba(52,211,153,0.25)" : "rgba(251,191,36,0.25)",
-              bgcolor: isReady ? "rgba(52,211,153,0.07)" : "rgba(251,191,36,0.07)",
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: "0.7rem",
-                fontWeight: 600,
-                letterSpacing: "0.04em",
-                color: isReady ? "#34d399" : "#fbbf24",
-              }}
-            >
-              {status}
-            </Typography>
-          </Box>
-          <Tooltip title="Открыть отчет">
-            <IconButton
-              size="small"
-              onClick={onClick}
-              sx={{ color: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)", p: 0.25 }}
-            >
-              <ArrowForwardIosIcon sx={{ fontSize: 11 }} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-    </motion.div>
-  );
-};
-
-/**
- * Activity chart component
- */
-interface ActivityChartProps {
-  history: HistoryItem[];
-  isDark: boolean;
-  textPrimary: string;
-  textMuted: string;
-  borderColor: string;
-}
-
-const ActivityChart: FC<ActivityChartProps> = ({ history, isDark, textPrimary, textMuted, borderColor }) => {
-  const theme: Theme = useTheme();
-
-  const last7Days: Date[] = useMemo(
-    () =>
-      Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        return d;
-      }),
-    [],
-  );
-
-  const chartData: ChartDataPoint[] = useMemo(
-    () =>
-      last7Days.map((day, i) => {
-        const start = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
-        const end = start + 86400000 - 1;
-        const count = history.filter((h: HistoryItem) => {
-          const t = (h.timestamp || h.id) as number;
-          return t >= start && t <= end;
-        }).length;
-        return {
-          label: day
-            .toLocaleDateString("ru-RU", { weekday: "short" })
-            .slice(0, 2)
-            .toUpperCase(),
-          date: day.toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
-          count,
-          isToday: i === 6,
-        };
-      }),
-    [last7Days, history],
-  );
-
-  const totalWeek: number = chartData.reduce((a, b) => a + b.count, 0);
-  const todayCount: number = chartData[6]?.count || 0;
-  const avgScore: string =
-    history.length > 0
-      ? (history.reduce((acc, h: HistoryItem) => acc + (h.score || 0), 0) / history.length).toFixed(1)
-      : "—";
-
-  interface CustomTooltipProps {
-    active?: boolean;
-    payload?: Array<{ payload: ChartDataPoint }>;
+const getTimestampValue = (item: HistoryItem): number => {
+  const raw = item.timestamp ?? item.id ?? 0;
+  if (typeof raw === "number") {
+    return raw;
   }
 
-  const CustomTooltip: FC<CustomTooltipProps> = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    const { date, count } = payload[0].payload;
-    return (
-      <Box
-        sx={{
-          bgcolor: isDark ? "rgba(20,20,20,0.95)" : "rgba(255,255,255,0.97)",
-          border: "1px solid",
-          borderColor,
-          borderRadius: 1,
-          px: 1.5,
-          py: 1,
-          boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-        }}
-      >
-        <Typography sx={{ fontSize: "0.7rem", color: textMuted, mb: 0.3 }}>{date}</Typography>
-        <Typography sx={{ fontSize: "0.85rem", fontWeight: 700, color: textPrimary }}>
-          {count} проверок
-        </Typography>
-      </Box>
-    );
-  };
+  const parsed = Date.parse(String(raw));
+  if (!Number.isNaN(parsed)) {
+    return parsed;
+  }
 
+  const numeric = Number(raw);
+  return Number.isNaN(numeric) ? 0 : numeric;
+};
+
+const getIssuesCount = (item: HistoryItem): number => {
   return (
-    <Box
-      sx={{
-        borderRadius: 1,
-        border: "1px solid",
-        borderColor,
-        overflow: "hidden",
-      }}
-    >
-      {/* Header */}
-      <Box
-        sx={{
-          px: 3,
-          py: 2.5,
-          borderBottom: "1px solid",
-          borderColor: "rgba(0,0,0,0.06)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Typography sx={{ fontWeight: 600, fontSize: "0.9rem", color: textPrimary }}>
-          Активность
-        </Typography>
-        {todayCount > 0 && (
-          <Box
-            sx={{
-              px: 1.25,
-              py: 0.25,
-              borderRadius: 0.5,
-              bgcolor: "rgba(52,211,153,0.1)",
-              border: "1px solid rgba(52,211,153,0.2)",
-            }}
-          >
-            <Typography sx={{ fontSize: "0.7rem", fontWeight: 600, color: "#34d399" }}>
-              {todayCount} сегодня
-            </Typography>
-          </Box>
-        )}
-      </Box>
-
-      {/* Chart */}
-      <Box sx={{ p: 3 }}>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={chartData}>
-            <XAxis dataKey="label" stroke={textMuted} />
-            <RechartsTooltip content={<CustomTooltip />} />
-            <Bar dataKey="count" radius={[6, 6, 0, 0]} fill="#3b82f6">
-              {(chartData as ChartDataPoint[]).map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.isToday ? "#10b981" : "#3b82f6"}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </Box>
-
-      {/* Footer Stats */}
-      <Box
-        sx={{
-          px: 3,
-          py: 2.5,
-          borderTop: "1px solid",
-          borderColor: "rgba(0,0,0,0.06)",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Typography sx={{ fontSize: "0.7rem", color: textMuted, fontWeight: 600, mb: 0.5 }}>
-            ВСЕГО НА НЕДЕЛЮ
-          </Typography>
-          <Typography sx={{ fontSize: "1.4rem", fontWeight: 700, color: textPrimary }}>
-            {totalWeek}
-          </Typography>
-        </Box>
-        <Box>
-          <Typography sx={{ fontSize: "0.7rem", color: textMuted, fontWeight: 600, mb: 0.5 }}>
-            СРЕДНЯЯ ОЦЕНКА
-          </Typography>
-          <Typography sx={{ fontSize: "1.4rem", fontWeight: 700, color: textPrimary }}>
-            {avgScore}
-          </Typography>
-        </Box>
-      </Box>
-    </Box>
+    item.totalIssues ??
+    item.issues_count ??
+    item.reportData?.check_results?.total_issues_count ??
+    item.validation_result?.summary?.total_issues ??
+    0
   );
 };
 
-// ============================================================================
-// Main Component
-// ============================================================================
+const getScoreValue = (item: HistoryItem): number | null => {
+  const candidate = item.score ?? item.reportData?.score;
+  if (candidate == null) {
+    return null;
+  }
 
-/**
- * DashboardPage Component
- * 
- * Shows user statistics:
- * - Total documents processed
- * - Average score
- * - Recent files with status
- * - Weekly activity chart
- * - Quick action buttons
- */
+  return typeof candidate === "number" ? candidate : Number(candidate);
+};
+
+const getProfileLabel = (item: HistoryItem): string => {
+  return (
+    item.profileName || item.profileId || item.profile_name || item.profile_id || "Базовый профиль"
+  );
+};
+
+const formatScore = (value: number | null): string => {
+  if (value == null || Number.isNaN(value)) {
+    return "--";
+  }
+
+  return value.toFixed(1);
+};
+
+const getStatusLabel = (item: HistoryItem): string => {
+  const issues = getIssuesCount(item);
+  if (issues === 0) {
+    return "Чисто";
+  }
+
+  if (issues <= 5) {
+    return "Нужна проверка";
+  }
+
+  return "Требует внимания";
+};
+
 const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
-  const theme: Theme = useTheme();
   const navigate = useNavigate();
-  
-  const { user } = useContext(AuthContext) as AuthContextType;
   const { history } = useContext(CheckHistoryContext) as CheckHistoryContextType;
-  const { textMuted, textSubtle } = usePageStyles();
 
-  const isDark: boolean = theme.palette.mode === "dark";
-  const textPrimary: string = isDark ? "#ffffff" : "#000000";
-  const borderColor: string = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const sortedHistory = useMemo(() => {
+    return [...history].sort((left, right) => getTimestampValue(right) - getTimestampValue(left));
+  }, [history]);
 
-  // Calculate statistics
-  const totalDocuments: number = history.length;
-  const successCount: number = history.filter((h: HistoryItem) => h.status === "Готово").length;
-  const recentFiles: HistoryItem[] = history.slice(-5).reverse();
-  const averageScore: number =
-    history.length > 0 ? history.reduce((acc, h: HistoryItem) => acc + (h.score || 0), 0) / history.length : 0;
+  const recentFiles = useMemo(() => sortedHistory.slice(0, 5), [sortedHistory]);
 
-  const handleOpenUpload = (): void => {
-    navigate("/");
-  };
+  const weekActivity = useMemo<ActivityPoint[]>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const handleOpenRecent = (index: number): void => {
-    const file = recentFiles[index];
-    if (file) {
-      navigate("/report", {
-        state: {
-          reportData: file.reportData,
-          fileName: file.fileName,
-          profileId: file.profileId || "default_gost",
-        },
+    const bucket = new Map<string, ActivityPoint>();
+    for (let offset = 6; offset >= 0; offset -= 1) {
+      const current = new Date(today);
+      current.setDate(today.getDate() - offset);
+      const dateKey = current.toISOString().slice(0, 10);
+      bucket.set(dateKey, {
+        dateKey,
+        label: current.toLocaleDateString("ru-RU", { weekday: "short" }).slice(0, 2).toUpperCase(),
+        fullDate: current.toLocaleDateString("ru-RU", { day: "numeric", month: "long" }),
+        count: 0,
+        trend: 0,
       });
     }
-  };
+
+    sortedHistory.forEach((item) => {
+      const timestamp = getTimestampValue(item);
+      if (!timestamp) {
+        return;
+      }
+
+      const dateKey = new Date(timestamp).toISOString().slice(0, 10);
+      const point = bucket.get(dateKey);
+      if (point) {
+        point.count += 1;
+      }
+    });
+
+    const values = Array.from(bucket.values());
+
+    return values.map((point, index) => {
+      const windowStart = Math.max(0, index - 2);
+      const windowSlice = values.slice(windowStart, index + 1);
+      const rollingAverage =
+        windowSlice.reduce((sum, item) => sum + item.count, 0) / Math.max(windowSlice.length, 1);
+
+      return {
+        ...point,
+        trend: Number(rollingAverage.toFixed(2)),
+      };
+    });
+  }, [sortedHistory]);
+
+  const metrics = useMemo(() => {
+    const totalChecks = sortedHistory.length;
+    const correctedCount = sortedHistory.filter(
+      (item) =>
+        item.correctedFilePath || item.corrected_file_path || item.reportData?.corrected_file_path,
+    ).length;
+    const zeroIssuesCount = sortedHistory.filter((item) => getIssuesCount(item) === 0).length;
+    const scoreValues = sortedHistory
+      .map((item) => getScoreValue(item))
+      .filter((value): value is number => value != null && !Number.isNaN(value));
+    const averageScore = scoreValues.length
+      ? scoreValues.reduce((sum, value) => sum + value, 0) / scoreValues.length
+      : null;
+    const topProfile = sortedHistory.reduce<Record<string, number>>((accumulator, item) => {
+      const profile = getProfileLabel(item);
+      accumulator[profile] = (accumulator[profile] || 0) + 1;
+      return accumulator;
+    }, {});
+    const mostUsedProfile =
+      Object.entries(topProfile).sort((left, right) => right[1] - left[1])[0]?.[0] || null;
+    const weekTotal = weekActivity.reduce((sum, point) => sum + point.count, 0);
+
+    return {
+      totalChecks,
+      correctedCount,
+      zeroIssuesCount,
+      averageScore,
+      mostUsedProfile,
+      weekTotal,
+    };
+  }, [sortedHistory, weekActivity]);
+
+  const healthSummary = useMemo(() => {
+    if (metrics.totalChecks === 0) {
+      return "История ещё не накоплена. После первой проверки здесь появится срез по качеству и активности.";
+    }
+
+    if (metrics.zeroIssuesCount === metrics.totalChecks) {
+      return "Поток выглядит стабильно: все проверенные документы прошли без замечаний.";
+    }
+
+    if (metrics.averageScore != null && metrics.averageScore >= 4) {
+      return "Качество потока хорошее: большинство документов близки к требованиям выбранных профилей.";
+    }
+
+    return "Есть потенциал для улучшения: проверьте недавние отчёты и обновите профили, которые используются чаще всего.";
+  }, [metrics]);
 
   return (
-    <Box className={className} sx={{ minHeight: "100vh", bgcolor: "background.default", py: 4 }}>
-      {/* Header */}
-      <Box sx={{ px: { xs: 2, md: 4 }, mb: 4 }}>
-        <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
-          Хорошего дня, {user?.name || "гость"}! 👋
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Вот обзор вашей активности
-        </Typography>
-      </Box>
-
-      {/* Quick Actions */}
-      <Box
-        sx={{
-          px: { xs: 2, md: 4 },
-          mb: 4,
-          display: "flex",
-          gap: 2,
-          flexWrap: "wrap",
-        }}
-      >
-        <Button
-          variant="contained"
-          startIcon={<NoteAddOutlinedIcon />}
-          onClick={handleOpenUpload}
-          sx={{ textTransform: "none", fontWeight: 600 }}
-        >
-          新提交
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<AssessmentOutlinedIcon />}
-          sx={{ textTransform: "none", fontWeight: 600 }}
-        >
-          Мои отчеты
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<TuneOutlinedIcon />}
-          sx={{ textTransform: "none", fontWeight: 600 }}
-        >
-          Профили
-        </Button>
-      </Box>
-
-      {/* Statistics Grid */}
-      <Box sx={{ px: { xs: 2, md: 4 }, mb: 4 }}>
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-        >
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Всего документов"
-                value={totalDocuments}
-                icon={<FileCopyOutlinedIcon />}
-                isDark={isDark}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Успешно"
-                value={successCount}
-                icon={<CheckCircleOutlineIcon />}
-                isDark={isDark}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Средняя оценка"
-                value={Math.round(averageScore * 10) / 10}
-                icon={<AssessmentOutlinedIcon />}
-                isDark={isDark}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Сегодня"
-                value={
-                  history.filter((h: HistoryItem) => {
-                    const today = new Date().toDateString();
-                    return new Date(h.timestamp).toDateString() === today;
-                  }).length
-                }
-                icon={<NoteAddOutlinedIcon />}
-                isDark={isDark}
-              />
-            </Grid>
-          </Grid>
-        </motion.div>
-      </Box>
-
-      {/* Main Content Grid */}
-      <Box sx={{ px: { xs: 2, md: 4 } }}>
-        <Grid container spacing={3}>
-          {/* Activity Chart */}
-          <Grid item xs={12} md={8}>
-            <ActivityChart
-              history={history}
-              isDark={isDark}
-              textPrimary={textPrimary}
-              textMuted={textMuted}
-              borderColor={borderColor}
-            />
-          </Grid>
-
-          {/* Recent Files */}
-          <Grid item xs={12} md={4}>
-            <Box
-              sx={{
-                borderRadius: 1,
-                border: "1px solid",
-                borderColor,
-                overflow: "hidden",
-              }}
+    <div className={className}>
+      <div className="@container/main flex flex-1 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-6">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              title: "Всего проверок",
+              value: metrics.totalChecks,
+              hint: "Накопленная история по документам",
+              icon: <Files className="size-4" />,
+            },
+            {
+              title: "За 7 дней",
+              value: metrics.weekTotal,
+              hint: "Текущая недельная активность",
+              icon: <TrendingUp className="size-4" />,
+            },
+            {
+              title: "Средняя оценка",
+              value: formatScore(metrics.averageScore),
+              hint: "Средний итоговый score по отчётам",
+              icon: <ShieldCheck className="size-4" />,
+            },
+            {
+              title: "Исправлено автоматически",
+              value: metrics.correctedCount,
+              hint: "Документы с автокоррекцией",
+              icon: <SlidersHorizontal className="size-4" />,
+            },
+          ].map((item) => (
+            <Card
+              key={item.title}
+              className="border-[#2e2f2f] bg-gradient-to-b from-[#171717] to-[#222222] text-[#fafafa] shadow-sm"
             >
-              <Box
-                sx={{
-                  px: 3,
-                  py: 2.5,
-                  borderBottom: "1px solid",
-                  borderColor: "rgba(0,0,0,0.06)",
-                }}
-              >
-                <Typography sx={{ fontWeight: 600, fontSize: "0.9rem", color: textPrimary }}>
-                  Недавние файлы
-                </Typography>
-              </Box>
-              <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
-                {recentFiles.length > 0 ? (
-                  <motion.div variants={containerVariants} initial="hidden" animate="show">
-                    {recentFiles.map((file, idx) => (
-                      <RecentFileItem
-                        key={idx}
-                        name={file.fileName}
-                        status={file.status || "Готово"}
-                        date={new Date(file.timestamp).toLocaleDateString("ru-RU")}
-                        isDark={isDark}
-                        onClick={() => handleOpenRecent(idx)}
-                      />
-                    ))}
-                  </motion.div>
-                ) : (
-                  <Box sx={{ p: 3, textAlign: "center" }}>
-                    <Typography color="text.secondary">Нет файлов</Typography>
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          </Grid>
-        </Grid>
-      </Box>
-    </Box>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <CardDescription>{item.title}</CardDescription>
+                  <div className="flex size-9 items-center justify-center rounded-xl border border-[#2e2f2f] bg-[#171717] text-[#b6b6b6]">
+                    {item.icon}
+                  </div>
+                </div>
+                <CardTitle className="text-3xl tracking-[-0.05em]">{item.value}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 text-sm text-[#b6b6b6]">{item.hint}</CardContent>
+            </Card>
+          ))}
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+          <Card className="border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl tracking-[-0.04em]">Активность по дням</CardTitle>
+              <CardDescription>
+                Сколько документов запускалось в проверку за последние 7 дней.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="h-[280px] w-full rounded-xl border border-[#2e2f2f] bg-[#171717] p-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={weekActivity}
+                    margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="activityGradientPrimary" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                          offset="0%"
+                          stopColor="var(--dashboard-primary-line)"
+                          stopOpacity={0.42}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="var(--dashboard-primary-line)"
+                          stopOpacity={0.05}
+                        />
+                      </linearGradient>
+                      <linearGradient id="activityGradientSecondary" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                          offset="0%"
+                          stopColor="var(--dashboard-secondary-line)"
+                          stopOpacity={0.32}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="var(--dashboard-secondary-line)"
+                          stopOpacity={0.04}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#2e2f2f" />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      stroke="#9b9b9b"
+                    />
+                    <Tooltip
+                      cursor={{ stroke: "#2e2f2f", strokeWidth: 1 }}
+                      contentStyle={{
+                        borderRadius: 12,
+                        border: "1px solid #2e2f2f",
+                        background: "#171717",
+                        color: "#fafafa",
+                      }}
+                      formatter={(value: number) => `${value} проверок`}
+                      labelFormatter={(_, payload: any[]) => payload?.[0]?.payload?.fullDate || ""}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="trend"
+                      stroke="var(--dashboard-secondary-line)"
+                      fill="url(#activityGradientSecondary)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="var(--dashboard-primary-line)"
+                      fill="url(#activityGradientPrimary)"
+                      strokeWidth={2.5}
+                      dot={false}
+                      activeDot={{ r: 5 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl tracking-[-0.04em]">Быстрые переходы</CardTitle>
+              <CardDescription>Частые действия после проверки документа.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 pt-0">
+              {[
+                {
+                  title: "Открыть историю",
+                  description: "Просмотреть предыдущие проверки и оценки.",
+                  action: () => navigate("/history"),
+                },
+                {
+                  title: "Перейти в отчёты",
+                  description: "Открыть готовые результаты и выгрузки.",
+                  action: () => navigate("/reports"),
+                },
+                {
+                  title: "Управлять профилями",
+                  description: "Редактировать правила вуза и шаблоны.",
+                  action: () => navigate("/profiles"),
+                },
+              ].map((item) => (
+                <button
+                  key={item.title}
+                  type="button"
+                  onClick={item.action}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-[#2e2f2f] bg-[#171717] px-4 py-4 text-left transition-colors hover:bg-[#222222]"
+                >
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                    <p className="text-sm text-[#b6b6b6]">{item.description}</p>
+                  </div>
+                  <ArrowRight className="size-4 shrink-0 text-[#b6b6b6]" />
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
+          <Card className="border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl tracking-[-0.04em]">Последние документы</CardTitle>
+              <CardDescription>Последние результаты из истории проверок CURSA.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              {recentFiles.length > 0 ? (
+                recentFiles.map((item, index) => (
+                  <button
+                    key={`${item.id}-${index}`}
+                    type="button"
+                    onClick={() =>
+                      navigate("/report", {
+                        state: {
+                          reportData: item.reportData,
+                          fileName: item.fileName || item.document_name,
+                          profileId: item.profileId || item.profile_id,
+                          profileName: item.profileName || item.profile_name,
+                        },
+                      })
+                    }
+                    className="flex w-full items-center justify-between gap-4 rounded-2xl border border-[#2e2f2f] bg-[#171717] px-4 py-4 text-left transition-colors hover:bg-[#222222]"
+                  >
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {item.fileName || item.document_name || "Без названия"}
+                        </p>
+                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[11px]">
+                          {getStatusLabel(item)}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-[#b6b6b6]">
+                        <span>{new Date(getTimestampValue(item)).toLocaleString("ru-RU")}</span>
+                        <span>•</span>
+                        <span>{getIssuesCount(item)} замечаний</span>
+                        <span>•</span>
+                        <span>{getProfileLabel(item)}</span>
+                      </div>
+                    </div>
+                    <ArrowRight className="size-4 shrink-0 text-[#b6b6b6]" />
+                  </button>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-[#2e2f2f] bg-[#171717] px-5 py-10 text-center text-sm text-[#b6b6b6]">
+                  История пока пуста. Первая проверка сразу появится здесь.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl tracking-[-0.04em]">Качество потока</CardTitle>
+              <CardDescription>Краткая сводка по текущему состоянию проверок.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-0">
+              <div className="rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b6b6b6]">
+                  Документы без замечаний
+                </p>
+                <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
+                  {metrics.zeroIssuesCount}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b6b6b6]">
+                  Средний score
+                </p>
+                <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
+                  {formatScore(metrics.averageScore)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4 text-sm text-[#b6b6b6]">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="mt-0.5 size-4 text-[#b6b6b6]" />
+                  <span>{healthSummary}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </div>
   );
 };
 

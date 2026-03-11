@@ -1,167 +1,276 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Box, Paper, Typography, ToggleButton, ToggleButtonGroup, CircularProgress, Alert } from '@mui/material';
-import ViewQuiltIcon from '@mui/icons-material/ViewQuilt';
-import DifferenceIcon from '@mui/icons-material/Difference';
-import axios from 'axios';
-import DOMPurify from 'dompurify';
-import * as Diff from 'diff';
-import './DocumentViewer.css';
+import DifferenceIcon from "@mui/icons-material/Difference";
+import ViewQuiltIcon from "@mui/icons-material/ViewQuilt";
+import { Alert, Box, CircularProgress, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import * as Diff from "diff";
+import DOMPurify from "dompurify";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-const DocumentViewer = ({ originalPath, correctedPath }) => {
-    const [mode, setMode] = useState('split'); // 'split', 'diff'
-    const [originalHtml, setOriginalHtml] = useState('');
-    const [correctedHtml, setCorrectedHtml] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [diffElements, setDiffElements] = useState(null);
+import { getApiErrorMessage, previewsApi } from "../api/client";
+import "./DocumentViewer.css";
 
-    const leftPaneRef = useRef(null);
-    const rightPaneRef = useRef(null);
-    const isScrolling = useRef(false);
+const getSeverityTone = (severity) => {
+  switch (severity) {
+    case "critical":
+    case "error":
+      return "#f87171";
+    case "warning":
+      return "#fbbf24";
+    case "info":
+      return "#38bdf8";
+    default:
+      return "#94a3b8";
+  }
+};
 
-    useEffect(() => {
-        const fetchPreviews = async () => {
-            if (!originalPath && !correctedPath) return;
+const DocumentViewer = ({
+  originalPath,
+  correctedPath,
+  highlightedIssues = [],
+  activePhaseTitle,
+  activePhaseAccent = "#38bdf8",
+  isProcessing = false,
+}) => {
+  const [mode, setMode] = useState("split"); // 'split', 'diff'
+  const [originalHtml, setOriginalHtml] = useState("");
+  const [correctedHtml, setCorrectedHtml] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [diffElements, setDiffElements] = useState(null);
 
-            setLoading(true);
-            setError(null);
-            try {
-                const requests = [];
-                if (originalPath) requests.push(axios.post('/api/preview/generate', { path: originalPath }));
-                else requests.push(Promise.resolve({ data: { html: '<p>Нет исходного файла</p>' } }));
+  const leftPaneRef = useRef(null);
+  const rightPaneRef = useRef(null);
+  const isScrolling = useRef(false);
+  const visibleHighlights = useMemo(() => highlightedIssues.slice(0, 4), [highlightedIssues]);
 
-                if (correctedPath) requests.push(axios.post('/api/preview/generate', { path: correctedPath }));
-                else requests.push(Promise.resolve({ data: { html: '<p>Нет исправленного файла</p>' } }));
+  useEffect(() => {
+    const fetchPreviews = async () => {
+      if (!originalPath && !correctedPath) return;
 
-                const [origRes, corrRes] = await Promise.all(requests);
-                setOriginalHtml(origRes.data.html);
-                setCorrectedHtml(corrRes.data.html);
-            } catch (err) {
-                console.error("Error fetching previews:", err);
-                setError("Не удалось загрузить предпросмотр документа. Пожалуйста, убедитесь, что файлы существуют.");
-            } finally {
-                setLoading(false);
-            }
-        };
+      setLoading(true);
+      setError(null);
+      try {
+        const requests = [];
+        if (originalPath) requests.push(previewsApi.generate(originalPath));
+        else requests.push(Promise.resolve({ html: "<p>Нет исходного файла</p>" }));
 
-        fetchPreviews();
-    }, [originalPath, correctedPath]);
+        if (correctedPath) requests.push(previewsApi.generate(correctedPath));
+        else requests.push(Promise.resolve({ html: "<p>Нет исправленного файла</p>" }));
 
-    useEffect(() => {
-        if (mode === 'diff' && originalHtml && correctedHtml) {
-            // Compute diff
-            const parser = new DOMParser();
-            const docOrig = parser.parseFromString(originalHtml, 'text/html');
-            const docCorr = parser.parseFromString(correctedHtml, 'text/html');
-            
-            const textOrig = docOrig.body.textContent || "";
-            const textCorr = docCorr.body.textContent || "";
-            
-            const diff = Diff.diffWords(textOrig, textCorr);
-            
-            const elements = diff.map((part, index) => {
-                const className = part.added ? 'diff-added' : part.removed ? 'diff-removed' : '';
-                return (
-                    <span key={index} className={className}>
-                        {part.value}
-                    </span>
-                );
-            });
-            setDiffElements(elements);
-        }
-    }, [originalHtml, correctedHtml, mode]);
-
-    const handleScroll = (source) => (e) => {
-        if (mode !== 'split') return;
-        if (isScrolling.current) return;
-
-        isScrolling.current = true;
-        const target = source === 'left' ? rightPaneRef.current : leftPaneRef.current;
-        const sourceEl = e.target;
-
-        if (target) {
-            // Calculate percentage to handle different heights
-            const percentage = sourceEl.scrollTop / (sourceEl.scrollHeight - sourceEl.clientHeight);
-            target.scrollTop = percentage * (target.scrollHeight - target.clientHeight);
-        }
-
-        setTimeout(() => {
-            isScrolling.current = false;
-        }, 50);
+        const [origRes, corrRes] = await Promise.all(requests);
+        setOriginalHtml(origRes.html || "<p>Нет исходного файла</p>");
+        setCorrectedHtml(corrRes.html || "<p>Нет исправленного файла</p>");
+      } catch (err) {
+        console.error("Error fetching previews:", getApiErrorMessage(err));
+        setError(
+          getApiErrorMessage(
+            err,
+            "Не удалось загрузить предпросмотр документа. Пожалуйста, убедитесь, что файлы существуют.",
+          ),
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const handleModeChange = (event, newMode) => {
-        if (newMode !== null) {
-            setMode(newMode);
-        }
-    };
+    fetchPreviews();
+  }, [originalPath, correctedPath]);
 
-    if (loading) {
+  useEffect(() => {
+    if (mode === "diff" && originalHtml && correctedHtml) {
+      // Compute diff
+      const parser = new DOMParser();
+      const docOrig = parser.parseFromString(originalHtml, "text/html");
+      const docCorr = parser.parseFromString(correctedHtml, "text/html");
+
+      const textOrig = docOrig.body.textContent || "";
+      const textCorr = docCorr.body.textContent || "";
+
+      const diff = Diff.diffWords(textOrig, textCorr);
+
+      const elements = diff.map((part, index) => {
+        const className = part.added ? "diff-added" : part.removed ? "diff-removed" : "";
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-                <CircularProgress />
-            </Box>
+          <span key={index} className={className}>
+            {part.value}
+          </span>
         );
+      });
+      setDiffElements(elements);
+    }
+  }, [originalHtml, correctedHtml, mode]);
+
+  const handleScroll = (source) => (e) => {
+    if (mode !== "split") return;
+    if (isScrolling.current) return;
+
+    isScrolling.current = true;
+    const target = source === "left" ? rightPaneRef.current : leftPaneRef.current;
+    const sourceEl = e.target;
+
+    if (target) {
+      // Calculate percentage to handle different heights
+      const percentage = sourceEl.scrollTop / (sourceEl.scrollHeight - sourceEl.clientHeight);
+      target.scrollTop = percentage * (target.scrollHeight - target.clientHeight);
     }
 
-    if (error) {
-        return (
-            <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
-        );
-    }
+    setTimeout(() => {
+      isScrolling.current = false;
+    }, 50);
+  };
 
+  const handleModeChange = (event, newMode) => {
+    if (newMode !== null) {
+      setMode(newMode);
+    }
+  };
+
+  if (loading) {
     return (
-        <div className="document-viewer-container">
-            <div className="viewer-controls">
-                <ToggleButtonGroup
-                    value={mode}
-                    exclusive
-                    onChange={handleModeChange}
-                    aria-label="view mode"
-                    size="small"
-                >
-                    <ToggleButton value="split" aria-label="split view">
-                        <ViewQuiltIcon sx={{ mr: 1 }} /> Сравнение
-                    </ToggleButton>
-                    <ToggleButton value="diff" aria-label="diff view">
-                        <DifferenceIcon sx={{ mr: 1 }} /> Различия
-                    </ToggleButton>
-                </ToggleButtonGroup>
-            </div>
-
-            <div className="viewer-content">
-                {mode === 'split' ? (
-                    <>
-                        <div className="doc-pane">
-                            <div className="doc-pane-header">Оригинал</div>
-                            <div 
-                                className="doc-pane-body" 
-                                ref={leftPaneRef}
-                                onScroll={handleScroll('left')}
-                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(originalHtml) }}
-                            />
-                        </div>
-                        <div className="doc-pane">
-                            <div className="doc-pane-header">Исправленный</div>
-                            <div 
-                                className="doc-pane-body" 
-                                ref={rightPaneRef}
-                                onScroll={handleScroll('right')}
-                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(correctedHtml) }}
-                            />
-                        </div>
-                    </>
-                ) : (
-                    <div className="doc-pane" style={{ width: '100%' }}>
-                        <div className="doc-pane-header">Текстовые различия</div>
-                        <div className="doc-pane-body diff-view-container">
-                            {diffElements}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+      <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+        <CircularProgress />
+      </Box>
     );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mt: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="document-viewer-container">
+      {(activePhaseTitle || visibleHighlights.length > 0) && (
+        <div className="viewer-stage-summary" data-testid="document-viewer-stage-summary">
+          {activePhaseTitle && (
+            <div
+              className="viewer-phase-pill"
+              style={{
+                borderColor: `${activePhaseAccent}66`,
+                background: `${activePhaseAccent}1a`,
+                color: activePhaseAccent,
+              }}
+            >
+              {isProcessing ? "Сейчас сканируем" : "Фокус проверки"}: {activePhaseTitle}
+            </div>
+          )}
+          {visibleHighlights.length > 0 && (
+            <div className="viewer-highlight-count">Фокусных зон: {visibleHighlights.length}</div>
+          )}
+        </div>
+      )}
+
+      <div className="viewer-controls">
+        <ToggleButtonGroup
+          value={mode}
+          exclusive
+          onChange={handleModeChange}
+          aria-label="view mode"
+          size="small"
+        >
+          <ToggleButton value="split" aria-label="split view">
+            <ViewQuiltIcon sx={{ mr: 1 }} /> Сравнение
+          </ToggleButton>
+          <ToggleButton value="diff" aria-label="diff view">
+            <DifferenceIcon sx={{ mr: 1 }} /> Различия
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </div>
+
+      {visibleHighlights.length > 0 && (
+        <div className="viewer-highlight-rail" data-testid="viewer-highlight-rail">
+          {visibleHighlights.map((issue) => (
+            <div
+              key={issue.id}
+              className="viewer-highlight-card"
+              style={{ borderColor: `${getSeverityTone(issue.severity)}55` }}
+            >
+              <div className="viewer-highlight-card-top">
+                <span
+                  className="viewer-highlight-dot"
+                  style={{ backgroundColor: getSeverityTone(issue.severity) }}
+                />
+                <span className="viewer-highlight-title">{issue.title}</span>
+              </div>
+              <div className="viewer-highlight-meta">{issue.location}</div>
+              <div className="viewer-highlight-status">{issue.status}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="viewer-content">
+        {mode === "split" ? (
+          <>
+            <div className="doc-pane" style={{ "--viewer-accent": activePhaseAccent }}>
+              <div className="doc-pane-header">
+                <span>Оригинал</span>
+                {activePhaseTitle && (
+                  <span className="doc-pane-phase">Фаза: {activePhaseTitle}</span>
+                )}
+              </div>
+              <div className="doc-pane-stage">
+                <div
+                  className={`doc-pane-body${isProcessing ? " doc-pane-body-processing" : ""}`}
+                  ref={leftPaneRef}
+                  onScroll={handleScroll("left")}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(originalHtml) }}
+                />
+                {(activePhaseTitle || isProcessing) && (
+                  <div className="doc-pane-overlay">
+                    <div className="doc-pane-focus-caption">
+                      {isProcessing
+                        ? "Идёт проход по документу"
+                        : "Показываем активную зону проверки"}
+                    </div>
+                    <div className={`doc-scanline${isProcessing ? " doc-scanline-active" : ""}`} />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="doc-pane" style={{ "--viewer-accent": activePhaseAccent }}>
+              <div className="doc-pane-header">
+                <span>Исправленный</span>
+                {activePhaseTitle && (
+                  <span className="doc-pane-phase">Фокус: {activePhaseTitle}</span>
+                )}
+              </div>
+              <div className="doc-pane-stage">
+                <div
+                  className={`doc-pane-body${isProcessing ? " doc-pane-body-processing" : ""}`}
+                  ref={rightPaneRef}
+                  onScroll={handleScroll("right")}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(correctedHtml) }}
+                />
+                {(activePhaseTitle || isProcessing) && (
+                  <div className="doc-pane-overlay">
+                    <div className="doc-pane-focus-caption doc-pane-focus-caption-success">
+                      {isProcessing
+                        ? "Подсвечиваем фрагменты, которые сейчас нормализуются"
+                        : "Здесь виден уже исправленный результат"}
+                    </div>
+                    <div className={`doc-scanline${isProcessing ? " doc-scanline-active" : ""}`} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="doc-pane" style={{ width: "100%" }}>
+            <div className="doc-pane-header">
+              <span>Текстовые различия</span>
+              <span className="doc-pane-phase doc-pane-phase-diff">
+                Зелёный = добавлено, красный = убрано
+              </span>
+            </div>
+            <div className="doc-pane-body diff-view-container">{diffElements}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default DocumentViewer;

@@ -40,7 +40,6 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
-  Grid,
   IconButton,
   InputLabel,
   LinearProgress,
@@ -70,17 +69,45 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import axios, { AxiosError } from "axios";
-import { FC, ReactNode, useEffect, useState } from "react";
+import { FC, ReactNode, useEffect, useRef, useState } from "react";
 
-import NotificationsPanel from "../components/NotificationsPanel";
+import { adminApi, getApiErrorMessage } from "../api/client";
 
-const isLocal =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-const API_BASE = isLocal
-  ? "http://localhost:5000"
-  : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
+interface GridCompatProps {
+  children: ReactNode;
+  container?: boolean;
+  spacing?: number;
+  xs?: number;
+  md?: number;
+  lg?: number;
+  sx?: Record<string, unknown>;
+}
+
+const Grid: FC<GridCompatProps> = ({
+  children,
+  container = false,
+  spacing = 0,
+  xs = 12,
+  md,
+  lg,
+  sx,
+}) => {
+  const baseStyles = container
+    ? {
+        display: "grid",
+        gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+        gap: spacing * 8,
+      }
+    : {
+        gridColumn: {
+          xs: `span ${xs} / span ${xs}`,
+          md: md ? `span ${md} / span ${md}` : undefined,
+          lg: lg ? `span ${lg} / span ${lg}` : undefined,
+        },
+      };
+
+  return <Box sx={{ ...baseStyles, ...(sx || {}) }}>{children}</Box>;
+};
 
 /**
  * TabPanelProps interface
@@ -343,6 +370,10 @@ const AdminPage: FC<AdminPageProps> = () => {
   });
   const [alertsConfig, setAlertsConfig] = useState<AlertsConfig | null>(null);
 
+  const setLoadingState = (key: keyof LoadingState, value: boolean): void => {
+    setLoading((prev) => ({ ...prev, [key]: value }));
+  };
+
   /**
    * Format bytes to readable size
    *
@@ -376,22 +407,17 @@ const AdminPage: FC<AdminPageProps> = () => {
    * Fetch list of corrected files
    */
   const fetchFiles = async (): Promise<void> => {
-    setLoading({ ...loading, files: true });
+    setLoadingState("files", true);
     try {
-      const { data } = await axios.get<{ files: File[] }>(
-        `${API_BASE}/api/document/list-corrections`,
-      );
+      const data = await adminApi.listCorrections<File>();
       setFiles(data.files || []);
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при получении списка файлов: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при получении списка файлов: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
-      setLoading({ ...loading, files: false });
+      setLoadingState("files", false);
     }
   };
 
@@ -401,7 +427,7 @@ const AdminPage: FC<AdminPageProps> = () => {
    * @param filename - File name to download
    */
   const downloadFile = (filename: string): void => {
-    window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filename)}`;
+    window.location.href = adminApi.getCorrectionDownloadUrl(filename);
   };
 
   /**
@@ -410,11 +436,9 @@ const AdminPage: FC<AdminPageProps> = () => {
    * @param filename - File name to delete
    */
   const deleteFile = async (filename: string): Promise<void> => {
-    setLoading({ ...loading, deleteFile: true });
+    setLoadingState("deleteFile", true);
     try {
-      const { data } = await axios.delete<{ success: boolean }>(
-        `${API_BASE}/api/document/admin/files/${filename}`,
-      );
+      const data = await adminApi.deleteCorrection(filename);
       if (data.success) {
         showAlert(`Файл ${filename} успешно удален`, "success");
         await fetchFiles();
@@ -422,15 +446,9 @@ const AdminPage: FC<AdminPageProps> = () => {
         showAlert("Ошибка при удалении файла", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при удалении файла: ${errorMsg}`, "error");
+      showAlert(`Ошибка при удалении файла: ${getApiErrorMessage(err, "Unknown error")}`, "error");
     } finally {
-      setLoading({ ...loading, deleteFile: false });
+      setLoadingState("deleteFile", false);
       setDeleteDialogOpen(false);
     }
   };
@@ -439,13 +457,9 @@ const AdminPage: FC<AdminPageProps> = () => {
    * Cleanup old files
    */
   const cleanupFiles = async (): Promise<void> => {
-    setLoading({ ...loading, cleanup: true });
+    setLoadingState("cleanup", true);
     try {
-      const { data } = await axios.post<{
-        success: boolean;
-        deleted_count: number;
-        kept_count: number;
-      }>(`${API_BASE}/api/document/admin/cleanup`, { days: cleanupDays });
+      const data = await adminApi.cleanupCorrections(cleanupDays);
 
       if (data.success) {
         showAlert(
@@ -457,15 +471,9 @@ const AdminPage: FC<AdminPageProps> = () => {
         showAlert("Ошибка при очистке файлов", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при очистке файлов: ${errorMsg}`, "error");
+      showAlert(`Ошибка при очистке файлов: ${getApiErrorMessage(err, "Unknown error")}`, "error");
     } finally {
-      setLoading({ ...loading, cleanup: false });
+      setLoadingState("cleanup", false);
       setCleanupDialogOpen(false);
     }
   };
@@ -474,22 +482,14 @@ const AdminPage: FC<AdminPageProps> = () => {
    * Fetch system logs
    */
   const fetchLogs = async (): Promise<void> => {
-    setLoading({ ...loading, logs: true });
+    setLoadingState("logs", true);
     try {
-      const { data } = await axios.get<{ logs: string[] }>(
-        `${API_BASE}/api/document/admin/logs?lines=${logsLines}`,
-      );
+      const data = await adminApi.getLogs(logsLines);
       setLogs(data.logs || []);
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при получении логов: ${errorMsg}`, "error");
+      showAlert(`Ошибка при получении логов: ${getApiErrorMessage(err, "Unknown error")}`, "error");
     } finally {
-      setLoading({ ...loading, logs: false });
+      setLoadingState("logs", false);
     }
   };
 
@@ -497,12 +497,9 @@ const AdminPage: FC<AdminPageProps> = () => {
    * Create backup of logs
    */
   const backupLogs = async (): Promise<void> => {
-    setLoading({ ...loading, backupLogs: true });
+    setLoadingState("backupLogs", true);
     try {
-      const { data } = await axios.post<{ success: boolean }>(
-        `${API_BASE}/api/document/admin/backup/logs`,
-        { clear_after_backup: clearLogsAfterBackup },
-      );
+      const data = await adminApi.backupLogs(clearLogsAfterBackup);
 
       if (data.success) {
         showAlert("Резервная копия логов успешно создана", "success");
@@ -514,15 +511,12 @@ const AdminPage: FC<AdminPageProps> = () => {
         showAlert("Ошибка при создании резервной копии логов", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при создании резервной копии: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при создании резервной копии: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
-      setLoading({ ...loading, backupLogs: false });
+      setLoadingState("backupLogs", false);
     }
   };
 
@@ -530,22 +524,17 @@ const AdminPage: FC<AdminPageProps> = () => {
    * Fetch log backups
    */
   const fetchLogBackups = async (): Promise<void> => {
-    setLoading({ ...loading, logBackups: true });
+    setLoadingState("logBackups", true);
     try {
-      const { data } = await axios.get<{ backups: LogBackup[] }>(
-        `${API_BASE}/api/document/admin/backup/logs`,
-      );
+      const data = await adminApi.listLogBackups<LogBackup>();
       setLogBackups(data.backups || []);
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при получении резервных копий: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при получении резервных копий: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
-      setLoading({ ...loading, logBackups: false });
+      setLoadingState("logBackups", false);
     }
   };
 
@@ -554,10 +543,10 @@ const AdminPage: FC<AdminPageProps> = () => {
    */
   const restoreLogs = async (): Promise<void> => {
     if (!backupToRestore) return;
-    setLoading({ ...loading, restoreLogs: true });
+    setLoadingState("restoreLogs", true);
     try {
-      const { data } = await axios.post<{ success: boolean }>(
-        `${API_BASE}/api/document/admin/backup/logs/restore/${backupToRestore}`,
+      const data = await adminApi.restoreLogs<{ success: boolean }, RestoreOptions>(
+        backupToRestore,
         restoreOptions,
       );
 
@@ -569,15 +558,12 @@ const AdminPage: FC<AdminPageProps> = () => {
         showAlert("Ошибка при восстановлении логов", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при восстановлении логов: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при восстановлении логов: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
-      setLoading({ ...loading, restoreLogs: false });
+      setLoadingState("restoreLogs", false);
       setRestoreDialogOpen(false);
     }
   };
@@ -587,11 +573,9 @@ const AdminPage: FC<AdminPageProps> = () => {
    */
   const deleteLogBackup = async (): Promise<void> => {
     if (!backupToDelete) return;
-    setLoading({ ...loading, deleteLogBackup: true });
+    setLoadingState("deleteLogBackup", true);
     try {
-      const { data } = await axios.delete<{ success: boolean }>(
-        `${API_BASE}/api/document/admin/backup/logs/${backupToDelete}`,
-      );
+      const data = await adminApi.deleteLogBackup(backupToDelete);
 
       if (data.success) {
         showAlert(`Резервная копия логов ${backupToDelete} успешно удалена`, "success");
@@ -600,15 +584,12 @@ const AdminPage: FC<AdminPageProps> = () => {
         showAlert("Ошибка при удалении резервной копии логов", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при удалении резервной копии: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при удалении резервной копии: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
-      setLoading({ ...loading, deleteLogBackup: false });
+      setLoadingState("deleteLogBackup", false);
       setDeleteBackupDialogOpen(false);
     }
   };
@@ -619,33 +600,28 @@ const AdminPage: FC<AdminPageProps> = () => {
    * @param filename - Backup file name
    */
   const downloadLogBackup = (filename: string): void => {
-    window.location.href = `${API_BASE}/api/document/admin/backup/logs/download/${encodeURIComponent(
-      filename,
-    )}`;
+    window.location.href = adminApi.getLogBackupDownloadUrl(filename);
   };
 
   /**
    * Fetch system information
    */
   const fetchSystemInfo = async (): Promise<void> => {
-    setLoading({ ...loading, systemInfo: true });
+    setLoadingState("systemInfo", true);
     try {
-      const { data } = await axios.get<SystemInfo>(`${API_BASE}/api/document/admin/system-info`);
+      const data = await adminApi.getSystemInfo<SystemInfo>();
       if (data.success) {
         setSystemInfo(data);
       } else {
         showAlert("Ошибка при получении системной информации", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при получении системной информации: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при получении системной информации: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
-      setLoading({ ...loading, systemInfo: false });
+      setLoadingState("systemInfo", false);
     }
   };
 
@@ -655,22 +631,17 @@ const AdminPage: FC<AdminPageProps> = () => {
   const fetchStatistics = async (): Promise<void> => {
     setStatisticsLoading(true);
     try {
-      const { data } = await axios.get<{ success: boolean; statistics: Statistics }>(
-        `${API_BASE}/api/document/admin/statistics?days=${statisticsPeriod}`,
-      );
+      const data = await adminApi.getStatistics<Statistics>(statisticsPeriod);
       if (data.success) {
         setStatistics(data.statistics);
       } else {
         showAlert("Ошибка при получении статистики", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при получении статистики: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при получении статистики: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
       setStatisticsLoading(false);
     }
@@ -682,22 +653,17 @@ const AdminPage: FC<AdminPageProps> = () => {
   const fetchAlertsConfig = async (): Promise<void> => {
     setAlertsConfigLoading(true);
     try {
-      const { data } = await axios.get<{ success: boolean; config: AlertsConfig }>(
-        `${API_BASE}/api/document/admin/alerts/config`,
-      );
+      const data = await adminApi.getAlertsConfig<AlertsConfig>();
       if (data.success) {
         setAlertsConfig(data.config);
       } else {
         showAlert("Ошибка при получении настроек оповещений", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при получении настроек оповещений: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при получении настроек оповещений: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
       setAlertsConfigLoading(false);
     }
@@ -711,10 +677,7 @@ const AdminPage: FC<AdminPageProps> = () => {
   const updateAlertsConfig = async (newConfig: AlertsConfig): Promise<void> => {
     setAlertsConfigUpdating(true);
     try {
-      const { data } = await axios.post<{ success: boolean }>(
-        `${API_BASE}/api/document/admin/alerts/config`,
-        newConfig,
-      );
+      const data = await adminApi.updateAlertsConfig(newConfig);
       if (data.success) {
         showAlert("Настройки оповещений успешно обновлены", "success");
         await fetchAlertsConfig();
@@ -722,17 +685,17 @@ const AdminPage: FC<AdminPageProps> = () => {
         showAlert("Ошибка при обновлении настроек оповещений", "error");
       }
     } catch (err) {
-      const errorMsg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? (err.response.data as { error: string }).error
-          : err instanceof Error
-            ? err.message
-            : "Unknown error";
-      showAlert(`Ошибка при обновлении настроек: ${errorMsg}`, "error");
+      showAlert(
+        `Ошибка при обновлении настроек: ${getApiErrorMessage(err, "Unknown error")}`,
+        "error",
+      );
     } finally {
       setAlertsConfigUpdating(false);
     }
   };
+
+  void alertsConfigUpdating;
+  void updateAlertsConfig;
 
   /**
    * Export system info to file
@@ -740,7 +703,7 @@ const AdminPage: FC<AdminPageProps> = () => {
    * @param format - Export format (txt or csv)
    */
   const exportSystemInfo = (format: "txt" | "csv" = "txt"): void => {
-    window.location.href = `${API_BASE}/api/document/admin/system-info/export?format=${format}`;
+    window.location.href = adminApi.getSystemInfoExportUrl(format);
   };
 
   /**
@@ -749,7 +712,25 @@ const AdminPage: FC<AdminPageProps> = () => {
    * @param format - Export format (txt or csv)
    */
   const exportStatistics = (format: "txt" | "csv" = "txt"): void => {
-    window.location.href = `${API_BASE}/api/document/admin/statistics/export?days=${statisticsPeriod}&format=${format}`;
+    window.location.href = adminApi.getStatisticsExportUrl(statisticsPeriod, format);
+  };
+
+  const adminActionsRef = useRef({
+    fetchFiles,
+    fetchLogs,
+    fetchLogBackups,
+    fetchSystemInfo,
+    fetchStatistics,
+    fetchAlertsConfig,
+  });
+
+  adminActionsRef.current = {
+    fetchFiles,
+    fetchLogs,
+    fetchLogBackups,
+    fetchSystemInfo,
+    fetchStatistics,
+    fetchAlertsConfig,
   };
 
   /**
@@ -790,51 +771,46 @@ const AdminPage: FC<AdminPageProps> = () => {
   // Initialize data on tab change
   useEffect(() => {
     if (tabValue === 0) {
-      fetchFiles();
+      void adminActionsRef.current.fetchFiles();
     } else if (tabValue === 1) {
-      fetchLogs();
-      fetchLogBackups();
+      void adminActionsRef.current.fetchLogs();
+      void adminActionsRef.current.fetchLogBackups();
     } else if (tabValue === 2) {
-      fetchSystemInfo();
-      fetchStatistics();
+      void adminActionsRef.current.fetchSystemInfo();
+      void adminActionsRef.current.fetchStatistics();
     } else if (tabValue === 3) {
-      fetchAlertsConfig();
+      void adminActionsRef.current.fetchAlertsConfig();
     }
   }, [tabValue]);
 
   // Refresh statistics when period changes
   useEffect(() => {
     if (tabValue === 2) {
-      fetchStatistics();
+      void adminActionsRef.current.fetchStatistics();
     }
-  }, [statisticsPeriod]);
+  }, [statisticsPeriod, tabValue]);
 
   return (
     <Container maxWidth="lg">
       {/* Header */}
       <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, mb: 1 }}>
+        <Typography variant="h4" component="h1">
           Панель администратора
         </Typography>
-        <NotificationsPanel onNotificationRead={fetchAlertsConfig} />
       </Box>
 
-      {/* Tabs */}
       <Paper sx={{ width: "100%", mb: 4 }}>
         <Tabs
           value={tabValue}
           onChange={(_, newValue): void => setTabValue(newValue)}
-          indicatorColor="primary"
           textColor="primary"
           variant="fullWidth"
         >
           <Tab label="Файлы" />
-          <Tab label="Журналы" />
+          <Tab label="Логи" />
           <Tab label="Обслуживание" />
           <Tab label="Оповещения" />
         </Tabs>
-
-        {/* ──FILE MANAGEMENT TAB── */}
         <TabPanel value={tabValue} index={0}>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="h6" component="h2">
@@ -977,7 +953,7 @@ const AdminPage: FC<AdminPageProps> = () => {
             >
               <List dense>
                 {logs.map((logLine, index) => {
-                  const { icon, color, text } = formatLogLine(logLine);
+                  const { icon, text } = formatLogLine(logLine);
                   return (
                     <ListItem key={index} divider>
                       <ListItemIcon sx={{ minWidth: 36 }}>{icon}</ListItemIcon>
@@ -1104,7 +1080,9 @@ const AdminPage: FC<AdminPageProps> = () => {
             </Typography>
             <Button
               startIcon={<RefreshIcon />}
-              onClick={(): Promise<void> => Promise.all([fetchSystemInfo(), fetchStatistics()])}
+              onClick={async (): Promise<void> => {
+                await Promise.all([fetchSystemInfo(), fetchStatistics()]);
+              }}
               disabled={loading.systemInfo || statisticsLoading}
             >
               Обновить данные
@@ -1113,7 +1091,7 @@ const AdminPage: FC<AdminPageProps> = () => {
 
           <Grid container spacing={3}>
             {/* Cleanup card */}
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <Card variant="outlined">
                 <CardHeader
                   title="Очистка старых файлов"
@@ -1144,7 +1122,7 @@ const AdminPage: FC<AdminPageProps> = () => {
             </Grid>
 
             {/* Export card */}
-            <Grid item xs={12} md={6}>
+            <Grid xs={12} md={6}>
               <Card variant="outlined">
                 <CardHeader
                   title="Отчеты и статистика"
@@ -1178,7 +1156,7 @@ const AdminPage: FC<AdminPageProps> = () => {
                         <InputLabel>Период статистики</InputLabel>
                         <Select
                           value={statisticsPeriod}
-                          onChange={(e): void => setStatisticsPeriod(parseInt(e.target.value))}
+                          onChange={(e): void => setStatisticsPeriod(Number(e.target.value))}
                           label="Период статистики"
                         >
                           <MenuItem value={7}>Последние 7 дней</MenuItem>
@@ -1216,7 +1194,7 @@ const AdminPage: FC<AdminPageProps> = () => {
 
             {/* System info card */}
             {systemInfo && (
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <Card variant="outlined">
                   <CardHeader
                     title="Информация о системе"
@@ -1324,7 +1302,7 @@ const AdminPage: FC<AdminPageProps> = () => {
 
             {/* Disk usage card */}
             {systemInfo && (
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <Card variant="outlined">
                   <CardHeader
                     title="Использование дисков"
@@ -1334,7 +1312,7 @@ const AdminPage: FC<AdminPageProps> = () => {
                   <CardContent>
                     <Grid container spacing={2}>
                       {Object.entries(systemInfo.system.disk_usage).map(([mountpoint, usage]) => (
-                        <Grid item xs={12} md={6} lg={4} key={mountpoint}>
+                        <Grid xs={12} md={6} lg={4} key={mountpoint}>
                           <Paper variant="outlined" sx={{ p: 2 }}>
                             <Typography variant="subtitle1" gutterBottom>
                               {mountpoint}
@@ -1390,7 +1368,7 @@ const AdminPage: FC<AdminPageProps> = () => {
             )}
 
             {/* Statistics section */}
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Typography variant="h6" component="h3" sx={{ mb: 2, mt: 2 }}>
                 Статистика использования системы
               </Typography>
@@ -1402,7 +1380,7 @@ const AdminPage: FC<AdminPageProps> = () => {
               ) : statistics ? (
                 <Grid container spacing={3}>
                   {/* Files statistics card */}
-                  <Grid item xs={12} md={6}>
+                  <Grid xs={12} md={6}>
                     <Card variant="outlined">
                       <CardHeader
                         title="Статистика файлов"
@@ -1456,7 +1434,7 @@ const AdminPage: FC<AdminPageProps> = () => {
                   </Grid>
 
                   {/* Logs statistics card */}
-                  <Grid item xs={12} md={6}>
+                  <Grid xs={12} md={6}>
                     <Card variant="outlined">
                       <CardHeader
                         title="Статистика журналов"
@@ -1507,7 +1485,7 @@ const AdminPage: FC<AdminPageProps> = () => {
                   </Grid>
 
                   {/* Weekday stats card */}
-                  <Grid item xs={12}>
+                  <Grid xs={12}>
                     <Card variant="outlined">
                       <CardHeader
                         title="Активность по дням недели"
@@ -1516,7 +1494,7 @@ const AdminPage: FC<AdminPageProps> = () => {
                       />
                       <CardContent>
                         <Grid container spacing={2}>
-                          <Grid item xs={12} md={6}>
+                          <Grid xs={12} md={6}>
                             <Typography variant="subtitle1" gutterBottom>
                               Файлы по дням недели
                             </Typography>
@@ -1541,7 +1519,7 @@ const AdminPage: FC<AdminPageProps> = () => {
                               </Table>
                             </TableContainer>
                           </Grid>
-                          <Grid item xs={12} md={6}>
+                          <Grid xs={12} md={6}>
                             <Typography variant="subtitle1" gutterBottom>
                               Логи по дням недели
                             </Typography>
@@ -1602,7 +1580,7 @@ const AdminPage: FC<AdminPageProps> = () => {
             </Box>
           ) : alertsConfig ? (
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <Typography variant="subtitle1" gutterBottom>
                   К реализации оставшихся функций оповещений требуется дополнительная настройка
                   бэкенда.

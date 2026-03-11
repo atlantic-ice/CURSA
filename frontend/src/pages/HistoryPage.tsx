@@ -18,16 +18,10 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import { SearchField } from "../components/ui/search-field";
-import type { HistoryItem, LocationState } from "../types";
+import type { CheckHistoryContextType, HistoryItem, LocationState } from "../types";
 
 interface HistoryPageProps {
   className?: string;
-}
-
-interface CheckHistoryContextType {
-  history: HistoryItem[];
-  removeFromHistory: (id: string) => void;
-  clearHistory: () => void;
 }
 
 const isLocal =

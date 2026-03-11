@@ -1,52 +1,31 @@
-import {
-  ArrowForwardRounded,
-  DarkModeRounded,
-  DescriptionRounded,
-  InsertDriveFileRounded,
-  LightModeRounded,
-} from "@mui/icons-material";
-import {
-  Avatar,
-  Box,
-  Button,
-  IconButton,
-  LinearProgress,
-  Theme,
-  Tooltip,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpRight, FileText, PanelsTopLeft, Settings, UploadCloud } from "lucide-react";
 import { FC, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { DropzoneOptions, useDropzone } from "react-dropzone";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { AuthContext, CheckHistoryContext, ColorModeContext } from "../App";
+import { CheckHistoryContext } from "../App";
 import { documentsApi } from "../api/client";
-import usePageStyles from "../hooks/usePageStyles";
-import BrandLogo from "../components/BrandLogo";
-import type { User, ValidationReport } from "../types";
+import AppPageLayout from "../components/layout/AppPageLayout";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent } from "../components/ui/card";
+import { cn } from "../lib/utils";
+import type { ValidationReport } from "../types";
 
-/**
- * Upload page interface
- */
 interface UploadPageProps {
   className?: string;
 }
 
-/**
- * Profile type from API
- */
 interface Profile {
   id: string;
   name: string;
   university: string;
-  rules?: Record<string, unknown>;
+  description?: string;
+  is_system?: boolean;
 }
 
-/**
- * History item type
- */
 interface HistoryItem {
   fileName: string;
   timestamp: number;
@@ -56,153 +35,97 @@ interface HistoryItem {
   profileId: string;
 }
 
-/**
- * Toast style type
- */
-interface ToastStyleType {
-  background: string;
-  color: string;
-  border: string;
-  borderRadius: string;
-  boxShadow: string;
-}
-
-/**
- * Auth Context type
- */
-interface AuthContextType {
-  user: User | null;
-}
-
-/**
- * Check History Context type
- */
 interface CheckHistoryContextType {
   addToHistory: (item: HistoryItem) => void;
 }
 
-/**
- * Color Mode Context type
- */
-interface ColorModeContextType {
-  toggleColorMode: () => void;
-}
+type ProfilesRouteMode = "manage" | "edit" | "import-export";
 
-/**
- * UploadPage Component
- *
- * Main page for document upload and initial analysis
- * Features:
- * - Drag-drop file upload
- * - Profile selection
- * - Document analysis with progress tracking
- * - Responsive design with animations
- * - Dark/light theme support
- */
 const UploadPage: FC<UploadPageProps> = ({ className = "" }) => {
-  const theme: Theme = useTheme();
-  const { textMuted: commonTextMuted, textSubtle: commonTextSubtle } = usePageStyles();
-  const colorMode = useContext(ColorModeContext) as ColorModeContextType;
-  const { addToHistory } = useContext(CheckHistoryContext) as CheckHistoryContextType;
-  const { user } = useContext(AuthContext) as AuthContextType;
+  const theme = useTheme();
   const navigate = useNavigate();
+  const { addToHistory } = useContext(CheckHistoryContext) as CheckHistoryContextType;
+  const isDark = theme.palette.mode === "dark";
 
-  // Theme-based colors
-  const isDark: boolean = theme.palette.mode === "dark";
-  const pageBg: string = isDark ? "#000000" : "#ffffff";
-  const cardBg: string = isDark ? "#1C1C1E" : "#F2F2F7";
-  const hoverBg: string = isDark ? "#2C2C2E" : "#EBEBF0";
-  const activeBg: string = isDark ? "#3A3A3C" : "#E5E5EA";
-  const textPrimary: string = isDark ? "#ffffff" : "#000000";
-  const textMuted: string = commonTextMuted;
-  const textSubtle: string = commonTextSubtle;
-  const subtleBg: string = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
-  const fileCardInnerBg: string = isDark ? "#2C2C2E" : "#ffffff";
-  const headerBg: string = isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.82)";
-  const iconBtnBg: string = isDark ? "#2C2C2E" : "#F2F2F7";
-  const iconBtnHover: string = isDark ? "#3A3A3C" : "#E5E5EA";
-  const iconColor: string = isDark ? "rgba(235,235,245,0.7)" : "rgba(0,0,0,0.5)";
-  const processingBarColor: string = isDark
-    ? "linear-gradient(90deg, transparent, #ffffff, transparent)"
-    : "linear-gradient(90deg, transparent, #000000, transparent)";
-
-  // Toast styling
-  const toastStyle: ToastStyleType = useMemo(
+  const toastStyle = useMemo(
     () => ({
-      background: isDark ? "#1C1C1E" : "#ffffff",
-      color: textPrimary,
-      border: "none",
-      borderRadius: "14px",
-      boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.4)" : "0 4px 24px rgba(0,0,0,0.08)",
+      background: isDark ? "#121214" : "#ffffff",
+      color: isDark ? "#ffffff" : "#111111",
+      border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(17,17,17,0.08)",
+      borderRadius: "16px",
+      boxShadow: isDark ? "0 20px 60px rgba(0,0,0,0.35)" : "0 18px 40px rgba(17,17,17,0.08)",
     }),
-    [isDark, textPrimary],
+    [isDark],
   );
 
-  // State management
-  const [isHovered, setIsHovered] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>("default_gost");
 
-  /**
-   * Load available profiles on component mount
-   */
+  const selectedProfileData = useMemo(() => {
+    return profiles.find((profile) => profile.id === selectedProfile) ?? null;
+  }, [profiles, selectedProfile]);
+
+  const profileKindLabel = useMemo(() => {
+    if (!selectedProfileData) {
+      return "Базовый";
+    }
+
+    if (selectedProfileData.is_system || selectedProfileData.id.startsWith("default")) {
+      return "Системный";
+    }
+
+    return "Пользовательский";
+  }, [selectedProfileData]);
+
   useEffect((): void => {
     const loadProfiles = async (): Promise<void> => {
       try {
         const accessToken = localStorage.getItem("access_token") || undefined;
-        const profiles = await documentsApi.getProfiles(accessToken);
-        if (Array.isArray(profiles) && profiles.length > 0) {
-          setProfiles(profiles as Profile[]);
-          const saved = localStorage.getItem("cursa_profile");
-          if (saved && profiles.find((p) => (p as Profile).id === saved)) {
-            setSelectedProfile(saved);
+        const loadedProfiles = await documentsApi.getProfiles(accessToken);
+
+        if (Array.isArray(loadedProfiles) && loadedProfiles.length > 0) {
+          setProfiles(loadedProfiles as Profile[]);
+          const savedProfile = localStorage.getItem("cursa_profile");
+          if (
+            savedProfile &&
+            loadedProfiles.find((profile) => (profile as Profile).id === savedProfile)
+          ) {
+            setSelectedProfile(savedProfile);
           }
         }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Не удалось загрузить профили";
-        console.error("Failed to load profiles:", msg);
+        const message = error instanceof Error ? error.message : "Не удалось загрузить профили";
+        console.error("Failed to load profiles:", message);
       }
     };
 
     loadProfiles();
   }, []);
 
-  /**
-   * Handle file drop/selection
-   */
   const onDrop = useCallback(
     (acceptedFiles: File[]): void => {
-      if (acceptedFiles.length === 0) return;
+      if (!acceptedFiles.length) return;
 
-      const selected = acceptedFiles[0];
-
-      // Validate file format
-      if (!selected.name.toLowerCase().endsWith(".docx")) {
+      const selectedFile = acceptedFiles[0];
+      if (!selectedFile.name.toLowerCase().endsWith(".docx")) {
         toast.error("Поддерживается только формат .docx", { style: toastStyle });
         return;
       }
 
-      // Validate file size (20MB limit)
-      if (selected.size > 20 * 1024 * 1024) {
+      if (selectedFile.size > 20 * 1024 * 1024) {
         toast.error("Файл слишком велик (макс 20 МБ)", { style: toastStyle });
         return;
       }
 
-      setFile(selected);
-      toast.success("Файл готов к обработке", {
-        icon: "",
-        style: toastStyle,
-      });
+      setFile(selectedFile);
+      toast.success("Файл готов к обработке", { style: toastStyle });
     },
     [toastStyle],
   );
 
-  /**
-   * Configure dropzone
-   */
   const dropzoneOptions: DropzoneOptions = {
     onDrop,
     accept: {
@@ -213,454 +136,234 @@ const UploadPage: FC<UploadPageProps> = ({ className = "" }) => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone(dropzoneOptions);
 
-  /**
-   * Handle document analysis
-   */
+  const handleProfileChange = useCallback((profileId: string): void => {
+    setSelectedProfile(profileId);
+    localStorage.setItem("cursa_profile", profileId);
+  }, []);
+
+  const handleProfilesNavigation = useCallback(
+    (mode: ProfilesRouteMode): void => {
+      navigate("/profiles", {
+        state: {
+          mode,
+          profileId: selectedProfile || "default_gost",
+          source: "upload",
+        },
+      });
+    },
+    [navigate, selectedProfile],
+  );
+
   const handleProcess = async (): Promise<void> => {
     if (!file) return;
 
     setIsProcessing(true);
-    setUploadProgress(10);
+    setUploadProgress(12);
 
     try {
       localStorage.setItem("cursa_profile", selectedProfile || "default_gost");
-
-      setUploadProgress(30);
+      setUploadProgress(34);
 
       const reportData = await documentsApi.validate(
         file,
         selectedProfile || "default_gost",
         localStorage.getItem("access_token") || undefined,
       );
+
       setUploadProgress(100);
 
-      // Save to history
-      const totalIssues: number = Array.isArray((reportData as { issues?: unknown[] })?.issues)
+      const totalIssues = Array.isArray((reportData as { issues?: unknown[] })?.issues)
         ? ((reportData as { issues?: unknown[] }).issues?.length ?? 0)
-        : 0;
+        : ((reportData as { check_results?: { total_issues_count?: number } })?.check_results
+            ?.total_issues_count ?? 0);
 
-      const historyItem: HistoryItem = {
+      addToHistory({
         fileName: file.name,
         timestamp: Date.now(),
         totalIssues,
         score: (reportData?.score as number) ?? 0,
         reportData: reportData as unknown as ValidationReport,
         profileId: selectedProfile || "default_gost",
-      };
+      });
 
-      addToHistory(historyItem);
-
-      // Navigate to report page
-      const selectedProfileObj = profiles.find((p) => p.id === (selectedProfile || "default_gost"));
       navigate("/report", {
         state: {
           reportData,
           fileName: file.name,
           profileId: selectedProfile || "default_gost",
-          profileName: selectedProfileObj?.university || selectedProfileObj?.name || "ГОСТ",
+          profileName: selectedProfileData?.university || selectedProfileData?.name || "ГОСТ",
         },
       });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Не удалось обработать документ";
-      toast.error(errorMessage, { style: toastStyle });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Не удалось обработать документ";
+      toast.error(message, { style: toastStyle });
       setIsProcessing(false);
       setUploadProgress(0);
     }
   };
 
-  /**
-   * Navigate to a specific route
-   */
-  const handleNavigate = (path: string): void => {
-    navigate(path);
-  };
-
-  /**
-   * Handle theme toggle
-   */
-  const handleThemeToggle = (): void => {
-    colorMode.toggleColorMode();
-  };
-
-  /**
-   * Clear selected file
-   */
   const handleClearFile = (): void => {
     if (!isProcessing) {
       setFile(null);
+      setUploadProgress(0);
     }
   };
 
   return (
-    <Box
-      className={className}
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        bgcolor: pageBg,
-        color: textPrimary,
-      }}
-    >
+    <AppPageLayout title="Главная" className={className}>
       <Toaster position="bottom-center" />
 
-      {/* Header */}
-      <Box
-        component={motion.div}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        sx={{
-          px: { xs: 3, md: 5 },
-          py: 2.5,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-          background: headerBg,
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}
-      >
-        {/* Logo instead of CURSA text */}
-        <BrandLogo size="medium" />
-
-        {/* Navigation buttons */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Button
-            onClick={() => window.scrollTo({ top: 400, behavior: "smooth" })}
-            sx={{
-              borderRadius: "20px",
-              color: textMuted,
-              textTransform: "none",
-              fontWeight: 500,
-              fontSize: "0.875rem",
-              px: 1.5,
-              py: 0.75,
-              boxShadow: "none",
-              border: "none",
-              minWidth: 0,
-              display: { xs: "none", sm: "inline-flex" },
-              "&:hover": { bgcolor: iconBtnHover, color: textPrimary, boxShadow: "none" },
-            }}
-          >
-            Проверить
-          </Button>
-          {["Панель", "История"].map((label, i) => (
-            <Button
-              key={label}
-              onClick={() => handleNavigate(i === 0 ? "/dashboard" : "/history")}
-              sx={{
-                borderRadius: "20px",
-                color: textMuted,
-                textTransform: "none",
-                fontWeight: 500,
-                fontSize: "0.875rem",
-                px: 1.5,
-                py: 0.75,
-                boxShadow: "none",
-                border: "none",
-                minWidth: 0,
-                display: { xs: "none", md: "inline-flex" },
-                "&:hover": { bgcolor: iconBtnHover, color: textPrimary, boxShadow: "none" },
-              }}
-            >
-              {label}
-            </Button>
-          ))}
-
-          {/* Theme toggle */}
-          <IconButton
-            onClick={handleThemeToggle}
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              bgcolor: iconBtnBg,
-              color: textPrimary,
-              "&:hover": { bgcolor: iconBtnHover },
-            }}
-          >
-            {isDark ? (
-              <LightModeRounded sx={{ fontSize: 18 }} />
-            ) : (
-              <DarkModeRounded sx={{ fontSize: 18 }} />
-            )}
-          </IconButton>
-
-          {/* User account */}
-          {user ? (
-            <Tooltip title={user.name || user.email || "Аккаунт"}>
-              <IconButton
-                onClick={() => handleNavigate("/account")}
-                sx={{
-                  width: 36,
-                  height: 36,
-                  p: 0,
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                }}
-              >
-                <Avatar
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    fontSize: "0.875rem",
-                    fontWeight: 700,
-                    bgcolor: iconBtnBg,
-                    color: textPrimary,
-                  }}
-                >
-                  {(user.name?.[0] || user.email?.[0] || "U").toUpperCase()}
-                </Avatar>
-              </IconButton>
-            </Tooltip>
-          ) : (
-            <Button
-              onClick={() => handleNavigate("/login")}
-              endIcon={<ArrowForwardRounded sx={{ fontSize: "16px !important" }} />}
-              sx={{
-                borderRadius: "20px",
-                bgcolor: iconBtnBg,
-                color: textPrimary,
-                textTransform: "none",
-                fontWeight: 500,
-                fontSize: "0.875rem",
-                px: 2,
-                py: 0.75,
-                boxShadow: "none",
-                border: "none",
-                minWidth: 0,
-                "&:hover": { bgcolor: iconBtnHover, boxShadow: "none" },
-              }}
-            >
-              Войти
-            </Button>
-          )}
-        </Box>
-      </Box>
-
-      {/* Main Content */}
-      <Box
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          px: { xs: 3, md: 4 },
-          py: { xs: 3, md: 4 },
-        }}
-      >
-        {/* Hero text */}
-        <Box
-          component={motion.div}
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65 }}
-          sx={{ textAlign: "center", mb: { xs: 3, md: 4 }, maxWidth: 520, mx: "auto" }}
-        >
-          <Typography
-            component="h1"
-            sx={{
-              fontSize: { xs: "2rem", md: "3.5rem" },
-              fontWeight: 700,
-              lineHeight: 1.15,
-              mb: 2.5,
-              letterSpacing: "-0.025em",
-              color: textPrimary,
-              fontFamily: "'Wix Madefor Display', sans-serif",
-            }}
-          >
-            Идеальный нормоконтроль.
-            <br />
-            Мгновенно.
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: "1rem",
-              color: textMuted,
-              maxWidth: 380,
-              mx: "auto",
-              fontWeight: 400,
-              lineHeight: 1.65,
-            }}
-          >
-            Проверка курсовых и дипломных работ на соответствие ГОСТ и методичкам вуза.
-          </Typography>
-        </Box>
-
-        {/* Profile selector */}
-        {profiles.length > 0 && (
-          <Box
-            component={motion.div}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.45, delay: 0.2 }}
-            sx={{ mb: 2, width: "100%", maxWidth: 480, mx: "auto" }}
-          >
-            <Typography
-              sx={{
-                fontSize: "0.7rem",
-                color: textSubtle,
-                fontWeight: 600,
-                mb: 1.25,
-                textAlign: "center",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Профиль проверки
-            </Typography>
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                overflowX: "auto",
-                flexWrap: "nowrap",
-                justifyContent: "flex-start",
-                scrollbarWidth: "none",
-                "&::-webkit-scrollbar": { display: "none" },
-                pb: 0.5,
-              }}
-            >
-              {profiles.map((profile: Profile) => {
-                const label = profile.university || profile.name;
-                const isSelected = selectedProfile === profile.id;
-                return (
-                  <Box
-                    key={profile.id}
-                    onClick={() => setSelectedProfile(profile.id)}
-                    sx={{
-                      px: 1.75,
-                      py: 0.625,
-                      borderRadius: "20px",
-                      cursor: "pointer",
-                      flexShrink: 0,
-                      bgcolor: isSelected ? (isDark ? "#ffffff" : "#000000") : subtleBg,
-                      color: isSelected ? (isDark ? "#000000" : "#ffffff") : textMuted,
-                      fontSize: "0.78rem",
-                      fontWeight: isSelected ? 600 : 500,
-                      transition: "all 0.15s ease",
-                      userSelect: "none",
-                      "&:hover": {
-                        bgcolor: isSelected ? (isDark ? "#e8e8e8" : "#1a1a1a") : hoverBg,
-                      },
-                    }}
-                  >
-                    {label}
-                  </Box>
-                );
-              })}
-            </Box>
-          </Box>
-        )}
-
-        {/* Drop zone / File ready */}
+      <div className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-3xl items-center justify-center">
         <AnimatePresence mode="wait">
           {!file ? (
             <motion.div
               key="dropzone"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ duration: 0.3 }}
-              style={{ width: "100%", maxWidth: 480 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.28 }}
+              className="w-full"
             >
-              <Box
-                {...getRootProps()}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                sx={{
-                  background: isDragActive ? activeBg : isHovered ? hoverBg : cardBg,
-                  borderRadius: "20px",
-                  p: { xs: "40px 28px", md: "52px 40px" },
-                  textAlign: "center",
-                  cursor: "pointer",
-                  transition: "background 0.18s ease, transform 0.18s ease",
-                  transform: isDragActive ? "scale(0.985)" : "scale(1)",
-                  userSelect: "none",
-                }}
-              >
-                <input {...getInputProps()} />
+              <div className="space-y-4">
+                <Card className="overflow-hidden rounded-[28px] border-border bg-card/90 shadow-surface">
+                  <CardContent className="p-5 md:p-6">
+                    <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                      <div className="space-y-2">
+                        <div className="inline-flex size-11 items-center justify-center rounded-2xl border border-border bg-background/80 text-muted-foreground">
+                          <PanelsTopLeft className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                            Профиль проверки
+                          </p>
+                          <h2 className="mt-1 font-sans text-xl font-semibold tracking-[-0.04em] text-foreground md:text-2xl">
+                            {selectedProfileData?.name || "Базовый ГОСТ"}
+                          </h2>
+                          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                            Выберите требования перед загрузкой документа. Это влияет на правила
+                            анализа и автокоррекции.
+                          </p>
+                        </div>
+                      </div>
 
-                {/* File icon */}
-                <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    mx: "auto",
-                    mb: 3,
-                    borderRadius: "14px",
-                    background: fileCardInnerBg,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: isDark ? "0 2px 8px rgba(0,0,0,0.3)" : "0 2px 8px rgba(0,0,0,0.07)",
-                    transition: "box-shadow 0.18s ease",
-                  }}
-                >
-                  <InsertDriveFileRounded
-                    sx={{
-                      fontSize: 25,
-                      color: isDragActive ? textPrimary : iconColor,
-                      transition: "color 0.18s ease",
-                    }}
-                  />
-                </Box>
+                      <div className="w-full md:max-w-[320px]">
+                        <label
+                          htmlFor="upload-profile-select"
+                          className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground"
+                        >
+                          Активный профиль
+                        </label>
+                        <select
+                          id="upload-profile-select"
+                          value={selectedProfile}
+                          onChange={(event) => handleProfileChange(event.target.value)}
+                          className="h-11 w-full rounded-2xl border border-border bg-background px-4 text-sm text-foreground outline-none transition-colors focus:border-foreground/30"
+                        >
+                          {profiles.map((profile) => (
+                            <option key={profile.id} value={profile.id}>
+                              {profile.name}
+                              {profile.university ? ` · ${profile.university}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
 
-                <Typography
-                  sx={{
-                    fontWeight: 600,
-                    mb: 1,
-                    color: textPrimary,
-                    fontFamily: "'Wix Madefor Display', sans-serif",
-                    fontSize: "1.05rem",
-                  }}
-                >
-                  {isDragActive ? "Отпустите файл здесь" : "Загрузите файл .docx"}
-                </Typography>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="rounded-full px-3 py-1 text-xs"
+                        data-testid="selected-profile-summary"
+                      >
+                        {profileKindLabel}
+                      </Badge>
+                      <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                        {selectedProfileData?.university || "ГОСТ"}
+                      </Badge>
+                      {selectedProfileData?.description ? (
+                        <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                          {selectedProfileData.description}
+                        </Badge>
+                      ) : null}
+                    </div>
 
-                <Typography
-                  sx={{
-                    color: textMuted,
-                    fontSize: "0.875rem",
-                    mb: 3.5,
-                    fontWeight: 400,
-                  }}
-                >
-                  Перетащите или нажмите для выбора
-                </Typography>
+                    <div className="mt-4 grid gap-2 md:grid-cols-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 justify-start rounded-2xl"
+                        onClick={() => handleProfilesNavigation("manage")}
+                        data-testid="manage-profiles-button"
+                      >
+                        <PanelsTopLeft className="size-4" />
+                        Профили
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 justify-start rounded-2xl"
+                        onClick={() => handleProfilesNavigation("edit")}
+                        data-testid="quick-edit-profile-button"
+                      >
+                        <Settings className="size-4" />
+                        Изменить профиль
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 justify-start rounded-2xl"
+                        onClick={() => handleProfilesNavigation("import-export")}
+                        data-testid="quick-import-export-button"
+                      >
+                        <ArrowUpRight className="size-4" />
+                        Импорт и экспорт
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <Box
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    px: 2.5,
-                    py: 1,
-                    borderRadius: "20px",
-                    background: subtleBg,
-                  }}
-                >
-                  <Typography variant="caption" sx={{ color: textSubtle, fontWeight: 500 }}>
-                    До 20 МБ
-                  </Typography>
-                  <Box
-                    sx={{
-                      width: 3,
-                      height: 3,
-                      borderRadius: "50%",
-                      background: isDark ? "rgba(235,235,245,0.18)" : "rgba(0,0,0,0.18)",
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ color: textSubtle, fontWeight: 500 }}>
-                    Только DOCX
-                  </Typography>
-                </Box>
-              </Box>
+                <Card className="overflow-hidden rounded-[32px] border-border bg-card/90 shadow-surface">
+                  <CardContent className="p-5 md:p-8">
+                    <div
+                      {...getRootProps()}
+                      className={cn(
+                        "cursor-pointer rounded-[28px] border-2 border-dashed p-6 text-center transition-all duration-200 md:p-10",
+                        isDragActive
+                          ? "border-foreground/30 bg-accent"
+                          : "border-border bg-background/60 hover:border-foreground/20 hover:bg-accent/60",
+                      )}
+                    >
+                      <input {...getInputProps()} />
+
+                      <div className="mx-auto mb-5 flex size-16 items-center justify-center rounded-2xl border border-border bg-card shadow-sm md:size-20">
+                        <UploadCloud className="size-7 text-muted-foreground md:size-8" />
+                      </div>
+
+                      <div className="mb-4 space-y-2">
+                        <h1 className="font-sans text-2xl font-semibold tracking-[-0.04em] text-foreground md:text-3xl">
+                          {isDragActive ? "Отпустите документ" : "Перетащите .docx сюда"}
+                        </h1>
+                        <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground md:text-base">
+                          Или нажмите на карточку, чтобы выбрать файл. Интерфейс теперь работает
+                          через новый shadcn-shell и оставляет только главное действие.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                          Только DOCX
+                        </Badge>
+                        <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                          До 20 МБ
+                        </Badge>
+                        <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                          Профиль: {selectedProfileData?.name || "Базовый ГОСТ"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -668,188 +371,86 @@ const UploadPage: FC<UploadPageProps> = ({ className = "" }) => {
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ duration: 0.3 }}
-              style={{ width: "100%", maxWidth: 440 }}
+              transition={{ duration: 0.28 }}
+              className="w-full"
             >
-              <Box
-                sx={{
-                  background: isDark ? "#1C1C1E" : cardBg,
-                  borderRadius: "20px",
-                  p: { xs: 3, md: 3.5 },
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-              >
-                {isProcessing && (
-                  <>
-                    <motion.div
-                      initial={{ x: "-100%" }}
-                      animate={{ x: "100%" }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: 2,
-                        background: processingBarColor,
-                      }}
-                    />
-                    {uploadProgress > 0 && uploadProgress < 100 && (
-                      <LinearProgress
-                        variant="determinate"
-                        value={uploadProgress}
-                        sx={{
-                          position: "absolute",
-                          top: 2,
-                          left: 0,
-                          right: 0,
-                          height: 2,
-                          bgcolor: "transparent",
-                          "& .MuiLinearProgress-bar": {
-                            bgcolor: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)",
-                          },
-                        }}
-                      />
-                    )}
-                  </>
-                )}
-
-                <Typography
-                  sx={{
-                    fontWeight: 600,
-                    mb: 2.5,
-                    textAlign: "center",
-                    color: textPrimary,
-                    fontFamily: "'Wix Madefor Display', sans-serif",
-                    fontSize: "1rem",
-                  }}
-                >
-                  Документ готов
-                </Typography>
-
-                {/* File info */}
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    mb: 3,
-                    p: 2,
-                    borderRadius: "14px",
-                    background: fileCardInnerBg,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: "10px",
-                      background: cardBg,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <DescriptionRounded sx={{ color: textPrimary, fontSize: 20 }} />
-                  </Box>
-                  <Box sx={{ flex: 1, overflow: "hidden" }}>
-                    <Typography
-                      sx={{
-                        fontWeight: 500,
-                        color: textPrimary,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        fontSize: "0.9rem",
-                      }}
+              <Card className="overflow-hidden rounded-[32px] border-border bg-card/90 shadow-surface">
+                <CardContent className="p-5 md:p-8">
+                  <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                        Документ
+                      </p>
+                      <h2 className="font-sans text-2xl font-semibold tracking-[-0.04em] text-foreground md:text-3xl">
+                        Файл готов к проверке
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClearFile}
+                      disabled={isProcessing}
+                      className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-background/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
                     >
-                      {file.name}
-                    </Typography>
-                    <Typography sx={{ color: textSubtle, fontSize: "0.78rem" }}>
-                      {(file.size / 1024 / 1024).toFixed(2)} МБ DOCX
-                    </Typography>
-                  </Box>
-                  <IconButton
-                    size="small"
-                    onClick={handleClearFile}
+                      <ArrowUpRight className="size-4 rotate-45" />
+                    </button>
+                  </div>
+
+                  <div className="mb-5 rounded-3xl border border-border bg-background/70 p-4 md:p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card">
+                        <FileText className="size-5 text-foreground" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-foreground md:text-base">
+                          {file.name}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} МБ · DOCX
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 flex flex-wrap gap-2">
+                    <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                      Готов к анализу
+                    </Badge>
+                    <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                      Профиль:{" "}
+                      {profiles.find((profile) => profile.id === selectedProfile)?.name || "ГОСТ"}
+                    </Badge>
+                  </div>
+
+                  <p className="mb-6 text-sm leading-relaxed text-muted-foreground md:text-base">
+                    Файл выбран и подготовлен к быстрой проверке. Следующим шагом система построит
+                    отчёт и сохранит его в историю.
+                  </p>
+
+                  {isProcessing ? (
+                    <div className="mb-5 overflow-hidden rounded-full bg-muted">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${uploadProgress}%` }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="h-2 rounded-full bg-primary"
+                      />
+                    </div>
+                  ) : null}
+
+                  <Button
+                    className="h-12 w-full rounded-2xl text-sm font-semibold md:text-base"
+                    onClick={handleProcess}
                     disabled={isProcessing}
-                    sx={{
-                      color: isDark ? "rgba(235,235,245,0.28)" : "rgba(0,0,0,0.28)",
-                      "&:hover": {
-                        color: textPrimary,
-                        bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
-                      },
-                    }}
-                  />
-                </Box>
-
-                {/* Selected profile row */}
-                {profiles.length > 0 && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      mb: 2,
-                      px: 0.5,
-                    }}
                   >
-                    <Typography sx={{ fontSize: "0.78rem", color: textSubtle, fontWeight: 500 }}>
-                      Профиль
-                    </Typography>
-                    <Typography sx={{ fontSize: "0.78rem", color: textMuted, fontWeight: 600 }}>
-                      {profiles.find((p: Profile) => p.id === selectedProfile)?.university ||
-                        profiles.find((p: Profile) => p.id === selectedProfile)?.name ||
-                        selectedProfile}
-                    </Typography>
-                  </Box>
-                )}
-
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={handleProcess}
-                  disabled={isProcessing}
-                  sx={{
-                    py: 1.75,
-                    borderRadius: "14px",
-                    fontWeight: 600,
-                    fontSize: "0.95rem",
-                    textTransform: "none",
-                    bgcolor: isDark ? "#ffffff" : "#000000",
-                    color: isDark ? "#000000" : "#ffffff",
-                    boxShadow: "none",
-                    "&:hover": { bgcolor: isDark ? "#e0e0e0" : "#1a1a1a", boxShadow: "none" },
-                    "&:disabled": {
-                      bgcolor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-                      color: isDark ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.28)",
-                    },
-                  }}
-                >
-                  {isProcessing ? "Анализируем файл..." : "Начать проверку"}
-                </Button>
-              </Box>
+                    {isProcessing ? `Анализируем файл... ${uploadProgress}%` : "Начать проверку"}
+                  </Button>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
         </AnimatePresence>
-      </Box>
-
-      {/* Footer */}
-      <Box sx={{ py: 3, textAlign: "center" }}>
-        <Typography
-          variant="caption"
-          sx={{
-            color: isDark ? "rgba(235,235,245,0.22)" : "rgba(0,0,0,0.22)",
-            fontWeight: 400,
-            letterSpacing: 0.3,
-          }}
-        >
-          2026 CURSA
-        </Typography>
-      </Box>
-    </Box>
+      </div>
+    </AppPageLayout>
   );
 };
 

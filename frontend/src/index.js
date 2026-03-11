@@ -10,6 +10,9 @@ import "./index.css";
 import reportWebVitals from "./reportWebVitals";
 import * as serviceWorkerRegistration from "./serviceWorkerRegistration";
 
+const shouldEnablePwa =
+  process.env.NODE_ENV === "production" && process.env.REACT_APP_ENABLE_PWA === "true";
+
 // Подавляем console.log/warn/error в production
 if (process.env.NODE_ENV === "production") {
   console.log = () => {};
@@ -25,16 +28,18 @@ root.render(
   </React.StrictMode>,
 );
 
-// Регистрация Service Worker для PWA
-serviceWorkerRegistration.register({
-  onSuccess: (registration) => {
-    console.log("CURSA PWA готов к офлайн-использованию");
-  },
-  onUpdate: (registration) => {
-    console.log("Доступна новая версия CURSA");
-    // Можно показать уведомление пользователю
-  },
-});
+if (shouldEnablePwa) {
+  serviceWorkerRegistration.register({
+    onSuccess: () => {
+      console.log("CURSA PWA готов к офлайн-использованию");
+    },
+    onUpdate: () => {
+      console.log("Доступна новая версия CURSA");
+    },
+  });
+} else {
+  serviceWorkerRegistration.unregister();
+}
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

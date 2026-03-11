@@ -115,6 +115,30 @@ def setup_security_headers(app):
         return response
 
 
+def setup_error_handlers(app):
+    """Регистрирует JSON-обработчики ошибок для API."""
+
+    @app.errorhandler(429)
+    def handle_rate_limit_exceeded(error):
+        response = jsonify(
+            {
+                "error": "Слишком много запросов. Повторите попытку позже.",
+                "status": 429,
+            }
+        )
+        response.status_code = 429
+
+        retry_after = None
+        if hasattr(error, "get_response"):
+            original_response = error.get_response()
+            retry_after = original_response.headers.get("Retry-After")
+
+        if retry_after:
+            response.headers["Retry-After"] = retry_after
+
+        return response
+
+
 def create_app():
     global socketio
 
@@ -248,6 +272,7 @@ def create_app():
 
     # === Security Headers ===
     setup_security_headers(app)
+    setup_error_handlers(app)
 
     # === Rate Limiting ===
     setup_rate_limiting(app)
@@ -282,6 +307,7 @@ def create_app():
     from app.api import preview_routes
     from app.api import auth_routes
     from app.api import validation_routes
+    from app.api import payment_routes
 
     app.register_blueprint(document_routes.bp)
     app.register_blueprint(profile_routes.bp)
@@ -289,6 +315,7 @@ def create_app():
     app.register_blueprint(preview_routes.bp)
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(validation_routes.validation_bp)
+    app.register_blueprint(payment_routes.bp)
 
     # Маршрут для API документации (JSON)
     @app.route("/api/openapi.json")

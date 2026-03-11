@@ -1,6 +1,8 @@
 import { Box, CircularProgress } from "@mui/material";
 import { useEffect, useState } from "react";
 
+import { memeApi } from "../api/client";
+
 export default function MemeWidget() {
   const [meme, setMeme] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,20 +33,26 @@ export default function MemeWidget() {
   const fetchMeme = async () => {
     setLoading(true);
     try {
+      const fetchBackendMeme = async () => {
+        const data = await memeApi.getRandom();
+        if (data && data.url) {
+          return {
+            url: data.url,
+            title: "мем",
+            postLink: data.postLink || "#",
+            author: data.author || "",
+          };
+        }
+
+        return null;
+      };
+
       // 1) Try backend RSS proxy (Pinterest board RSS)
       try {
-        const res = await fetch("/api/document/memes/random");
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.url) {
-            setMeme({
-              url: data.url,
-              title: "мем",
-              postLink: data.postLink || "#",
-              author: data.author || "",
-            });
-            return;
-          }
+        const backendMeme = await fetchBackendMeme();
+        if (backendMeme) {
+          setMeme(backendMeme);
+          return;
         }
       } catch (e) {
         // ignore and fallback
@@ -58,18 +66,10 @@ export default function MemeWidget() {
         // (backend call attempted above; if it failed to return, fall through to meme-api with Cyrillic preference)
         try {
           // another attempt at backend in case of transient error
-          const res2 = await fetch("/api/document/memes/random");
-          if (res2.ok) {
-            const data2 = await res2.json();
-            if (data2 && data2.url) {
-              setMeme({
-                url: data2.url,
-                title: "мем",
-                postLink: data2.postLink || "#",
-                author: data2.author || "",
-              });
-              return;
-            }
+          const backendMeme = await fetchBackendMeme();
+          if (backendMeme) {
+            setMeme(backendMeme);
+            return;
           }
         } catch (e) {
           // ignore

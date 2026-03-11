@@ -1,0 +1,33 @@
+
+> frontend@0.1.0 build
+> react-scripts build
+
+(node:43740) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Creating an optimized production build...
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Failed to compile.
+
+[eslint] 
+src\components\ProfileComparison.js
+  Line 442:35:  'theme' is not defined  no-undef
+  Line 507:48:  'theme' is not defined  no-undef
+
+src\components\ProfileImportExport.js
+  Line 177:7:  'setExportDialogOpen' is not defined  no-undef
+
+Search for the keywords to learn more about each error.
+
+
+EXIT:0

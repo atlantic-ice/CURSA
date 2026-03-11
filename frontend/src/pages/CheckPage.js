@@ -26,19 +26,12 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import axios from "axios";
 import { motion } from "framer-motion";
 import { useCallback, useContext, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useNavigate } from "react-router-dom";
 import { CheckHistoryContext } from "../App";
-
-const isLocal =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-const API_BASE = isLocal
-  ? "http://localhost:5000"
-  : process.env.REACT_APP_API_BASE || "https://cursa.onrender.com";
+import { documentsApi, getApiErrorMessage } from "../api/client";
 
 const CheckPage = () => {
   const navigate = useNavigate();
@@ -108,17 +101,14 @@ const CheckPage = () => {
     setError("");
 
     const formData = new FormData();
-    formData.append("file", file);
 
     try {
-      const response = await axios.post(`${API_BASE}/api/document/analyze`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
       // Сохраняем в историю
-      const reportData = response.data;
+      const reportData = await documentsApi.validate(
+        file,
+        "default_gost",
+        localStorage.getItem("access_token") || undefined,
+      );
       const totalIssues =
         reportData?.check_results?.total_issues_count ?? reportData?.total_issues_count ?? 0;
       addToHistory({
@@ -137,10 +127,12 @@ const CheckPage = () => {
         },
       });
     } catch (error) {
-      console.error("Ошибка при загрузке файла:", error);
+      console.error("Ошибка при загрузке файла:", getApiErrorMessage(error));
       setError(
-        error.response?.data?.error ||
+        getApiErrorMessage(
+          error,
           "Произошла ошибка при загрузке файла. Пожалуйста, попробуйте еще раз.",
+        ),
       );
       setActiveStep(1);
     } finally {
@@ -156,26 +148,6 @@ const CheckPage = () => {
     setActiveStep(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
-    }
-  };
-
-  // Функция для скачивания документа
-  const downloadDocument = (filePath, originalName) => {
-    if (!filePath) return;
-
-    const extension = ".docx";
-    const fileName = originalName
-      ? originalName.endsWith(".docx")
-        ? originalName
-        : originalName + extension
-      : `corrected_document_${Date.now()}${extension}`;
-
-    // Если путь выглядит как имя файла (без слешей), используем прямой доступ
-    if (filePath.indexOf("/") === -1 && filePath.indexOf("\\") === -1) {
-      window.location.href = `${API_BASE}/corrections/${encodeURIComponent(filePath)}`;
-    } else {
-      // Иначе используем стандартный endpoint
-      window.location.href = `${API_BASE}/api/document/download-corrected?path=${encodeURIComponent(filePath)}&filename=${encodeURIComponent(fileName)}`;
     }
   };
 

@@ -5,9 +5,11 @@
  * Handles authorization code flow and token management.
  */
 
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+
+import { AuthContext } from "../../App";
+import { authApi, getApiErrorMessage } from "../../api/client";
 import styles from "./OAuthLogin.module.css";
 
 export const OAUTH_PROVIDERS = {
@@ -26,11 +28,13 @@ interface OAuthConfig {
 }
 
 interface OAuthCallbackData {
-  success: boolean;
   access_token: string;
   refresh_token: string;
-  user_id: number;
-  email: string;
+  is_new_user?: boolean;
+}
+
+interface OAuthAuthContextType {
+  loginWithToken: (accessToken: string, refreshToken: string) => Promise<void>;
 }
 
 const getOAuthConfig = (provider: OAuthProvider): OAuthConfig | null => {
@@ -117,7 +121,7 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({
   showAllProviders = false,
 }) => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { loginWithToken } = useContext(AuthContext) as OAuthAuthContextType;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -192,15 +196,10 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({
       setLoading(true);
       setError(null);
 
-      if (!callbackData.success) {
-        throw new Error(callbackData as any);
-      }
-
-      // Store tokens via AuthContext
-      login(callbackData.access_token, callbackData.refresh_token, callbackData.user_id);
+      await loginWithToken(callbackData.access_token, callbackData.refresh_token);
 
       onSuccess?.();
-      navigate("/dashboard");
+      navigate(callbackData.is_new_user ? "/?welcome=true" : "/dashboard");
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Authentication failed";
       setError(errorMsg);
@@ -266,24 +265,7 @@ export const OAuthCallback: React.FC<{ provider: OAuthProvider }> = ({ provider 
           throw new Error("No authorization code received");
         }
 
-        // Exchange code with backend
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/auth/oauth/${provider}/callback`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ code }),
-          },
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "OAuth authentication failed");
-        }
-
-        const data: OAuthCallbackData = await response.json();
+        const data: OAuthCallbackData = await authApi.oauthCallback(provider, code);
 
         // Send success message to parent window
         if (window.opener) {
@@ -300,7 +282,7 @@ export const OAuthCallback: React.FC<{ provider: OAuthProvider }> = ({ provider 
           window.location.href = "/dashboard";
         }
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Authentication failed";
+        const errorMsg = getApiErrorMessage(err, "Authentication failed");
         setError(errorMsg);
         setLoading(false);
       }

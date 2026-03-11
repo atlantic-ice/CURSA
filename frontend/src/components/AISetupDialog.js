@@ -1,28 +1,27 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import PropTypes from 'prop-types';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  Typography,
-  Box,
   Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Link,
   Stack,
-  CircularProgress,
-} from '@mui/material';
-import axios from 'axios';
+  TextField,
+  Typography,
+} from "@mui/material";
+import PropTypes from "prop-types";
+import { useEffect, useMemo, useState } from "react";
 
-const API_ORIGIN = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+import { aiApi, getApiErrorMessage } from "../api/client";
 
 const AISetupDialog = ({ open, status, onClose, onSkip, onStatusChange }) => {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const hasExistingKey = Boolean(status?.has_key);
 
@@ -30,9 +29,9 @@ const AISetupDialog = ({ open, status, onClose, onSkip, onStatusChange }) => {
 
   useEffect(() => {
     if (!open) {
-      setApiKey('');
-      setError('');
-      setSuccess('');
+      setApiKey("");
+      setError("");
+      setSuccess("");
     }
   }, [open, status]);
 
@@ -48,22 +47,24 @@ const AISetupDialog = ({ open, status, onClose, onSkip, onStatusChange }) => {
 
   const handleSave = async () => {
     setSaving(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      const response = await axios.post(`${API_ORIGIN}/api/document/ai/key`, {
-        api_key: apiKey.trim(),
-      });
-      const nextStatus = response.data.status || {};
-      setSuccess('Ключ сохранен. ИИ включен.');
-      setApiKey('');
+      const response = await aiApi.saveKey(apiKey.trim());
+      const nextStatus = response.status || {};
+      setSuccess("Ключ сохранен. ИИ включен.");
+      setApiKey("");
       if (onStatusChange) {
-        onStatusChange(nextStatus, 'saved');
+        onStatusChange(nextStatus, "saved");
       }
     } catch (err) {
-      const message = err?.response?.data?.error || 'Не удалось сохранить ключ. Проверьте подключение и попробуйте снова.';
-      setError(message);
+      setError(
+        getApiErrorMessage(
+          err,
+          "Не удалось сохранить ключ. Проверьте подключение и попробуйте снова.",
+        ),
+      );
     } finally {
       setSaving(false);
     }
@@ -71,19 +72,18 @@ const AISetupDialog = ({ open, status, onClose, onSkip, onStatusChange }) => {
 
   const handleClear = async () => {
     setSaving(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      const response = await axios.delete(`${API_ORIGIN}/api/document/ai/key`);
-      const nextStatus = response.data.status || {};
-      setSuccess('Ключ удален. ИИ отключен.');
+      const response = await aiApi.clearKey();
+      const nextStatus = response.status || {};
+      setSuccess("Ключ удален. ИИ отключен.");
       if (onStatusChange) {
-        onStatusChange(nextStatus, 'cleared');
+        onStatusChange(nextStatus, "cleared");
       }
     } catch (err) {
-      const message = err?.response?.data?.error || 'Не удалось удалить ключ. Попробуйте позже.';
-      setError(message);
+      setError(getApiErrorMessage(err, "Не удалось удалить ключ. Попробуйте позже."));
     } finally {
       setSaving(false);
     }
@@ -95,16 +95,18 @@ const AISetupDialog = ({ open, status, onClose, onSkip, onStatusChange }) => {
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Typography variant="body1">
-            Подключите ключ Gemini API, чтобы включить интеллектуальные подсказки и корректировки прямо в приложении.
+            Подключите ключ Gemini API, чтобы включить интеллектуальные подсказки и корректировки
+            прямо в приложении.
           </Typography>
 
           <Typography variant="body2" color="text.secondary">
-            1. Откройте{' '}
+            1. Откройте{" "}
             <Link href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">
               Google AI Studio
-            </Link>{' '}
+            </Link>{" "}
             и создайте ключ.
-            <br />2. Скопируйте ключ и вставьте его ниже.
+            <br />
+            2. Скопируйте ключ и вставьте его ниже.
           </Typography>
 
           {hasExistingKey && (
@@ -112,8 +114,8 @@ const AISetupDialog = ({ open, status, onClose, onSkip, onStatusChange }) => {
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 Текущий ключ сохранен:
               </Typography>
-              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                {status?.masked_key || '********'}
+              <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+                {status?.masked_key || "********"}
               </Typography>
               {status?.configured_at && (
                 <Typography variant="caption" color="text.secondary">
@@ -146,12 +148,8 @@ const AISetupDialog = ({ open, status, onClose, onSkip, onStatusChange }) => {
             Удалить ключ
           </Button>
         )}
-        <Button
-          onClick={handleSave}
-          disabled={saving || !isKeyCandidate}
-          variant="contained"
-        >
-          {saving ? <CircularProgress size={22} color="inherit" /> : 'Сохранить ключ'}
+        <Button onClick={handleSave} disabled={saving || !isKeyCandidate} variant="contained">
+          {saving ? <CircularProgress size={22} color="inherit" /> : "Сохранить ключ"}
         </Button>
       </DialogActions>
     </Dialog>

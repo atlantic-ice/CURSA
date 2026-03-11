@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "test-uploadpage",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"test",
+				"--",
+				"--watchAll=false",
+				"--runInBand",
+				"src/pages/__tests__/UploadPage.test.js"
+			],
+			"isBackground": false
+		}
+	]
+}

@@ -1,26 +1,38 @@
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { CheckHistoryContext } from "../../App";
+import { documentsApi } from "../../api/client";
 import UploadPage from "../UploadPage";
 
-// Mock axios
-jest.mock("axios", () => ({
-  get: jest.fn().mockResolvedValue({ data: [] }),
-}));
+const mockProfiles = [
+  {
+    id: "default_gost",
+    name: "ГОСТ 7.32-2017",
+    university: "ГОСТ",
+    description: "Базовый системный шаблон",
+    is_system: true,
+  },
+  {
+    id: "bmstu",
+    name: "МГТУ им. Баумана",
+    university: "МГТУ",
+    description: "Методические рекомендации вуза",
+    is_system: false,
+  },
+];
 
-// Мок для компонентов
-jest.mock("../../components/HealthStatusChip", () => {
-  return function MockHealthStatusChip() {
-    return <div data-testid="health-status-chip">Health Status</div>;
-  };
-});
+const mockNavigate = jest.fn();
 
-jest.mock("../../components/IdleOverlay", () => {
-  return function MockIdleOverlay() {
-    return null;
-  };
-});
+jest.mock(
+  "react-router-dom",
+  () => ({
+    MemoryRouter: ({ children }) => children,
+    useNavigate: () => mockNavigate,
+  }),
+  { virtual: true },
+);
 
 // Мок для react-hot-toast
 jest.mock("react-hot-toast", () => ({
@@ -33,13 +45,14 @@ jest.mock("react-hot-toast", () => ({
 
 // Мок для framer-motion
 jest.mock("framer-motion", () => ({
+  AnimatePresence: ({ children }) => <>{children}</>,
   motion: {
     div: ({ children, ...props }) => <div {...props}>{children}</div>,
   },
 }));
 
 describe("UploadPage - Navigation", () => {
-  const renderUploadPage = () => {
+  const renderUploadPage = async () => {
     const theme = createTheme({
       palette: {
         mode: "dark",
@@ -49,54 +62,123 @@ describe("UploadPage - Navigation", () => {
       },
     });
 
-    return render(
+    const view = render(
       <ThemeProvider theme={theme}>
-        <MemoryRouter>
-          <UploadPage />
-        </MemoryRouter>
+        <CheckHistoryContext.Provider
+          value={{
+            history: [],
+            addToHistory: jest.fn(),
+            removeFromHistory: jest.fn(),
+            clearHistory: jest.fn(),
+          }}
+        >
+          <MemoryRouter>
+            <UploadPage />
+          </MemoryRouter>
+        </CheckHistoryContext.Provider>
       </ThemeProvider>,
     );
+
+    await screen.findByLabelText("Активный профиль");
+    return view;
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNavigate.mockReset();
+    jest.spyOn(documentsApi, "getProfiles").mockResolvedValue(mockProfiles);
+    jest.spyOn(documentsApi, "validate").mockResolvedValue({
+      score: 0,
+      check_results: { total_issues_count: 0 },
+    });
     // Mock localStorage
-    Storage.prototype.getItem = jest.fn(() => JSON.stringify([]));
+    Storage.prototype.getItem = jest.fn((key) => {
+      if (key === "cursa_profile") {
+        return "default_gost";
+      }
+
+      return null;
+    });
     Storage.prototype.setItem = jest.fn();
   });
 
-  test("renders login button", () => {
-    renderUploadPage();
-
-    const loginButton = screen.getByRole("button", { name: /войти/i });
-    expect(loginButton).toBeInTheDocument();
-    expect(loginButton).toBeVisible();
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
-  test("login button has correct content", () => {
-    renderUploadPage();
+  test("renders profile controls on upload screen", async () => {
+    await renderUploadPage();
 
-    const loginButton = screen.getByRole("button", { name: /войти/i });
-    expect(loginButton).toHaveTextContent("Войти");
+    await waitFor(() => {
+      expect(screen.getByTestId("selected-profile-summary")).toHaveTextContent("Системный");
+    });
+
+    expect(screen.getByRole("heading", { name: /гост 7.32-2017/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Активный профиль")).toHaveValue("default_gost");
+    expect(screen.getByRole("button", { name: /профили/i })).toBeInTheDocument();
+    expect(screen.getByTestId("manage-profiles-button")).toBeInTheDocument();
+    expect(screen.getByTestId("quick-edit-profile-button")).toBeInTheDocument();
+    expect(screen.getByTestId("quick-import-export-button")).toBeInTheDocument();
+    expect(screen.getByTestId("selected-profile-summary")).toHaveTextContent("Системный");
   });
 
-  test("renders profiles button", () => {
-    renderUploadPage();
+  test("navigates to profiles management from quick action", async () => {
+    await renderUploadPage();
 
-    const profilesButton = screen.getByRole("button", { name: /профили/i });
-    expect(profilesButton).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("manage-profiles-button"));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/profiles", {
+      state: {
+        mode: "manage",
+        profileId: "default_gost",
+        source: "upload",
+      },
+    });
   });
 
-  test("login button is before profiles button", () => {
-    renderUploadPage();
+  test("opens profile editor route state from quick edit action", async () => {
+    await renderUploadPage();
 
-    const buttons = screen.getAllByRole("button");
-    const loginButton = screen.getByRole("button", { name: /войти/i });
-    const profilesButton = screen.getByRole("button", { name: /профили/i });
+    fireEvent.click(screen.getByTestId("quick-edit-profile-button"));
 
-    const loginIndex = buttons.indexOf(loginButton);
-    const profilesIndex = buttons.indexOf(profilesButton);
+    expect(mockNavigate).toHaveBeenCalledWith("/profiles", {
+      state: {
+        mode: "edit",
+        profileId: "default_gost",
+        source: "upload",
+      },
+    });
+  });
 
-    expect(loginIndex).toBeLessThan(profilesIndex);
+  test("opens import export route state from quick action", async () => {
+    await renderUploadPage();
+
+    fireEvent.click(screen.getByTestId("quick-import-export-button"));
+
+    expect(mockNavigate).toHaveBeenCalledWith("/profiles", {
+      state: {
+        mode: "import-export",
+        profileId: "default_gost",
+        source: "upload",
+      },
+    });
+  });
+
+  test("updates selected profile from dropdown", async () => {
+    await renderUploadPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("selected-profile-summary")).toHaveTextContent("Системный");
+    });
+
+    fireEvent.change(screen.getByLabelText("Активный профиль"), {
+      target: { value: "bmstu" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Активный профиль")).toHaveValue("bmstu");
+    });
+    expect(screen.getByTestId("selected-profile-summary")).toHaveTextContent("Пользовательский");
+    expect(Storage.prototype.setItem).toHaveBeenCalledWith("cursa_profile", "bmstu");
   });
 });
