@@ -152,6 +152,15 @@ PLANS: dict[str, dict] = {
     },
 }
 
+VALID_BILLING_CYCLES = {"monthly", "yearly"}
+
+# Promo codes are intentionally simple for MVP and can be moved to DB later.
+PROMO_CODES: dict[str, int] = {
+    "WELCOME10": 10,
+    "STUDENT20": 20,
+    "LAUNCH35": 35,
+}
+
 
 class PaymentServiceError(Exception):
     """Base error for payment service operations"""
@@ -273,6 +282,8 @@ class PaymentService:
         plan_key: str,
         payment_method: str = "mock",
         payment_token: Optional[str] = None,
+        billing_cycle: str = "monthly",
+        promo_code: Optional[str] = None,
     ) -> dict:
         """
         Create or upgrade a subscription for a user.
@@ -297,6 +308,14 @@ class PaymentService:
         if not user:
             raise PaymentServiceError("User not found", "user_not_found")
 
+        billing_cycle = self._normalize_billing_cycle(billing_cycle)
+        discount_percent = self._resolve_promo_discount(promo_code)
+        original_amount, final_amount, duration_days = self._calculate_subscription_pricing(
+            plan=plan,
+            billing_cycle=billing_cycle,
+            discount_percent=discount_percent,
+        )
+
         # Cancel existing subscription
         existing = self.get_active_subscription(user_id)
         if existing:
@@ -306,9 +325,9 @@ class PaymentService:
         # Process payment
         payment_result = self._process_payment(
             user_id=user_id,
-            amount=plan["price_rub"],
+            amount=final_amount,
             currency="RUB",
-            description=f"Подписка {plan['name']}",
+            description=f"Подписка {plan['name']} ({'год' if billing_cycle == 'yearly' else 'месяц'})",
             provider=payment_method,
             token=payment_token,
         )
@@ -316,16 +335,16 @@ class PaymentService:
         if not payment_result["success"]:
             raise PaymentServiceError(payment_result["error"], "payment_failed")
 
-        # Create subscription (1 month)
+        # Create subscription with selected billing cycle
         now = datetime.now(timezone.utc)
         sub = Subscription(
             user_id=user_id,
             plan=plan_key,
             status=SubscriptionStatus.ACTIVE,
-            amount=plan["price_rub"],
+            amount=final_amount,
             currency="RUB",
             started_at=now,
-            expires_at=now + timedelta(days=30),
+            expires_at=now + timedelta(days=duration_days),
         )
         db.session.add(sub)
 
@@ -342,7 +361,66 @@ class PaymentService:
             "status": sub.status.value,
             "expires_at": sub.expires_at.isoformat(),
             "payment_id": payment_result.get("payment_id"),
+            "billing_cycle": billing_cycle,
+            "original_amount": float(original_amount),
+            "final_amount": float(final_amount),
+            "discount_percent": discount_percent,
+            "promo_code_applied": promo_code.upper() if promo_code and discount_percent > 0 else None,
+            "duration_days": duration_days,
         }
+
+    def _normalize_billing_cycle(self, billing_cycle: str) -> str:
+        """Validate and normalize billing cycle input."""
+        normalized = (billing_cycle or "monthly").strip().lower()
+        if normalized not in VALID_BILLING_CYCLES:
+            raise PaymentServiceError(
+                f"Invalid billing_cycle '{billing_cycle}'. Supported: monthly, yearly",
+                "invalid_billing_cycle",
+            )
+        return normalized
+
+    def _resolve_promo_discount(self, promo_code: Optional[str]) -> int:
+        """Resolve promo code to discount percentage (0 if absent)."""
+        if not promo_code:
+            return 0
+
+        normalized = promo_code.strip().upper()
+        if not normalized:
+            return 0
+
+        discount = PROMO_CODES.get(normalized)
+        if discount is None:
+            raise PaymentServiceError("Invalid promo code", "invalid_promo_code")
+        return discount
+
+    def _calculate_subscription_pricing(
+        self,
+        plan: dict,
+        billing_cycle: str,
+        discount_percent: int,
+    ) -> tuple[Decimal, Decimal, int]:
+        """
+        Calculate final price and duration.
+
+        Yearly pricing uses 2 months free (10x monthly) as a base yearly discount.
+        Promo discount is applied on top of cycle pricing.
+        """
+        monthly_price: Decimal = plan["price_rub"]
+
+        if billing_cycle == "yearly":
+            original_amount = monthly_price * Decimal("10")
+            duration_days = 365
+        else:
+            original_amount = monthly_price
+            duration_days = 30
+
+        if discount_percent > 0:
+            multiplier = Decimal(str(100 - discount_percent)) / Decimal("100")
+            final_amount = (original_amount * multiplier).quantize(Decimal("0.01"))
+        else:
+            final_amount = original_amount
+
+        return original_amount, final_amount, duration_days
 
     def cancel_subscription(self, user_id: int) -> dict:
         """Cancel the active subscription (remains active until period end)."""

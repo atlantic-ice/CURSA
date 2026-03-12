@@ -201,6 +201,32 @@ class TestSubscribe:
                 payment_service.subscribe(99999, "PRO")
             assert exc_info.value.code == "user_not_found"
 
+    def test_subscribe_yearly_cycle_sets_365_days(self, app, payment_service, test_user):
+        with app.app_context():
+            result = payment_service.subscribe(test_user.id, "PRO", billing_cycle="yearly")
+            assert result["billing_cycle"] == "yearly"
+            assert result["duration_days"] == 365
+            assert result["final_amount"] == float(PLANS["PRO"]["price_rub"] * 10)
+
+    def test_subscribe_with_valid_promo_code_applies_discount(self, app, payment_service, test_user):
+        with app.app_context():
+            result = payment_service.subscribe(test_user.id, "PRO", promo_code="WELCOME10")
+            assert result["discount_percent"] == 10
+            assert result["promo_code_applied"] == "WELCOME10"
+            assert result["final_amount"] < result["original_amount"]
+
+    def test_subscribe_with_invalid_promo_code_raises(self, app, payment_service, test_user):
+        with app.app_context():
+            with pytest.raises(PaymentServiceError) as exc_info:
+                payment_service.subscribe(test_user.id, "PRO", promo_code="BADCODE")
+            assert exc_info.value.code == "invalid_promo_code"
+
+    def test_subscribe_with_invalid_billing_cycle_raises(self, app, payment_service, test_user):
+        with app.app_context():
+            with pytest.raises(PaymentServiceError) as exc_info:
+                payment_service.subscribe(test_user.id, "PRO", billing_cycle="weekly")
+            assert exc_info.value.code == "invalid_billing_cycle"
+
 
 class TestCancelSubscription:
     def test_cancel_active_subscription(self, app, payment_service, test_user):
@@ -351,6 +377,36 @@ class TestSubscribeAPI:
             headers=headers,
         )
         assert response.status_code == 422
+
+    def test_subscribe_yearly_with_promo(self, client, app, test_user):
+        with app.app_context():
+            token = create_access_token(identity=str(test_user.id))
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        response = client.post(
+            "/api/payments/subscribe",
+            json={
+                "plan_key": "PRO",
+                "billing_cycle": "yearly",
+                "promo_code": "WELCOME10",
+                "payment_method": "mock",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 201
+        data = response.get_json()["data"]
+        assert data["billing_cycle"] == "yearly"
+        assert data["discount_percent"] == 10
+
+    def test_subscribe_invalid_cycle_returns_400(self, client, app, test_user):
+        with app.app_context():
+            token = create_access_token(identity=str(test_user.id))
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        response = client.post(
+            "/api/payments/subscribe",
+            json={"plan_key": "PRO", "billing_cycle": "weekly"},
+            headers=headers,
+        )
+        assert response.status_code == 400
 
 
 class TestCancelAPI:

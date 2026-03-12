@@ -28,10 +28,16 @@ const fade = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
 };
 
-const fmtPrice = (plan: Plan): string => {
+const getCyclePrice = (plan: Plan, cycle: "monthly" | "yearly"): number => {
+  if (cycle === "yearly") return Math.round(plan.price_rub * 10 * 100) / 100;
+  return plan.price_rub;
+};
+
+const fmtPrice = (plan: Plan, cycle: "monthly" | "yearly"): string => {
   if (plan.key === "ENTERPRISE") return "По запросу";
   if (plan.price_rub === 0) return "Бесплатно";
-  return `${plan.price_rub.toLocaleString("ru-RU")} ₽/мес`;
+  const unit = cycle === "yearly" ? "год" : "мес";
+  return `${getCyclePrice(plan, cycle).toLocaleString("ru-RU")} ₽/${unit}`;
 };
 
 const renderLimit = (value: number): string => (value === -1 ? "Безлимит" : String(value));
@@ -40,6 +46,7 @@ const PricingPage: FC<PricingPageProps> = ({ className }) => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
   useEffect(() => {
     let alive = true;
@@ -109,6 +116,24 @@ const PricingPage: FC<PricingPageProps> = ({ className }) => {
             <Button asChild variant="outline" className="border-white/20 bg-white/5 text-white">
               <Link to="/register">Создать аккаунт</Link>
             </Button>
+            <div className="ml-auto inline-flex rounded-lg border border-white/20 bg-white/5 p-1">
+              <Button
+                size="sm"
+                variant={billingCycle === "monthly" ? "default" : "ghost"}
+                className={cn("h-8", billingCycle !== "monthly" && "text-white hover:text-white")}
+                onClick={() => setBillingCycle("monthly")}
+              >
+                Ежемесячно
+              </Button>
+              <Button
+                size="sm"
+                variant={billingCycle === "yearly" ? "default" : "ghost"}
+                className={cn("h-8", billingCycle !== "yearly" && "text-white hover:text-white")}
+                onClick={() => setBillingCycle("yearly")}
+              >
+                Ежегодно (-2 мес)
+              </Button>
+            </div>
           </div>
         </motion.div>
       </section>
@@ -153,7 +178,12 @@ const PricingPage: FC<PricingPageProps> = ({ className }) => {
                       <Icon className={cn("h-5 w-5", meta.accent)} />
                       <CardTitle className="text-base">{plan.name}</CardTitle>
                     </div>
-                    <p className="pt-1 text-2xl font-semibold">{fmtPrice(plan)}</p>
+                    <p className="pt-1 text-2xl font-semibold">{fmtPrice(plan, billingCycle)}</p>
+                    {billingCycle === "yearly" && plan.price_rub > 0 && plan.key !== "ENTERPRISE" && (
+                      <p className="text-xs text-muted-foreground">
+                        Эквивалент {Math.round((plan.price_rub * 10 * 100) / 12) / 100} ₽/мес
+                      </p>
+                    )}
                   </CardHeader>
 
                   <CardContent className="flex-1 space-y-2">
@@ -179,7 +209,11 @@ const PricingPage: FC<PricingPageProps> = ({ className }) => {
                         className="w-full"
                         variant={isFeatured ? "default" : "outline"}
                       >
-                        <Link to="/billing">Выбрать тариф</Link>
+                        <Link
+                          to={`/billing?plan=${encodeURIComponent(plan.key)}&cycle=${encodeURIComponent(billingCycle)}`}
+                        >
+                          Выбрать тариф
+                        </Link>
                       </Button>
                     )}
                   </CardFooter>

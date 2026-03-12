@@ -917,6 +917,8 @@ export interface SubscribeRequest {
   plan_key: string;
   payment_method?: "mock" | "stripe" | "yookassa";
   payment_token?: string;
+  billing_cycle?: "monthly" | "yearly";
+  promo_code?: string;
 }
 
 export interface SubscribeResponse {
@@ -926,6 +928,12 @@ export interface SubscribeResponse {
   status: string;
   expires_at: string;
   payment_id: string;
+  billing_cycle: "monthly" | "yearly";
+  original_amount: number;
+  final_amount: number;
+  discount_percent: number;
+  promo_code_applied?: string | null;
+  duration_days: number;
 }
 
 export const paymentsApi = {

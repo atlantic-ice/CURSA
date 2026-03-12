@@ -19,8 +19,15 @@ import {
 } from "lucide-react";
 import { FC, useCallback, useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
 
-import { paymentsApi, type PaymentRecord, type Plan, type SubscriptionInfo } from "../api/client";
+import {
+  paymentsApi,
+  type PaymentRecord,
+  type Plan,
+  type SubscribeResponse,
+  type SubscriptionInfo,
+} from "../api/client";
 
 import AppPageLayout from "../components/layout/AppPageLayout";
 import { Badge } from "../components/ui/badge";
@@ -34,6 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
+import { Input } from "../components/ui/input";
 import { Separator } from "../components/ui/separator";
 import { cn } from "../lib/utils";
 
@@ -126,10 +134,18 @@ interface PlanCardProps {
   plan: Plan;
   isCurrent: boolean;
   isLoading: boolean;
+  billingCycle: "monthly" | "yearly";
   onSelect: (plan: Plan) => void;
 }
 
-const PlanCard: FC<PlanCardProps> = ({ plan, isCurrent, isLoading, onSelect }) => {
+const getCyclePrice = (plan: Plan, cycle: "monthly" | "yearly"): number => {
+  if (cycle === "yearly") {
+    return Math.round(plan.price_rub * 10 * 100) / 100;
+  }
+  return plan.price_rub;
+};
+
+const PlanCard: FC<PlanCardProps> = ({ plan, isCurrent, isLoading, billingCycle, onSelect }) => {
   const Icon = PLAN_ICONS[plan.key] ?? PLAN_ICONS.FREE;
   const colorClass = PLAN_COLORS[plan.key] ?? PLAN_COLORS.FREE;
   const borderClass = PLAN_BORDER[plan.key] ?? PLAN_BORDER.FREE;
@@ -178,9 +194,11 @@ const PlanCard: FC<PlanCardProps> = ({ plan, isCurrent, isLoading, onSelect }) =
             ) : (
               <>
                 <span className="text-2xl font-bold">
-                  {plan.price_rub.toLocaleString("ru-RU")} ₽
+                  {getCyclePrice(plan, billingCycle).toLocaleString("ru-RU")} ₽
                 </span>
-                <span className="text-sm text-muted-foreground">/мес</span>
+                <span className="text-sm text-muted-foreground">
+                  {billingCycle === "yearly" ? "/год" : "/мес"}
+                </span>
               </>
             )}
           </div>
@@ -237,6 +255,7 @@ const PlanCard: FC<PlanCardProps> = ({ plan, isCurrent, isLoading, onSelect }) =
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 const BillingPage: FC<BillingPageProps> = ({ className }) => {
+  const [searchParams] = useSearchParams();
   const accessToken =
     typeof window !== "undefined" ? (localStorage.getItem("accessToken") ?? "") : "";
 
@@ -246,11 +265,30 @@ const BillingPage: FC<BillingPageProps> = ({ className }) => {
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [promoCode, setPromoCode] = useState("");
 
   // Modals
   const [confirmPlan, setConfirmPlan] = useState<Plan | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  useEffect(() => {
+    const cycleParam = (searchParams.get("cycle") || "").toLowerCase();
+    if (cycleParam === "monthly" || cycleParam === "yearly") {
+      setBillingCycle(cycleParam);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (plans.length === 0) return;
+    const planParam = (searchParams.get("plan") || "").toUpperCase();
+    if (!planParam) return;
+    const matched = plans.find((p) => p.key === planParam);
+    if (matched) {
+      setConfirmPlan(matched);
+    }
+  }, [plans, searchParams]);
 
   // ── Data loading ──────────────────────────────────────────────────────────
 
@@ -305,13 +343,23 @@ const BillingPage: FC<BillingPageProps> = ({ className }) => {
 
     try {
       const res = await paymentsApi.subscribe(
-        { plan_key: plan.key, payment_method: "mock" },
+        {
+          plan_key: plan.key,
+          payment_method: "mock",
+          billing_cycle: billingCycle,
+          promo_code: promoCode.trim() || undefined,
+        },
         accessToken,
       );
 
       if (res.success) {
-        toast.success(`Подписка «${plan.name}» активирована!`);
+        const payload = res.data as SubscribeResponse;
+        const amount = payload.final_amount.toLocaleString("ru-RU");
+        const discountPart =
+          payload.discount_percent > 0 ? ` со скидкой ${payload.discount_percent}%` : "";
+        toast.success(`Подписка «${plan.name}» активирована${discountPart}. Списано ${amount} ₽.`);
         await loadData();
+        setPromoCode("");
       }
     } catch (err: any) {
       const msg = err?.message ?? "Ошибка оформления подписки";
@@ -473,9 +521,29 @@ const BillingPage: FC<BillingPageProps> = ({ className }) => {
 
       {/* Plans grid */}
       <div className="mt-2">
-        <h2 className="mb-4 text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Доступные тарифы
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Доступные тарифы
+          </h2>
+          <div className="ml-auto inline-flex rounded-lg border border-border/70 bg-card/40 p-1">
+            <Button
+              size="sm"
+              variant={billingCycle === "monthly" ? "default" : "ghost"}
+              className="h-8"
+              onClick={() => setBillingCycle("monthly")}
+            >
+              Ежемесячно
+            </Button>
+            <Button
+              size="sm"
+              variant={billingCycle === "yearly" ? "default" : "ghost"}
+              className="h-8"
+              onClick={() => setBillingCycle("yearly")}
+            >
+              Ежегодно (-2 мес)
+            </Button>
+          </div>
+        </div>
 
         {loading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -498,6 +566,7 @@ const BillingPage: FC<BillingPageProps> = ({ className }) => {
                   plan={plan}
                   isCurrent={plan.key === currentPlanKey}
                   isLoading={subscribing}
+                  billingCycle={billingCycle}
                   onSelect={(p) => setConfirmPlan(p)}
                 />
               ))}
@@ -524,13 +593,28 @@ const BillingPage: FC<BillingPageProps> = ({ className }) => {
             <DialogDescription>
               Тариф <strong>{confirmPlan?.name}</strong>
               {confirmPlan && confirmPlan.price_rub > 0
-                ? ` — ${confirmPlan.price_rub.toLocaleString("ru-RU")} ₽/мес`
+                ? ` — ${getCyclePrice(confirmPlan, billingCycle).toLocaleString("ru-RU")} ₽/${billingCycle === "yearly" ? "год" : "мес"}`
                 : " — Бесплатно"}
             </DialogDescription>
           </DialogHeader>
 
           {confirmPlan && (
             <div className="space-y-2 py-2">
+              {confirmPlan.price_rub > 0 && (
+                <div className="space-y-1.5">
+                  <label htmlFor="promo-code" className="text-sm text-muted-foreground">
+                    Промокод (опционально)
+                  </label>
+                  <Input
+                    id="promo-code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="WELCOME10"
+                    maxLength={24}
+                  />
+                </div>
+              )}
+
               <p className="text-sm text-muted-foreground">Что входит:</p>
               <ul className="space-y-1">
                 {confirmPlan.features.map((f) => (

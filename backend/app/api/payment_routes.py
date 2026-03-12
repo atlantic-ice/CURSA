@@ -100,6 +100,8 @@ def subscribe():
         plan_key       str  Required. FREE | STUDENT | PRO | TEAM
         payment_method str  Optional. "mock" (default) | "stripe" | "yookassa"
         payment_token  str  Optional. Provider-specific card/payment token.
+        billing_cycle  str  Optional. "monthly" (default) | "yearly"
+        promo_code     str  Optional. Promo code for discount.
     """
     user_id = int(get_jwt_identity())
     body = request.get_json(silent=True) or {}
@@ -110,6 +112,8 @@ def subscribe():
 
     payment_method = body.get("payment_method", "mock")
     payment_token = body.get("payment_token")
+    billing_cycle = body.get("billing_cycle", "monthly")
+    promo_code = body.get("promo_code")
 
     svc = get_payment_service()
     try:
@@ -118,6 +122,8 @@ def subscribe():
             plan_key=plan_key,
             payment_method=payment_method,
             payment_token=payment_token,
+            billing_cycle=billing_cycle,
+            promo_code=promo_code,
         )
         return _ok(result, 201)
     except PaymentServiceError as exc:
