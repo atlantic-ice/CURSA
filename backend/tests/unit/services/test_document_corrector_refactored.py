@@ -55,6 +55,19 @@ class TestDocumentCorrector:
         assert corrector is not None
         assert len(corrector.correctors) == 4
 
+    def test_initialization_accepts_profile_data_signature(self):
+        """Проверяет совместимость сигнатуры со стабильным корректром."""
+        corrector = DocumentCorrector(
+            profile_data={
+                "rules": {
+                    "font": {"name": "Times New Roman", "size": 14},
+                    "line_spacing": 1.5,
+                }
+            }
+        )
+
+        assert corrector.rules["font"]["name"] == "Times New Roman"
+
     def test_correct_document(self, temp_docx_file):
         """Проверяет основную функцию коррекции."""
         corrector = DocumentCorrector()
@@ -71,12 +84,36 @@ class TestDocumentCorrector:
             assert isinstance(report, CorrectionReport)
             assert report.passes_completed > 0
             assert report.total_issues_fixed >= 0
+            assert getattr(report, "corrected_file_path", None) == out_path
             assert os.path.exists(out_path)
 
             # Проверяем что новый документ валиден
             corrected_doc = Document(out_path)
             assert corrected_doc is not None
 
+        finally:
+            if os.path.exists(out_path):
+                os.remove(out_path)
+
+    def test_correct_document_multipass_returns_path_and_report(self, temp_docx_file):
+        """Проверяет multipass API совместимости с рабочим pipeline."""
+        corrector = DocumentCorrector()
+
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
+            out_path = f.name
+
+        try:
+            corrected_path, report = corrector.correct_document_multipass(
+                temp_docx_file,
+                out_path=out_path,
+                max_passes=2,
+            )
+
+            assert corrected_path == out_path
+            assert isinstance(report, CorrectionReport)
+            assert report.max_passes == 2
+            assert report.passes_completed > 0
+            assert os.path.exists(corrected_path)
         finally:
             if os.path.exists(out_path):
                 os.remove(out_path)

@@ -1,20 +1,49 @@
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
 import { ColorModeContext } from "../../App";
 import Header from "../Header";
 
-// Моки для контекста и хуков
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useLocation: () => ({
-    pathname: "/",
+jest.mock(
+  "react-router-dom",
+  () => ({
+    Link: ({ to, children, ...props }) => (
+      <a href={to} {...props}>
+        {children}
+      </a>
+    ),
+    useLocation: () => ({ pathname: "/" }),
   }),
-}));
+  { virtual: true },
+);
+
+const setMatchMedia = (matches) => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }),
+  });
+};
 
 describe("Header", () => {
+  const mockToggleColorMode = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setMatchMedia(false);
+  });
+
   const renderHeader = (isMobile = false) => {
+    setMatchMedia(isMobile);
+
     // Создаем тему для тестирования
     const theme = createTheme({
       palette: {
@@ -31,15 +60,10 @@ describe("Header", () => {
       },
     });
 
-    // Мокируем useMediaQuery
-    jest.spyOn(theme.breakpoints, "down").mockImplementation(() => isMobile);
-
     return render(
-      <ColorModeContext.Provider value={{ toggleColorMode: jest.fn() }}>
+      <ColorModeContext.Provider value={{ toggleColorMode: mockToggleColorMode }}>
         <ThemeProvider theme={theme}>
-          <BrowserRouter>
-            <Header />
-          </BrowserRouter>
+          <Header />
         </ThemeProvider>
       </ColorModeContext.Provider>,
     );
@@ -66,7 +90,7 @@ describe("Header", () => {
   test("отображает кнопку переключения темы", () => {
     renderHeader();
 
-    const themeToggleButton = screen.getByRole("button", { name: /темная тема/i });
+    const themeToggleButton = screen.getByRole("button", { name: /переключить тему/i });
     expect(themeToggleButton).toBeInTheDocument();
   });
 
@@ -75,14 +99,13 @@ describe("Header", () => {
 
     const checkButton = screen.getByRole("link", { name: /проверить/i });
     expect(checkButton).toBeInTheDocument();
-    expect(checkButton).toHaveAttribute("href", "/check");
+    expect(checkButton).toHaveAttribute("href", "/");
   });
 
-  // Мобильные тесты могут быть сложнее, т.к. нужно мокировать медиа-запросы
   test("отображает переключатель мобильного меню на мобильных устройствах", () => {
     renderHeader(true);
 
-    // Тест может потребовать дополнительной настройки для корректной работы с медиа-запросами
-    // Этот тест может быть неполным в зависимости от реализации mobile drawer
+    const menuToggleButton = screen.getByRole("button", { name: /открыть меню/i });
+    expect(menuToggleButton).toBeInTheDocument();
   });
 });

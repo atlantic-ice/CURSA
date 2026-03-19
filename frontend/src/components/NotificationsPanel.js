@@ -172,12 +172,22 @@ const NotificationsPanel = ({ onNotificationRead }) => {
             <Typography variant="h6">Уведомления</Typography>
             <Box>
               <Tooltip title="Прочитать все">
-                <IconButton size="small" onClick={markAllAsRead} disabled={unreadCount === 0}>
+                <IconButton
+                  size="small"
+                  onClick={markAllAsRead}
+                  disabled={unreadCount === 0}
+                  aria-label="Прочитать все уведомления"
+                >
                   <DoneAllIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Очистить все">
-                <IconButton size="small" onClick={clearAll} disabled={totalCount === 0}>
+                <IconButton
+                  size="small"
+                  onClick={clearAll}
+                  disabled={totalCount === 0}
+                  aria-label="Очистить все уведомления"
+                >
                   <DeleteSweepIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -217,6 +227,7 @@ const NotificationsPanel = ({ onNotificationRead }) => {
                                 size="small"
                                 onClick={() => markAsRead(notification.id)}
                                 edge="end"
+                                aria-label={`Отметить уведомление как прочитанное: ${notification.message}`}
                               >
                                 <DoneAllIcon fontSize="small" />
                               </IconButton>

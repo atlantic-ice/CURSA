@@ -10,6 +10,36 @@
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.report-playback-chip--structure {
+  border-color: #38bdf866;
+  background-color: #38bdf81a;
+  color: #38bdf8;
+}
+
+.report-playback-chip--styles {
+  border-color: #8b5cf666;
+  background-color: #8b5cf61a;
+  color: #8b5cf6;
+}
+
+.report-playback-chip--formatting {
+  border-color: #f59e0b66;
+  background-color: #f59e0b1a;
+  color: #f59e0b;
+}
+
+.report-playback-chip--xml-deep {
+  border-color: #14b8a666;
+  background-color: #14b8a61a;
+  color: #14b8a6;
+}
+
+.report-playback-chip--verification {
+  border-color: #22c55e66;
+  background-color: #22c55e1a;
+  color: #22c55e;
+}
+
 /* Print styles */
 @media print {
   .glass-card {

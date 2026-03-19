@@ -3,11 +3,11 @@
  * Запуск: node generateComponentTests.js
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 // Путь к директории с компонентами
-const componentsDir = path.join(__dirname, '..');
+const componentsDir = path.join(__dirname, "..");
 // Путь к директории с тестами
 const testsDir = __dirname;
 
@@ -25,41 +25,38 @@ describe('${componentName}', () => {
   test('рендерится без ошибок', () => {
     // Добавьте необходимые пропсы для компонента
     renderWithProviders(<${componentName} />);
-    
+
     // Добавьте ассерты для базового тестирования компонента
     // например: expect(screen.getByText(...)).toBeInTheDocument();
   });
-  
+
   // Добавьте дополнительные тесты для компонента
 });
 `;
 
 // Функция для получения списка файлов компонентов
 const getComponentFiles = () => {
-  return fs.readdirSync(componentsDir)
-    .filter(file => {
-      return (
-        file.endsWith('.js') || 
-        file.endsWith('.jsx') || 
-        file.endsWith('.tsx')
-      ) && 
-      !file.endsWith('.test.js') && 
-      !file.endsWith('.spec.js') &&
-      file !== 'index.js'
-    });
+  return fs.readdirSync(componentsDir).filter((file) => {
+    return (
+      (file.endsWith(".js") || file.endsWith(".jsx") || file.endsWith(".tsx")) &&
+      !file.endsWith(".test.js") &&
+      !file.endsWith(".spec.js") &&
+      file !== "index.js"
+    );
+  });
 };
 
 // Функция для создания теста для компонента
 const createTestForComponent = (componentFile) => {
   const componentName = path.basename(componentFile, path.extname(componentFile));
   const testFile = path.join(testsDir, `${componentName}.test.js`);
-  
+
   // Проверяем, существует ли уже тест для этого компонента
   if (fs.existsSync(testFile)) {
     console.log(`Тест для компонента ${componentName} уже существует`);
     return;
   }
-  
+
   // Создаем файл с тестом
   fs.writeFileSync(testFile, generateTestTemplate(componentName));
   console.log(`Создан тест для компонента ${componentName}`);
@@ -67,22 +64,33 @@ const createTestForComponent = (componentFile) => {
 
 // Главная функция
 const generateTests = () => {
-  console.log('Начинаем генерацию тестов для компонентов...');
-  
+  console.log("Начинаем генерацию тестов для компонентов...");
+
   const componentFiles = getComponentFiles();
-  
+
   // Создаем директорию для утилит, если она не существует
-  const utilsDir = path.join(testsDir, 'utils');
+  const utilsDir = path.join(testsDir, "utils");
   if (!fs.existsSync(utilsDir)) {
     fs.mkdirSync(utilsDir);
-    console.log('Создана директория для утилит тестирования');
+    console.log("Создана директория для утилит тестирования");
   }
-  
+
   // Генерируем тесты для каждого компонента
   componentFiles.forEach(createTestForComponent);
-  
+
   console.log(`Генерация завершена. Создано ${componentFiles.length} тестов.`);
 };
 
-// Запускаем функцию генерации тестов
-generateTests(); 
+if (require.main === module) {
+  // Позволяет запускать генератор вручную без side-effect при Jest-импорте.
+  generateTests();
+}
+
+if (typeof describe === "function") {
+  describe("generateComponentTests utility", () => {
+    test("builds a basic test template", () => {
+      const template = generateTestTemplate("DemoComponent");
+      expect(template).toContain("describe('DemoComponent'");
+    });
+  });
+}

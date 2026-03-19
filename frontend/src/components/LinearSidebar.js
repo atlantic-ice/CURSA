@@ -1,46 +1,44 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { Box, Typography, IconButton, useTheme } from '@mui/material';
 import {
-  Home as HomeIcon,
-  Description as DocumentIcon,
   CheckCircle as CheckIcon,
-  BookOpen as GuideIcon,
-  LibraryBooks as ExamplesIcon,
-  FolderOpen as ResourcesIcon,
-  History as HistoryIcon,
-  Settings as SettingsIcon,
   Brightness4 as DarkModeIcon,
+  LibraryBooks as ExamplesIcon,
+  BookOpen as GuideIcon,
+  History as HistoryIcon,
+  Home as HomeIcon,
   Brightness7 as LightModeIcon,
-} from '@mui/icons-material';
-import StarLogo from './StarLogo';
+  FolderOpen as ResourcesIcon,
+  Settings as SettingsIcon,
+} from "@mui/icons-material";
+import { Box, IconButton, Typography, useTheme } from "@mui/material";
+import { NavLink, useLocation } from "react-router-dom";
+import StarLogo from "./StarLogo";
 
 const LinearSidebar = ({ colorMode, mode }) => {
   const theme = useTheme();
   const location = useLocation();
 
   const navItems = [
-    { path: '/', icon: <HomeIcon />, label: 'Главная' },
-    { path: '/check', icon: <CheckIcon />, label: 'Проверка' },
-    { path: '/guidelines', icon: <GuideIcon />, label: 'Методические указания' },
-    { path: '/examples', icon: <ExamplesIcon />, label: 'Примеры' },
-    { path: '/resources', icon: <ResourcesIcon />, label: 'Ресурсы' },
-    { path: '/history', icon: <HistoryIcon />, label: 'История' },
-    { path: '/admin', icon: <SettingsIcon />, label: 'Администрирование' },
+    { path: "/", icon: <HomeIcon />, label: "Главная" },
+    { path: "/", icon: <CheckIcon />, label: "Проверка" },
+    { path: "/guidelines", icon: <GuideIcon />, label: "Методические указания" },
+    { path: "/examples", icon: <ExamplesIcon />, label: "Примеры" },
+    { path: "/resources", icon: <ResourcesIcon />, label: "Ресурсы" },
+    { path: "/history", icon: <HistoryIcon />, label: "История" },
+    { path: "/admin", icon: <SettingsIcon />, label: "Администрирование" },
   ];
 
   return (
     <Box
       sx={{
         width: 240,
-        height: '100vh',
-        position: 'sticky',
+        height: "100vh",
+        position: "sticky",
         top: 0,
-        display: 'flex',
-        flexDirection: 'column',
+        display: "flex",
+        flexDirection: "column",
         borderRight: `1px solid ${theme.palette.divider}`,
         backgroundColor: theme.palette.background.paper,
-        overflow: 'hidden',
+        overflow: "hidden",
       }}
     >
       {/* Логотип и название */}
@@ -50,20 +48,17 @@ const LinearSidebar = ({ colorMode, mode }) => {
           borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <StarLogo 
-            size={24} 
-            color={theme.palette.primary.main}
-          />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <StarLogo size={24} color={theme.palette.primary.main} />
           <Typography
             variant="h5"
             sx={{
               fontWeight: 700,
-              background: 'linear-gradient(135deg, #007AFF 0%, #0066D6 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.02em',
+              background: "linear-gradient(135deg, #007AFF 0%, #0066D6 100%)",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              letterSpacing: "-0.02em",
             }}
           >
             CURSA
@@ -73,9 +68,9 @@ const LinearSidebar = ({ colorMode, mode }) => {
           variant="caption"
           sx={{
             color: theme.palette.text.secondary,
-            fontSize: '0.75rem',
+            fontSize: "0.75rem",
             mt: 0.5,
-            display: 'block',
+            display: "block",
           }}
         >
           Нормоконтроль документов
@@ -86,40 +81,32 @@ const LinearSidebar = ({ colorMode, mode }) => {
       <Box
         sx={{
           flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
+          overflowY: "auto",
+          overflowX: "hidden",
           py: 2,
           px: 1.5,
         }}
       >
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
-          
+
           return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              style={{ textDecoration: 'none' }}
-            >
+            <NavLink key={item.path} to={item.path} style={{ textDecoration: "none" }}>
               <Box
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: "flex",
+                  alignItems: "center",
                   gap: 1.5,
                   px: 1.5,
                   py: 1,
                   my: 0.25,
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  backgroundColor: isActive
-                    ? theme.palette.action.selected
-                    : 'transparent',
-                  color: isActive
-                    ? theme.palette.text.primary
-                    : theme.palette.text.secondary,
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  backgroundColor: isActive ? theme.palette.action.selected : "transparent",
+                  color: isActive ? theme.palette.text.primary : theme.palette.text.secondary,
                   fontWeight: isActive ? 600 : 500,
-                  '&:hover': {
+                  "&:hover": {
                     backgroundColor: theme.palette.action.hover,
                     color: theme.palette.text.primary,
                   },
@@ -127,12 +114,12 @@ const LinearSidebar = ({ colorMode, mode }) => {
               >
                 <Box
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     width: 20,
                     height: 20,
-                    '& svg': {
+                    "& svg": {
                       fontSize: 20,
                     },
                   }}
@@ -142,8 +129,8 @@ const LinearSidebar = ({ colorMode, mode }) => {
                 <Typography
                   variant="body2"
                   sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 'inherit',
+                    fontSize: "0.875rem",
+                    fontWeight: "inherit",
                   }}
                 >
                   {item.label}
@@ -163,19 +150,19 @@ const LinearSidebar = ({ colorMode, mode }) => {
       >
         <Box
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             px: 1.5,
             py: 1,
-            borderRadius: '6px',
+            borderRadius: "6px",
             backgroundColor: theme.palette.action.hover,
           }}
         >
           <Typography
             variant="body2"
             sx={{
-              fontSize: '0.875rem',
+              fontSize: "0.875rem",
               fontWeight: 500,
               color: theme.palette.text.secondary,
             }}
@@ -184,15 +171,16 @@ const LinearSidebar = ({ colorMode, mode }) => {
           </Typography>
           <IconButton
             onClick={colorMode.toggleColorMode}
+            aria-label="Переключить тему"
             size="small"
             sx={{
               color: theme.palette.text.secondary,
-              '&:hover': {
+              "&:hover": {
                 backgroundColor: theme.palette.action.selected,
               },
             }}
           >
-            {mode === 'dark' ? (
+            {mode === "dark" ? (
               <LightModeIcon fontSize="small" />
             ) : (
               <DarkModeIcon fontSize="small" />

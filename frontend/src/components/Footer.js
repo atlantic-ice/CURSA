@@ -1,10 +1,19 @@
-import React, { memo } from 'react';
-import { Box, Container, Grid, Typography, Link, Divider, useTheme, IconButton } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
-import TelegramIcon from '@mui/icons-material/Telegram';
-import StarLogo from './StarLogo';
+import GitHubIcon from "@mui/icons-material/GitHub";
+import LinkedInIcon from "@mui/icons-material/LinkedIn";
+import TelegramIcon from "@mui/icons-material/Telegram";
+import {
+  Box,
+  Container,
+  Divider,
+  Grid,
+  IconButton,
+  Link,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import { memo } from "react";
+import { Link as RouterLink } from "react-router-dom";
+import StarLogo from "./StarLogo";
 
 const Footer = memo(() => {
   const theme = useTheme();
@@ -12,29 +21,29 @@ const Footer = memo(() => {
 
   const footerLinks = [
     {
-      title: 'Сервис',
+      title: "Сервис",
       links: [
-        { name: 'Главная', path: '/' },
-        { name: 'Проверка', path: '/check' },
-        { name: 'История', path: '/history' },
-      ]
+        { name: "Главная", path: "/" },
+        { name: "Проверка", path: "/" },
+        { name: "История", path: "/history" },
+      ],
     },
     {
-      title: 'Информация',
+      title: "Информация",
       links: [
-        { name: 'Требования', path: '/guidelines' },
-        { name: 'Примеры', path: '/examples' },
-        { name: 'Ресурсы', path: '/resources' },
-      ]
+        { name: "Требования", path: "/guidelines" },
+        { name: "Примеры", path: "/examples" },
+        { name: "Ресурсы", path: "/resources" },
+      ],
     },
     {
-      title: 'Контакты',
+      title: "Контакты",
       links: [
-        { name: 'О нас', path: '/about' },
-        { name: 'Поддержка', path: '/support' },
-        { name: 'Обратная связь', path: '/feedback' },
-      ]
-    }
+        { name: "О нас", path: "/about" },
+        { name: "Поддержка", path: "/support" },
+        { name: "Обратная связь", path: "/feedback" },
+      ],
+    },
   ];
 
   return (
@@ -43,65 +52,80 @@ const Footer = memo(() => {
       sx={{
         py: 6,
         px: 2,
-        mt: 'auto',
-        backgroundColor: theme => theme.palette.mode === 'dark' 
-          ? 'rgba(15, 23, 42, 0.95)' 
-          : 'rgba(248, 250, 252, 0.95)',
-        borderTop: '1px solid',
-        borderColor: 'divider',
+        mt: "auto",
+        backgroundColor: (theme) =>
+          theme.palette.mode === "dark" ? "rgba(15, 23, 42, 0.95)" : "rgba(248, 250, 252, 0.95)",
+        borderTop: "1px solid",
+        borderColor: "divider",
       }}
     >
       <Container maxWidth="lg">
         <Grid container spacing={4}>
           {/* Логотип и описание */}
           <Grid item xs={12} md={4}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-              <StarLogo 
-                size={24} 
-                color={theme.palette.mode === 'dark' ? '#60a5fa' : '#2563eb'}
-              />
-              <Typography 
-                variant="h5" 
-                sx={{ 
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+              <StarLogo size={24} color={theme.palette.mode === "dark" ? "#60a5fa" : "#2563eb"} />
+              <Typography
+                variant="h5"
+                sx={{
                   fontWeight: 800,
-                  letterSpacing: '0.05em',
+                  letterSpacing: "0.05em",
                   fontFamily: '"Montserrat", "Roboto", "Arial", sans-serif',
-                  color: theme.palette.mode === 'dark' ? '#60a5fa' : '#2563eb',
+                  color: theme.palette.mode === "dark" ? "#60a5fa" : "#2563eb",
                 }}
               >
                 CURSA
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: 300 }}>
-              Сервис автоматизированной проверки курсовых работ на соответствие требованиям оформления
+              Сервис автоматизированной проверки курсовых работ на соответствие требованиям
+              оформления
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mt: 3 }}>
-              <IconButton 
-                size="small" 
+            <Box sx={{ display: "flex", gap: 1, mt: 3 }}>
+              <IconButton
+                size="small"
                 aria-label="github"
-                sx={{ 
-                  color: 'text.secondary',
-                  '&:hover': { color: 'primary.main', bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.05)' }
+                sx={{
+                  color: "text.secondary",
+                  "&:hover": {
+                    color: "primary.main",
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(37, 99, 235, 0.1)"
+                        : "rgba(37, 99, 235, 0.05)",
+                  },
                 }}
               >
                 <GitHubIcon fontSize="small" />
               </IconButton>
-              <IconButton 
-                size="small" 
+              <IconButton
+                size="small"
                 aria-label="telegram"
-                sx={{ 
-                  color: 'text.secondary',
-                  '&:hover': { color: 'primary.main', bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.05)' }
+                sx={{
+                  color: "text.secondary",
+                  "&:hover": {
+                    color: "primary.main",
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(37, 99, 235, 0.1)"
+                        : "rgba(37, 99, 235, 0.05)",
+                  },
                 }}
               >
                 <TelegramIcon fontSize="small" />
               </IconButton>
-              <IconButton 
-                size="small" 
+              <IconButton
+                size="small"
                 aria-label="linkedin"
-                sx={{ 
-                  color: 'text.secondary',
-                  '&:hover': { color: 'primary.main', bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.05)' }
+                sx={{
+                  color: "text.secondary",
+                  "&:hover": {
+                    color: "primary.main",
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(37, 99, 235, 0.1)"
+                        : "rgba(37, 99, 235, 0.05)",
+                  },
                 }}
               >
                 <LinkedInIcon fontSize="small" />
@@ -115,18 +139,18 @@ const Footer = memo(() => {
               <Typography variant="subtitle2" color="text.primary" fontWeight={600} gutterBottom>
                 {section.title}
               </Typography>
-              <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
+              <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0 }}>
                 {section.links.map((link) => (
                   <Box component="li" key={link.name} sx={{ py: 0.5 }}>
                     <Link
                       component={RouterLink}
                       to={link.path}
                       color="text.secondary"
-                      sx={{ 
-                        textDecoration: 'none',
-                        fontSize: '0.875rem',
-                        transition: 'color 0.2s',
-                        '&:hover': { color: 'primary.main' }
+                      sx={{
+                        textDecoration: "none",
+                        fontSize: "0.875rem",
+                        transition: "color 0.2s",
+                        "&:hover": { color: "primary.main" },
                       }}
                     >
                       {link.name}
@@ -148,8 +172,8 @@ const Footer = memo(() => {
             <Box
               component="form"
               sx={{
-                display: 'flex',
-                flexDirection: { xs: 'column', sm: 'row' },
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
                 gap: 1,
               }}
             >
@@ -160,19 +184,20 @@ const Footer = memo(() => {
                   flex: 1,
                   py: 1.5,
                   px: 2,
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  border: "1px solid",
+                  borderColor: "divider",
                   borderRadius: 1,
-                  bgcolor: 'background.paper',
-                  color: 'text.primary',
-                  fontSize: '0.875rem',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                  '&:focus': {
-                    borderColor: 'primary.main',
-                    boxShadow: theme => theme.palette.mode === 'dark'
-                      ? '0 0 0 2px rgba(37, 99, 235, 0.2)'
-                      : '0 0 0 2px rgba(37, 99, 235, 0.1)',
+                  bgcolor: "background.paper",
+                  color: "text.primary",
+                  fontSize: "0.875rem",
+                  outline: "none",
+                  transition: "all 0.2s",
+                  "&:focus": {
+                    borderColor: "primary.main",
+                    boxShadow: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "0 0 0 2px rgba(37, 99, 235, 0.2)"
+                        : "0 0 0 2px rgba(37, 99, 235, 0.1)",
                   },
                 }}
               />
@@ -182,16 +207,16 @@ const Footer = memo(() => {
                 sx={{
                   py: 1.5,
                   px: 3,
-                  border: 'none',
+                  border: "none",
                   borderRadius: 1,
-                  bgcolor: 'primary.main',
-                  color: 'white',
-                  fontSize: '0.875rem',
+                  bgcolor: "primary.main",
+                  color: "white",
+                  fontSize: "0.875rem",
                   fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    bgcolor: "primary.dark",
                   },
                 }}
               >
@@ -204,20 +229,28 @@ const Footer = memo(() => {
         <Divider sx={{ my: 4 }} />
 
         {/* Копирайт */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             © {currentYear} CURSA. Все права защищены.
           </Typography>
-          <Box sx={{ display: 'flex', gap: 3 }}>
+          <Box sx={{ display: "flex", gap: 3 }}>
             <Link
               component={RouterLink}
               to="/privacy"
               color="text.secondary"
-              sx={{ 
-                textDecoration: 'none',
-                fontSize: '0.75rem',
-                transition: 'color 0.2s',
-                '&:hover': { color: 'primary.main' }
+              sx={{
+                textDecoration: "none",
+                fontSize: "0.75rem",
+                transition: "color 0.2s",
+                "&:hover": { color: "primary.main" },
               }}
             >
               Политика конфиденциальности
@@ -226,11 +259,11 @@ const Footer = memo(() => {
               component={RouterLink}
               to="/terms"
               color="text.secondary"
-              sx={{ 
-                textDecoration: 'none',
-                fontSize: '0.75rem',
-                transition: 'color 0.2s',
-                '&:hover': { color: 'primary.main' }
+              sx={{
+                textDecoration: "none",
+                fontSize: "0.75rem",
+                transition: "color 0.2s",
+                "&:hover": { color: "primary.main" },
               }}
             >
               Условия использования
@@ -242,6 +275,6 @@ const Footer = memo(() => {
   );
 });
 
-Footer.displayName = 'Footer';
+Footer.displayName = "Footer";
 
-export default Footer; 
+export default Footer;

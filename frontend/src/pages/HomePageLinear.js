@@ -122,7 +122,7 @@ const HomePage = () => {
         {/* Quick Action Card */}
         <LinearCard
           hover
-          onClick={() => navigate("/check")}
+          onClick={() => navigate("/")}
           sx={{
             mb: 5,
             cursor: "pointer",
@@ -131,8 +131,12 @@ const HomePage = () => {
                 ? "linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 102, 214, 0.05) 100%)"
                 : "linear-gradient(135deg, rgba(0, 122, 255, 0.05) 0%, rgba(0, 122, 255, 0.02) 100%)",
             borderColor: "primary.main",
-            borderWidth: 1.5,
           }}
+          action={
+            <LinearButton variant="contained" onClick={() => navigate("/")}>
+              Начать проверку
+            </LinearButton>
+          }
         >
           <Box
             sx={{
@@ -180,6 +184,7 @@ const HomePage = () => {
               </Box>
             </Box>
             <IconButton
+              aria-label="Перейти к проверке документа"
               sx={{
                 width: 48,
                 height: 48,
@@ -342,7 +347,10 @@ const HomePage = () => {
                       />
                     )}
                     <LinearStatusIndicator status={check.status} label={check.statusLabel} />
-                    <IconButton size="small">
+                    <IconButton
+                      size="small"
+                      aria-label={`Открыть отчет о проверке ${check.filename}`}
+                    >
                       <ArrowIcon fontSize="small" />
                     </IconButton>
                   </Box>
@@ -355,7 +363,7 @@ const HomePage = () => {
               title="Нет проверок"
               description="Загрузите документ для начала проверки"
               action={
-                <LinearButton variant="contained" onClick={() => navigate("/check")}>
+                <LinearButton variant="contained" onClick={() => navigate("/")}>
                   Проверить документ
                 </LinearButton>
               }

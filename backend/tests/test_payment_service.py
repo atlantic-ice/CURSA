@@ -208,7 +208,9 @@ class TestSubscribe:
             assert result["duration_days"] == 365
             assert result["final_amount"] == float(PLANS["PRO"]["price_rub"] * 10)
 
-    def test_subscribe_with_valid_promo_code_applies_discount(self, app, payment_service, test_user):
+    def test_subscribe_with_valid_promo_code_applies_discount(
+        self, app, payment_service, test_user
+    ):
         with app.app_context():
             result = payment_service.subscribe(test_user.id, "PRO", promo_code="WELCOME10")
             assert result["discount_percent"] == 10

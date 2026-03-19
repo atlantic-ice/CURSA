@@ -365,7 +365,9 @@ class PaymentService:
             "original_amount": float(original_amount),
             "final_amount": float(final_amount),
             "discount_percent": discount_percent,
-            "promo_code_applied": promo_code.upper() if promo_code and discount_percent > 0 else None,
+            "promo_code_applied": (
+                promo_code.upper() if promo_code and discount_percent > 0 else None
+            ),
             "duration_days": duration_days,
         }
 

@@ -179,11 +179,13 @@ const PricingPage: FC<PricingPageProps> = ({ className }) => {
                       <CardTitle className="text-base">{plan.name}</CardTitle>
                     </div>
                     <p className="pt-1 text-2xl font-semibold">{fmtPrice(plan, billingCycle)}</p>
-                    {billingCycle === "yearly" && plan.price_rub > 0 && plan.key !== "ENTERPRISE" && (
-                      <p className="text-xs text-muted-foreground">
-                        Эквивалент {Math.round((plan.price_rub * 10 * 100) / 12) / 100} ₽/мес
-                      </p>
-                    )}
+                    {billingCycle === "yearly" &&
+                      plan.price_rub > 0 &&
+                      plan.key !== "ENTERPRISE" && (
+                        <p className="text-xs text-muted-foreground">
+                          Эквивалент {Math.round((plan.price_rub * 10 * 100) / 12) / 100} ₽/мес
+                        </p>
+                      )}
                   </CardHeader>
 
                   <CardContent className="flex-1 space-y-2">

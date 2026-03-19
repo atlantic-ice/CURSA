@@ -36,11 +36,16 @@ jest.mock(
 
 // Мок для react-hot-toast
 jest.mock("react-hot-toast", () => ({
-  Toaster: () => null,
+  __esModule: true,
+  default: {
+    success: jest.fn(),
+    error: jest.fn(),
+  },
   toast: {
     success: jest.fn(),
     error: jest.fn(),
   },
+  Toaster: () => null,
 }));
 
 // Мок для framer-motion
@@ -180,5 +185,26 @@ describe("UploadPage - Navigation", () => {
     });
     expect(screen.getByTestId("selected-profile-summary")).toHaveTextContent("Пользовательский");
     expect(Storage.prototype.setItem).toHaveBeenCalledWith("cursa_profile", "bmstu");
+  });
+
+  test("clear selected file button has accessible name", async () => {
+    const { container } = await renderUploadPage();
+
+    const fileInput = container.querySelector('input[type="file"]');
+    expect(fileInput).toBeInTheDocument();
+
+    const file = new File(["test docx content"], "paper.docx", {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: /очистить выбранный файл/i,
+        }),
+      ).toBeInTheDocument();
+    });
   });
 });

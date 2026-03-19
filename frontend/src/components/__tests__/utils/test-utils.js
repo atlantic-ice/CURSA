@@ -1,11 +1,10 @@
-import React from 'react';
-import { render } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { render } from "@testing-library/react";
+import React from "react";
 
 // Создаем контекст для переключения темы
 const ColorModeContext = React.createContext({
-  toggleColorMode: jest.fn()
+  toggleColorMode: jest.fn(),
 });
 
 // Экспортируем его для использования в тестах
@@ -21,29 +20,25 @@ export function renderWithProviders(ui, options = {}) {
   const {
     theme = createTheme({
       palette: {
-        mode: 'light',
-        primary: { main: '#2563eb', contrastText: '#ffffff' },
-        text: { primary: '#000000', secondary: '#666666' },
-        divider: '#e0e0e0',
-        action: { selected: '#f5f5f5' }
-      }
-    }), 
+        mode: "light",
+        primary: { main: "#2563eb", contrastText: "#ffffff" },
+        text: { primary: "#000000", secondary: "#666666" },
+        divider: "#e0e0e0",
+        action: { selected: "#f5f5f5" },
+      },
+    }),
     colorMode = { toggleColorMode: jest.fn() },
-    route = '/',
+    route = "/",
     ...renderOptions
   } = options;
 
   // Устанавливаем начальный маршрут
-  window.history.pushState({}, 'Test page', route);
+  window.history.pushState({}, "Test page", route);
 
   function Wrapper({ children }) {
     return (
       <ColorModeContext.Provider value={colorMode}>
-        <ThemeProvider theme={theme}>
-          <BrowserRouter>
-            {children}
-          </BrowserRouter>
-        </ThemeProvider>
+        <ThemeProvider theme={theme}>{children}</ThemeProvider>
       </ColorModeContext.Provider>
     );
   }
@@ -56,9 +51,9 @@ export function renderWithProviders(ui, options = {}) {
  * @param {boolean} matches - Должен ли медиа-запрос совпадать
  */
 export function mockMediaQuery(matches) {
-  Object.defineProperty(window, 'matchMedia', {
+  Object.defineProperty(window, "matchMedia", {
     writable: true,
-    value: jest.fn().mockImplementation(query => ({
+    value: jest.fn().mockImplementation((query) => ({
       matches,
       media: query,
       onchange: null,
@@ -76,12 +71,23 @@ export function mockMediaQuery(matches) {
  * @param {string} pathname - Текущий путь
  * @returns {Object} - Моки для react-router-dom
  */
-export function createRouterMocks(pathname = '/') {
+export function createRouterMocks(pathname = "/") {
+  const mockPathname = pathname;
+
   // Мок для useLocation
-  jest.mock('react-router-dom', () => ({
-    ...jest.requireActual('react-router-dom'),
-    useLocation: jest.fn().mockReturnValue({ pathname }),
+  jest.mock("react-router-dom", () => ({
+    ...jest.requireActual("react-router-dom"),
+    useLocation: jest.fn().mockReturnValue({ pathname: mockPathname }),
     useNavigate: jest.fn().mockReturnValue(jest.fn()),
-    useParams: jest.fn().mockReturnValue({})
+    useParams: jest.fn().mockReturnValue({}),
   }));
-} 
+}
+
+if (typeof describe === "function") {
+  describe("test-utils exports", () => {
+    test("render helpers are defined", () => {
+      expect(typeof renderWithProviders).toBe("function");
+      expect(typeof mockMediaQuery).toBe("function");
+    });
+  });
+}

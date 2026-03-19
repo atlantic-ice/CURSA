@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import fs from "fs";
+import path from "path";
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+describe("App public route contract", () => {
+  const appSource = fs.readFileSync(path.join(__dirname, "App.tsx"), "utf8");
+
+  test.each(["/guidelines", "/examples", "/materials", "/resources"])(
+    "keeps %s as a public route",
+    (routePath) => {
+      expect(appSource).toContain(`path="${routePath}"`);
+    },
+  );
 });

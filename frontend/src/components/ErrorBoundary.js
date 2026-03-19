@@ -1,8 +1,22 @@
 import { ErrorOutline, Refresh } from "@mui/icons-material";
-import { Box, Button, Container, Paper, Typography } from "@mui/material";
+import { Box, Button, Paper, Typography } from "@mui/material";
 import PropTypes from "prop-types";
 import React from "react";
 import logger from "../utils/logger";
+
+const CHUNK_RELOAD_STORAGE_KEY = "cursa:chunk-reload-attempted";
+
+const CHUNK_ERROR_PATTERNS = [
+  /ChunkLoadError/i,
+  /Loading chunk [^\s]+ failed/i,
+  /Failed to fetch dynamically imported module/i,
+];
+
+function isChunkLoadError(error) {
+  const message = error?.message || error?.toString?.() || "";
+  const name = error?.name || "";
+  return CHUNK_ERROR_PATTERNS.some((pattern) => pattern.test(message) || pattern.test(name));
+}
 
 /**
  * ErrorBoundary - компонент для глобальной обработки ошибок React.
@@ -55,6 +69,16 @@ class ErrorBoundary extends React.Component {
       errorInfo,
     });
 
+    // При ошибке загрузки чанка пробуем одно автоматическое восстановление.
+    if (isChunkLoadError(error)) {
+      const alreadyRetried = sessionStorage.getItem(CHUNK_RELOAD_STORAGE_KEY) === "1";
+      if (!alreadyRetried) {
+        sessionStorage.setItem(CHUNK_RELOAD_STORAGE_KEY, "1");
+        this.props.reloadPage();
+        return;
+      }
+    }
+
     // Вызываем callback если передан
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -81,12 +105,14 @@ class ErrorBoundary extends React.Component {
    * Перезагружает страницу
    */
   handleReload = () => {
-    window.location.reload();
+    sessionStorage.removeItem(CHUNK_RELOAD_STORAGE_KEY);
+    this.props.reloadPage();
   };
 
   render() {
     const { hasError, error, errorInfo } = this.state;
     const { children, fallback, showDetails } = this.props;
+    const chunkLoadFailed = isChunkLoadError(error);
 
     if (hasError) {
       // Если передан кастомный fallback, используем его
@@ -98,22 +124,26 @@ class ErrorBoundary extends React.Component {
 
       // Дефолтный UI ошибки
       return (
-        <Container maxWidth="sm">
+        <Box sx={{ minHeight: "100vh", px: { xs: 2, md: 3 }, py: { xs: 4, md: 6 } }}>
           <Box
             sx={{
-              minHeight: "100vh",
+              mx: "auto",
+              width: "100%",
+              maxWidth: "1480px",
+              minHeight: "calc(100vh - 48px)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              py: 4,
             }}
           >
             <Paper
               elevation={0}
               sx={{
-                p: 4,
+                width: "100%",
+                maxWidth: 760,
+                p: { xs: 4, md: 6 },
                 textAlign: "center",
-                borderRadius: 60,
+                borderRadius: 8,
                 background: "rgba(10, 10, 10, 0.8)",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
               }}
@@ -126,12 +156,17 @@ class ErrorBoundary extends React.Component {
                 }}
               />
 
-              <Typography variant="h5" gutterBottom sx={{ color: "text.primary", fontWeight: 600 }}>
+              <Typography variant="h4" gutterBottom sx={{ color: "text.primary", fontWeight: 700 }}>
                 Что-то пошло не так
               </Typography>
 
-              <Typography variant="body1" sx={{ color: "text.secondary", mb: 3 }}>
-                Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.
+              <Typography
+                variant="body1"
+                sx={{ color: "text.secondary", mb: 4, fontSize: "1.05rem" }}
+              >
+                {chunkLoadFailed
+                  ? "Ошибка загрузки части интерфейса. Обновите приложение, чтобы подтянуть актуальные ресурсы."
+                  : "Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу."}
               </Typography>
 
               {/* Показываем детали ошибки в dev режиме */}
@@ -139,11 +174,11 @@ class ErrorBoundary extends React.Component {
                 <Paper
                   sx={{
                     p: 2,
-                    mb: 3,
+                    mb: 4,
                     bgcolor: "rgba(255, 0, 0, 0.1)",
-                    borderRadius: 60,
+                    borderRadius: 4,
                     textAlign: "left",
-                    maxHeight: 200,
+                    maxHeight: 240,
                     overflow: "auto",
                   }}
                 >
@@ -169,31 +204,39 @@ class ErrorBoundary extends React.Component {
                 </Paper>
               )}
 
-              <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
+              <Box sx={{ display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap" }}>
                 <Button
                   variant="contained"
                   startIcon={<Refresh />}
                   onClick={this.handleReload}
+                  size="large"
                   sx={{
                     background: "#ededed",
                     color: "#0a0a0a",
                     fontWeight: 600,
                     textTransform: "none",
+                    minWidth: 200,
                     "&:hover": {
                       background: "#ffffff",
                     },
                   }}
                 >
-                  Перезагрузить
+                  {chunkLoadFailed ? "Обновить приложение" : "Перезагрузить"}
                 </Button>
 
-                <Button variant="outlined" color="secondary" onClick={this.handleReset}>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={this.handleReset}
+                  size="large"
+                  sx={{ minWidth: 200 }}
+                >
                   Попробовать снова
                 </Button>
               </Box>
             </Paper>
           </Box>
-        </Container>
+        </Box>
       );
     }
 
@@ -212,6 +255,8 @@ ErrorBoundary.propTypes = {
   onError: PropTypes.func,
   /** Callback при сбросе состояния */
   onReset: PropTypes.func,
+  /** Функция перезагрузки страницы (для тестов/кастомизации) */
+  reloadPage: PropTypes.func,
 };
 
 ErrorBoundary.defaultProps = {
@@ -219,6 +264,7 @@ ErrorBoundary.defaultProps = {
   showDetails: process.env.NODE_ENV === "development",
   onError: null,
   onReset: null,
+  reloadPage: () => window.location.reload(),
 };
 
 export default ErrorBoundary;

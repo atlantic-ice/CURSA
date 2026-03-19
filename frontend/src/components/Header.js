@@ -65,6 +65,7 @@ const Header = () => {
         </Typography>
         <IconButton
           onClick={() => setMobileOpen(false)}
+          aria-label="Закрыть меню"
           sx={{
             color: "rgba(255,255,255,0.4)",
             p: 0.5,
@@ -217,6 +218,7 @@ const Header = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, ml: "auto" }}>
           <IconButton
             onClick={colorMode.toggleColorMode}
+            aria-label="Переключить тему"
             sx={{
               width: 32,
               height: 32,
@@ -284,6 +286,7 @@ const Header = () => {
           {isMobile && (
             <IconButton
               onClick={() => setMobileOpen(true)}
+              aria-label="Открыть меню"
               sx={{
                 color: "rgba(255,255,255,0.6)",
                 p: 0.75,

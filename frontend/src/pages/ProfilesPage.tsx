@@ -25,13 +25,13 @@ import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from
 import { useLocation } from "react-router-dom";
 
 import { getApiErrorMessage, profilesApi } from "../api/client";
-import ProfileBulkOperations from "../components/ProfileBulkOperations.js";
-import ProfileComparison from "../components/ProfileComparison.js";
-import ProfileEditor from "../components/ProfileEditor.js";
-import ProfileHistory from "../components/ProfileHistory.js";
-import ProfileImportExport from "../components/ProfileImportExport.js";
-import ProfileStatistics from "../components/ProfileStatistics.js";
-import ProfileValidation from "../components/ProfileValidation.js";
+import ProfileBulkOperations from "../components/ProfileBulkOperations";
+import ProfileComparison from "../components/ProfileComparison";
+import ProfileEditor from "../components/ProfileEditor";
+import ProfileHistory from "../components/ProfileHistory";
+import ProfileImportExport from "../components/ProfileImportExport";
+import ProfileStatistics from "../components/ProfileStatistics";
+import ProfileValidation from "../components/ProfileValidation";
 import AppPageLayout from "../components/layout/AppPageLayout";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";

@@ -2,8 +2,9 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { motion } from "framer-motion";
 import {
   ArrowUpRight,
-  Command,
+  BookOpen,
   FilePlus2,
+  FolderOpen,
   LayoutDashboard,
   LucideIcon,
   Search,
@@ -168,11 +169,13 @@ const OAuthCallbackPage = lazy(() => import("./pages/OAuthCallbackPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
+const GuidelinesPage = lazy(() => import("./pages/GuidelinesPage"));
+const ExamplesPage = lazy(() => import("./pages/ExamplesPage"));
+const MaterialsPage = lazy(() => import("./pages/MaterialsPage"));
+const ResourcesPage = lazy(() => import("./pages/ResourcesPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const BillingPage = lazy(() => import("./pages/BillingPage"));
-const PricingPage = lazy(() => import("./pages/PricingPage"));
 
 // ============================================================================
 // Constants
@@ -183,7 +186,6 @@ const SHORTCUT_DEFS: ShortcutDef[] = [
   { keys: ["G", "D"], description: "Панель" },
   { keys: ["G", "H"], description: "История" },
   { keys: ["G", "R"], description: "Отчёты" },
-  { keys: ["G", "P"], description: "Тарифы" },
   { keys: ["G", "A"], description: "Аккаунт" },
   { keys: ["G", "S"], description: "Настройки" },
   { keys: ["Ctrl", "K"], description: "Командная палитра" },
@@ -194,7 +196,8 @@ const PALETTE_NAV_ITEMS: PaletteNavItem[] = [
   { label: "Загрузить документ", to: "/", shortcut: "N", icon: FilePlus2 },
   { label: "Панель", to: "/dashboard", shortcut: "G D", icon: LayoutDashboard },
   { label: "Отчёты", to: "/reports", shortcut: "G R", icon: ArrowUpRight },
-  { label: "Тарифы", to: "/pricing", shortcut: "G P", icon: Command },
+  { label: "Материалы", to: "/materials", shortcut: "", icon: BookOpen },
+  { label: "Ресурсы", to: "/resources", shortcut: "", icon: FolderOpen },
   { label: "Аккаунт", to: "/account", shortcut: "G A", icon: User },
   { label: "Настройки", to: "/settings", shortcut: "G S", icon: Settings },
 ];
@@ -494,7 +497,6 @@ const KeyboardShortcutsHandler: FC<KeyboardShortcutsHandlerProps> = ({
       d: "/dashboard",
       h: "/history",
       r: "/reports",
-      p: "/pricing",
       a: "/account",
       s: "/settings",
     };
@@ -592,10 +594,34 @@ const AnimatedRoutes: FC = () => {
           }
         />
         <Route
-          path="/pricing"
+          path="/guidelines"
           element={
             <PageWrapper>
-              <PricingPage />
+              <GuidelinesPage />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/examples"
+          element={
+            <PageWrapper>
+              <ExamplesPage />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/materials"
+          element={
+            <PageWrapper>
+              <MaterialsPage />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/resources"
+          element={
+            <PageWrapper>
+              <ResourcesPage />
             </PageWrapper>
           }
         />
@@ -640,14 +666,6 @@ const AnimatedRoutes: FC = () => {
               </PageWrapper>
             }
           />
-          <Route
-            path="/billing"
-            element={
-              <PageWrapper>
-                <BillingPage />
-              </PageWrapper>
-            }
-          />
         </Route>
         <Route element={<AdminRoute />}>
           <Route
@@ -663,6 +681,8 @@ const AnimatedRoutes: FC = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/upload" element={<Navigate to="/" replace />} />
+      <Route path="/pricing" element={<Navigate to="/" replace />} />
+      <Route path="/billing" element={<Navigate to="/" replace />} />
       <Route
         path="/auth/:provider/callback"
         element={

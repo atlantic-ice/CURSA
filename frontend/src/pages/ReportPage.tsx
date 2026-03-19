@@ -15,7 +15,7 @@ import { FC, ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { documentsApi, getApiErrorMessage } from "../api/client";
-import DocumentViewer from "../components/DocumentViewer.js";
+import DocumentViewer from "../components/DocumentViewer";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
@@ -203,6 +203,14 @@ const verificationLabels: Record<string, string> = {
   fonts: "Шрифты",
   spacing: "Интервалы",
   margins: "Поля",
+};
+
+const playbackAccentClasses: Record<string, string> = {
+  structure: "report-playback-chip--structure",
+  styles: "report-playback-chip--styles",
+  formatting: "report-playback-chip--formatting",
+  xml_deep: "report-playback-chip--xml-deep",
+  verification: "report-playback-chip--verification",
 };
 
 const AnimatedNumber: FC<{ value: number }> = ({ value }) => {
@@ -1094,18 +1102,9 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
                           className={cn(
                             "rounded-full border px-3 py-1.5 text-sm transition-colors",
                             isActive
-                              ? "text-foreground"
+                              ? playbackAccentClasses[step.key] || "text-foreground"
                               : "border-border/70 bg-background/55 text-muted-foreground hover:bg-accent",
                           )}
-                          style={
-                            isActive
-                              ? {
-                                  borderColor: `${step.accent}66`,
-                                  backgroundColor: `${step.accent}1A`,
-                                  color: step.accent,
-                                }
-                              : undefined
-                          }
                         >
                           {step.title}
                           {step.count > 0 ? ` · ${step.count}` : ""}

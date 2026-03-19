@@ -95,6 +95,7 @@ const SplineWelcome = ({
           {/* Кнопка закрытия */}
           <IconButton
             onClick={handleCloseWelcome}
+            aria-label="Закрыть приветствие"
             sx={{
               position: "absolute",
               top: 16,

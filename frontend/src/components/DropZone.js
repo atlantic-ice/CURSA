@@ -23,6 +23,11 @@ import { useDropzone } from "react-dropzone";
 import { useNavigate } from "react-router-dom";
 import { CheckHistoryContext } from "../App";
 import api from "../utils/api";
+
+const DropZone = ({ children, sx: sxOverride, multiple }) => {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [batchResults, setBatchResults] = useState(null);

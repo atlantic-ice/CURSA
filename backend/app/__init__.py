@@ -217,7 +217,7 @@ def create_app():
     get_oauth_service(app)
 
     # Импорт моделей для миграций (важно после инициализации db)
-    from app.models import User, Subscription, Document, Payment, APIKey
+    from app.models import User, Subscription, Document, APIKey
 
     if not is_testing:
         app.logger.info("База данных инициализирована")
@@ -307,7 +307,6 @@ def create_app():
     from app.api import preview_routes
     from app.api import auth_routes
     from app.api import validation_routes
-    from app.api import payment_routes
 
     app.register_blueprint(document_routes.bp)
     app.register_blueprint(profile_routes.bp)
@@ -315,7 +314,6 @@ def create_app():
     app.register_blueprint(preview_routes.bp)
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(validation_routes.validation_bp)
-    app.register_blueprint(payment_routes.bp)
 
     # Маршрут для API документации (JSON)
     @app.route("/api/openapi.json")

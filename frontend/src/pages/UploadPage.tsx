@@ -389,6 +389,8 @@ const UploadPage: FC<UploadPageProps> = ({ className = "" }) => {
                       type="button"
                       onClick={handleClearFile}
                       disabled={isProcessing}
+                      aria-label="Очистить выбранный файл"
+                      title="Очистить выбранный файл"
                       className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-background/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
                     >
                       <ArrowUpRight className="size-4 rotate-45" />
