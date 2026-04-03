@@ -1,10 +1,10 @@
 import {
-  ArrowRight,
-  Files,
-  ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
-  TrendingUp,
+    ArrowRight,
+    Files,
+    ShieldCheck,
+    SlidersHorizontal,
+    Sparkles,
+    TrendingUp,
 } from "lucide-react";
 import { FC, useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -224,24 +224,24 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
           ].map((item) => (
             <Card
               key={item.title}
-              className="border-[#2e2f2f] bg-gradient-to-b from-[#171717] to-[#222222] text-[#fafafa] shadow-sm"
+              className="border-border bg-gradient-to-b from-card to-muted/30 text-card-foreground shadow-sm"
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-3">
                   <CardDescription>{item.title}</CardDescription>
-                  <div className="flex size-9 items-center justify-center rounded-xl border border-[#2e2f2f] bg-[#171717] text-[#b6b6b6]">
+                  <div className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground">
                     {item.icon}
                   </div>
                 </div>
                 <CardTitle className="text-3xl tracking-[-0.05em]">{item.value}</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 text-sm text-[#b6b6b6]">{item.hint}</CardContent>
+              <CardContent className="pt-0 text-sm text-muted-foreground">{item.hint}</CardContent>
             </Card>
           ))}
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-          <Card className="border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+          <Card className="border-border bg-card text-card-foreground shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl tracking-[-0.04em]">Активность по дням</CardTitle>
               <CardDescription>
@@ -249,7 +249,7 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="h-[280px] w-full rounded-xl border border-[#2e2f2f] bg-[#171717] p-2">
+              <div className="h-[280px] w-full rounded-xl border border-border bg-card p-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={weekActivity}
@@ -281,21 +281,21 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
                         />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#2e2f2f" />
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(var(--border))" />
                     <XAxis
                       dataKey="label"
                       tickLine={false}
                       axisLine={false}
                       tickMargin={10}
-                      stroke="#9b9b9b"
+                      stroke="oklch(var(--muted-foreground))"
                     />
                     <Tooltip
-                      cursor={{ stroke: "#2e2f2f", strokeWidth: 1 }}
+                      cursor={{ stroke: "oklch(var(--border))", strokeWidth: 1 }}
                       contentStyle={{
                         borderRadius: 12,
-                        border: "1px solid #2e2f2f",
-                        background: "#171717",
-                        color: "#fafafa",
+                        border: "1px solid oklch(var(--border))",
+                        background: "oklch(var(--card))",
+                        color: "oklch(var(--card-foreground))",
                       }}
                       formatter={(value: number) => `${value} проверок`}
                       labelFormatter={(_, payload: any[]) => payload?.[0]?.payload?.fullDate || ""}
@@ -324,7 +324,7 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
             </CardContent>
           </Card>
 
-          <Card className="border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+          <Card className="border-border bg-card text-card-foreground shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl tracking-[-0.04em]">Быстрые переходы</CardTitle>
               <CardDescription>Частые действия после проверки документа.</CardDescription>
@@ -351,13 +351,13 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
                   key={item.title}
                   type="button"
                   onClick={item.action}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-[#2e2f2f] bg-[#171717] px-4 py-4 text-left transition-colors hover:bg-[#222222]"
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card px-4 py-4 text-left transition-colors hover:bg-muted/30"
                 >
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                    <p className="text-sm text-[#b6b6b6]">{item.description}</p>
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
                   </div>
-                  <ArrowRight className="size-4 shrink-0 text-[#b6b6b6]" />
+                  <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
                 </button>
               ))}
             </CardContent>
@@ -365,7 +365,7 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-          <Card className="border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+          <Card className="border-border bg-card text-card-foreground shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl tracking-[-0.04em]">Последние документы</CardTitle>
               <CardDescription>Последние результаты из истории проверок CURSA.</CardDescription>
@@ -386,7 +386,7 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
                         },
                       })
                     }
-                    className="flex w-full items-center justify-between gap-4 rounded-2xl border border-[#2e2f2f] bg-[#171717] px-4 py-4 text-left transition-colors hover:bg-[#222222]"
+                    className="flex w-full items-center justify-between gap-4 rounded-2xl border border-border bg-card px-4 py-4 text-left transition-colors hover:bg-muted/30"
                   >
                     <div className="min-w-0 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
@@ -397,7 +397,7 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
                           {getStatusLabel(item)}
                         </Badge>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-[#b6b6b6]">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span>{new Date(getTimestampValue(item)).toLocaleString("ru-RU")}</span>
                         <span>•</span>
                         <span>{getIssuesCount(item)} замечаний</span>
@@ -405,42 +405,42 @@ const DashboardPage: FC<DashboardPageProps> = ({ className = "" }) => {
                         <span>{getProfileLabel(item)}</span>
                       </div>
                     </div>
-                    <ArrowRight className="size-4 shrink-0 text-[#b6b6b6]" />
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
                   </button>
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-[#2e2f2f] bg-[#171717] px-5 py-10 text-center text-sm text-[#b6b6b6]">
+                <div className="rounded-2xl border border-dashed border-border bg-card px-5 py-10 text-center text-sm text-muted-foreground">
                   История пока пуста. Первая проверка сразу появится здесь.
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+          <Card className="border-border bg-card text-card-foreground shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl tracking-[-0.04em]">Качество потока</CardTitle>
               <CardDescription>Краткая сводка по текущему состоянию проверок.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-0">
-              <div className="rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b6b6b6]">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                   Документы без замечаний
                 </p>
                 <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
                   {metrics.zeroIssuesCount}
                 </p>
               </div>
-              <div className="rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b6b6b6]">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                   Средний score
                 </p>
                 <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
                   {formatScore(metrics.averageScore)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4 text-sm text-[#b6b6b6]">
+              <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
                 <div className="flex items-start gap-3">
-                  <Sparkles className="mt-0.5 size-4 text-[#b6b6b6]" />
+                  <Sparkles className="mt-0.5 size-4 text-muted-foreground" />
                   <span>{healthSummary}</span>
                 </div>
               </div>

@@ -1,4 +1,3 @@
-import { useTheme } from "@mui/material/styles";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, FileText, PanelsTopLeft, Settings, UploadCloud } from "lucide-react";
 import { FC, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -42,20 +41,18 @@ interface CheckHistoryContextType {
 type ProfilesRouteMode = "manage" | "edit" | "import-export";
 
 const UploadPage: FC<UploadPageProps> = ({ className = "" }) => {
-  const theme = useTheme();
   const navigate = useNavigate();
   const { addToHistory } = useContext(CheckHistoryContext) as CheckHistoryContextType;
-  const isDark = theme.palette.mode === "dark";
 
   const toastStyle = useMemo(
     () => ({
-      background: isDark ? "#121214" : "#ffffff",
-      color: isDark ? "#ffffff" : "#111111",
-      border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(17,17,17,0.08)",
+      background: "oklch(var(--card))",
+      color: "oklch(var(--card-foreground))",
+      border: "1px solid oklch(var(--border))",
       borderRadius: "16px",
-      boxShadow: isDark ? "0 20px 60px rgba(0,0,0,0.35)" : "0 18px 40px rgba(17,17,17,0.08)",
+      boxShadow: "0 20px 60px color-mix(in srgb, black 22%, transparent)",
     }),
-    [isDark],
+    [],
   );
 
   const [file, setFile] = useState<File | null>(null);

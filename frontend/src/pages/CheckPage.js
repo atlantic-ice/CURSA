@@ -6,25 +6,24 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import {
-  Alert,
-  AlertTitle,
-  Backdrop,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Container,
-  Fade,
-  Grid,
-  IconButton,
-  Paper,
-  Step,
-  StepLabel,
-  Stepper,
-  Tooltip,
-  Typography,
-  useTheme,
+    Alert,
+    AlertTitle,
+    Backdrop,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CircularProgress,
+    Container,
+    Fade,
+    Grid,
+    IconButton,
+    Paper,
+    Step,
+    StepLabel,
+    Stepper,
+    Tooltip,
+    Typography,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import { useCallback, useContext, useRef, useState } from "react";
@@ -35,7 +34,6 @@ import { documentsApi, getApiErrorMessage } from "../api/client";
 
 const CheckPage = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -160,8 +158,7 @@ const CheckPage = () => {
       padding: "40px 20px",
       borderRadius: 16,
       position: "relative",
-      background: (theme) =>
-        theme.palette.mode === "dark" ? "rgba(15, 23, 42, 0.5)" : "rgba(248, 250, 252, 0.7)",
+      backgroundColor: "action.hover",
       color: (theme) => theme.palette.text.secondary,
       outline: "none",
       transition: "all 0.25s ease",
@@ -173,20 +170,17 @@ const CheckPage = () => {
       borderColor: "transparent",
       "&:hover": {
         borderColor: "transparent",
-        backgroundColor: (theme) =>
-          theme.palette.mode === "dark" ? "rgba(15, 23, 42, 0.6)" : "rgba(248, 250, 252, 0.8)",
+        backgroundColor: "action.selected",
       },
     },
     active: {
       borderColor: "transparent",
-      backgroundColor: (theme) =>
-        theme.palette.mode === "dark" ? "rgba(15, 23, 42, 0.7)" : "rgba(239, 246, 255, 0.7)",
+      backgroundColor: "action.selected",
       boxShadow: "none",
     },
     reject: {
       borderColor: "transparent",
-      backgroundColor: (theme) =>
-        theme.palette.mode === "dark" ? "rgba(30, 41, 59, 0.7)" : "rgba(254, 242, 242, 0.7)",
+      backgroundColor: "error.light",
       boxShadow: "none",
     },
   };
@@ -202,7 +196,7 @@ const CheckPage = () => {
           sx={{
             fontWeight: 800,
             mb: 1,
-            color: "#ededed",
+            color: "text.primary",
           }}
         >
           Проверка курсовой работы
@@ -328,12 +322,12 @@ const CheckPage = () => {
                               py: 1.5,
                               fontWeight: 600,
                               fontSize: 16,
-                              background: "#ededed",
-                              color: "#0a0a0a",
+                              backgroundColor: "primary.main",
+                              color: "primary.contrastText",
                               boxShadow: "none",
                               mb: 2,
                               "&:hover": {
-                                background: "#ffffff",
+                                backgroundColor: "primary.dark",
                                 boxShadow: "none",
                               },
                             }}
@@ -361,7 +355,10 @@ const CheckPage = () => {
                               color="text.secondary"
                               sx={{ display: "block" }}
                             >
-                              <span style={{ color: "#2563eb", fontWeight: 600 }}>Совет:</span> Файл
+                              <span style={{ color: "var(--mui-palette-primary-main)", fontWeight: 600 }}>
+                                Совет:
+                              </span>{" "}
+                              Файл
                               должен быть в формате DOCX, созданном в Microsoft Word или совместимых
                               редакторах.
                             </Typography>
@@ -377,10 +374,9 @@ const CheckPage = () => {
                       sx={{
                         mb: 3,
                         borderRadius: 16,
-                        boxShadow: (theme) =>
-                          theme.palette.mode === "dark"
-                            ? "0 4px 16px rgba(239, 68, 68, 0.2)"
-                            : "0 4px 16px rgba(239, 68, 68, 0.1)",
+                        boxShadow: "none",
+                        border: "1px solid",
+                        borderColor: "error.main",
                       }}
                     >
                       <AlertTitle>Ошибка</AlertTitle>
@@ -474,7 +470,7 @@ const CheckPage = () => {
                     sx={{
                       p: 4,
                       borderRadius: 16,
-                      background: "rgba(10, 10, 10, 0.8)",
+                      backgroundColor: "background.paper",
                       boxShadow: "none",
                     }}
                   >
@@ -543,14 +539,13 @@ const CheckPage = () => {
                           py: 1.2,
                           borderRadius: 1,
                           fontWeight: 600,
-                          background: (theme) =>
-                            theme.palette.mode === "dark"
-                              ? "linear-gradient(90deg, #2563eb 0%, #6366f1 100%)"
-                              : undefined,
-                          boxShadow: (theme) =>
-                            theme.palette.mode === "dark"
-                              ? "0 4px 16px rgba(37, 99, 235, 0.3)"
-                              : undefined,
+                          backgroundColor: "primary.main",
+                          color: "primary.contrastText",
+                          boxShadow: "none",
+                          "&:hover": {
+                            backgroundColor: "primary.dark",
+                            boxShadow: "none",
+                          },
                         }}
                       >
                         Проверить
@@ -596,10 +591,7 @@ const CheckPage = () => {
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
-                      background: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? "linear-gradient(145deg, rgba(15, 23, 42, 0.7) 0%, rgba(30, 41, 59, 0.7) 100%)"
-                          : "linear-gradient(145deg, rgba(248, 250, 252, 0.7) 0%, rgba(241, 245, 249, 0.7) 100%)",
+                      backgroundColor: "background.paper",
                       backdropFilter: "none",
                       WebkitBackdropFilter: "none",
                       boxShadow: "none",
@@ -630,7 +622,7 @@ const CheckPage = () => {
 
                   <Backdrop
                     sx={{
-                      color: "#fff",
+                      color: "text.primary",
                       zIndex: (theme) => theme.zIndex.drawer + 1,
                       backdropFilter: "none",
                     }}

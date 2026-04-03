@@ -10,12 +10,12 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Checkbox } from "../components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "../components/ui/dialog";
 import { SearchField } from "../components/ui/search-field";
 import type { CheckHistoryContextType, HistoryItem, LocationState } from "../types";
@@ -52,6 +52,29 @@ const getDeletePlural = (count: number): string => {
   if (count === 1) return "запись";
   if (count >= 2 && count <= 4) return "записи";
   return "записей";
+};
+
+const getReadinessStatus = (item: HistoryItem): string => {
+  return item.reportData?.graduation_readiness?.status || "unknown";
+};
+
+const getReadinessLabel = (item: HistoryItem): string => {
+  const status = getReadinessStatus(item);
+  if (status === "ready") return "Готово к сдаче";
+  if (status === "almost_ready") return "Почти готово";
+  if (status === "needs_revision") return "Нужна доработка";
+  return "Оценка недоступна";
+};
+
+const getQualityGatePassed = (item: HistoryItem): boolean | null => {
+  if (typeof item.reportData?.quality_gate_passed === "boolean") {
+    return item.reportData.quality_gate_passed;
+  }
+  return null;
+};
+
+const hasFallback = (item: HistoryItem): boolean => {
+  return Boolean(item.reportData?.quality_metrics?.fallback_applied);
 };
 
 const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
@@ -151,13 +174,27 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
   };
 
   const exportCSV = (): void => {
-    const headers = ["Файл", "Дата", "Профиль", "Замечания", "Балл", "Исправлен"];
+    const headers = [
+      "Файл",
+      "Дата",
+      "Профиль",
+      "Замечания",
+      "Балл",
+      "Исправлен",
+      "Quality Gate",
+      "Готовность",
+      "Fallback",
+    ];
     const rows = filteredHistory.map((item: HistoryItem) => {
       const score = item.score ?? item.reportData?.check_results?.score ?? item.reportData?.score;
       const issuesCount =
         item.reportData?.check_results?.total_issues_count ?? item.totalIssues ?? 0;
       const corrected =
         item.correctedFilePath || item.reportData?.corrected_file_path ? "Да" : "Нет";
+      const gatePassed = getQualityGatePassed(item);
+      const gateLabel = gatePassed == null ? "Нет данных" : gatePassed ? "Пройден" : "Не пройден";
+      const readinessLabel = getReadinessLabel(item);
+      const fallbackLabel = hasFallback(item) ? "Да" : "Нет";
       const profileLabel =
         item.reportData?.check_results?.profile?.name || item.profileId || "default_gost";
       const dateStr = new Date(item.timestamp || (item.id as unknown as number)).toLocaleString(
@@ -171,6 +208,9 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
         issuesCount,
         score ?? "",
         corrected,
+        gateLabel,
+        readinessLabel,
+        fallbackLabel,
       ];
     });
 
@@ -236,9 +276,9 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
         </div>
       }
     >
-      <Card className="rounded-[30px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+      <Card className="rounded-[30px] border-border bg-card text-card-foreground shadow-sm">
         <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:p-5">
-          <p className="text-sm text-[#b6b6b6] md:mr-2">
+          <p className="text-sm text-muted-foreground md:mr-2">
             {history.length === 0
               ? "Нет записей"
               : `${history.length} ${pluralRecords(history.length)}`}
@@ -253,7 +293,7 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
             placeholder="Поиск по названию или дате"
             buttonLabel="Поиск"
             className="min-w-0 flex-1"
-            inputClassName="h-11 rounded-2xl border-[#2e2f2f] bg-[#171717] text-[#fafafa] placeholder:text-[#7b7b7b]"
+            inputClassName="h-11 rounded-2xl border-border bg-card text-foreground placeholder:text-muted-foreground"
             buttonClassName="h-11 rounded-2xl px-4"
           />
 
@@ -271,7 +311,7 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
         </CardContent>
       </Card>
 
-      <Card className="rounded-[30px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+      <Card className="rounded-[30px] border-border bg-card text-card-foreground shadow-sm">
         <CardHeader className="p-6 pb-4">
           <CardTitle className="text-xl">Записи</CardTitle>
           <CardDescription>
@@ -280,7 +320,7 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
         </CardHeader>
         <CardContent className="space-y-3 p-6 pt-0">
           {history.length === 0 ? (
-            <div className="rounded-[26px] border border-dashed border-[#2e2f2f] bg-[#171717] px-6 py-16 text-center">
+            <div className="rounded-[26px] border border-dashed border-border bg-card px-6 py-16 text-center">
               <FileText className="mx-auto size-10 text-muted-foreground" />
               <p className="mt-4 text-base font-medium text-foreground">История пуста</p>
               <Button variant="outline" className="mt-4 rounded-xl" onClick={() => navigate("/")}>
@@ -288,12 +328,12 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
               </Button>
             </div>
           ) : filteredHistory.length === 0 ? (
-            <div className="rounded-[26px] border border-dashed border-[#2e2f2f] bg-[#171717] px-6 py-16 text-center text-sm text-[#b6b6b6]">
+            <div className="rounded-[26px] border border-dashed border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground">
               Ничего не найдено.
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-[24px_minmax(0,1fr)_160px_96px_120px] items-center gap-3 rounded-2xl border border-[#2e2f2f] bg-[#222222] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#b6b6b6]">
+              <div className="grid grid-cols-[24px_minmax(0,1fr)_160px_96px_120px] items-center gap-3 rounded-2xl border border-border bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 <Checkbox checked={allPageSelected} onCheckedChange={toggleSelectAllOnPage} />
                 <span>Файл</span>
                 <span>Дата</span>
@@ -309,6 +349,9 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
                 const score = item.score ?? item.reportData?.score;
                 const issuesCount =
                   item.reportData?.check_results?.total_issues_count ?? item.totalIssues ?? 0;
+                const readinessLabel = getReadinessLabel(item);
+                const gatePassed = getQualityGatePassed(item);
+                const fallbackApplied = hasFallback(item);
 
                 return (
                   <motion.div
@@ -316,7 +359,7 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
                     initial="hidden"
                     animate="show"
                     variants={rowMotion}
-                    className="grid grid-cols-[24px_minmax(0,1fr)_160px_96px_120px] items-center gap-3 rounded-2xl border border-[#2e2f2f] bg-[#171717] px-3 py-3 transition-colors hover:bg-[#222222]"
+                    className="grid grid-cols-[24px_minmax(0,1fr)_160px_96px_120px] items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3 transition-colors hover:bg-muted/30"
                   >
                     <Checkbox checked={selected} onCheckedChange={() => toggleSelect(itemId)} />
 
@@ -328,10 +371,30 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
                       <p className="truncate text-sm font-semibold text-foreground">
                         {item.fileName || "Без названия"}
                       </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#b6b6b6]">
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span>{item.profileId || "default_gost"}</span>
                         <span>•</span>
                         <span>{issuesCount} замечаний</span>
+                        <Badge variant="outline" className="rounded-full px-2 py-0.5 text-muted-foreground">
+                          {readinessLabel}
+                        </Badge>
+                        {gatePassed != null ? (
+                          <Badge
+                            className={cn(
+                              "rounded-full px-2 py-0.5",
+                              gatePassed
+                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+                                : "bg-red-500/15 text-red-600 dark:text-red-300",
+                            )}
+                          >
+                            Gate: {gatePassed ? "OK" : "Fail"}
+                          </Badge>
+                        ) : null}
+                        {fallbackApplied ? (
+                          <Badge className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-600 dark:text-amber-300">
+                            Fallback
+                          </Badge>
+                        ) : null}
                         {correctedPath ? (
                           <Badge className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-600 dark:text-emerald-300">
                             <CheckCircle2 className="mr-1 size-3" />
@@ -341,7 +404,7 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
                       </div>
                     </button>
 
-                    <p className="text-xs text-[#b6b6b6]">
+                    <p className="text-xs text-muted-foreground">
                       {new Date(item.timestamp || (item.id as unknown as number)).toLocaleString(
                         "ru-RU",
                       )}
@@ -378,7 +441,7 @@ const HistoryPage: FC<HistoryPageProps> = ({ className = "" }) => {
                 );
               })}
 
-              <div className="flex items-center justify-between pt-2 text-sm text-[#b6b6b6]">
+              <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
                 <span>
                   Страница {page + 1} из {totalPages}
                 </span>

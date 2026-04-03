@@ -5,6 +5,7 @@ import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import TextFormatIcon from "@mui/icons-material/TextFormat";
 import { Box, Container, Paper, Tab, Tabs, Typography, useTheme } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import GuidelineExample from "../components/GuidelineExample";
@@ -42,16 +43,6 @@ const ExamplesPage = () => {
     setTabValue(newValue);
   };
 
-  // Ссылки на связанные разделы
-  const relatedLinks = [
-    {
-      title: "Рекомендации по оформлению",
-      description: "Подробные требования и рекомендации по оформлению курсовых работ",
-      path: "/guidelines",
-      icon: <MenuBookIcon color="primary" />,
-    },
-  ];
-
   return (
     <Box sx={{ position: "relative", minHeight: "100vh", pb: 8 }}>
       {/* WOW-шапка */}
@@ -85,7 +76,7 @@ const ExamplesPage = () => {
                 gap: 1.5,
                 letterSpacing: 0,
                 fontSize: { xs: 28, md: 38 },
-                color: "#ededed",
+                color: "text.primary",
               }}
             >
               <MenuBookOutlinedIcon sx={{ fontSize: { xs: 28, md: 38 } }} />
@@ -147,18 +138,18 @@ const ExamplesPage = () => {
                 px: 2.5,
                 color: theme.palette.text.secondary,
                 "&.Mui-selected": {
-                  color: "#ededed",
-                  background: "rgba(255,255,255,0.05)",
+                  color: theme.palette.text.primary,
+                  background: alpha(theme.palette.action.selected, 0.6),
                 },
                 "&:hover": {
-                  background: "rgba(255,255,255,0.03)",
-                  color: "#ededed",
+                  background: theme.palette.action.hover,
+                  color: theme.palette.text.primary,
                 },
               },
               "& .MuiTabs-indicator": {
                 height: 4,
                 borderRadius: 2,
-                background: "linear-gradient(90deg,#2563eb,#6366f1)",
+                background: theme.palette.primary.main,
               },
             }}
           >

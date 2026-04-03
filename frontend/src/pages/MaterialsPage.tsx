@@ -1,11 +1,11 @@
 import {
-  ArrowRight,
-  BookOpen,
-  CheckCircle2,
-  Clock3,
-  Download,
-  FileStack,
-  Sparkles,
+    ArrowRight,
+    BookOpen,
+    CheckCircle2,
+    Clock3,
+    Download,
+    FileStack,
+    Sparkles,
 } from "lucide-react";
 import { FC } from "react";
 import { useNavigate } from "react-router-dom";
@@ -97,16 +97,22 @@ const MaterialsPage: FC<MaterialsPageProps> = ({ className = "" }) => {
   return (
     <AppPageLayout className={className} title="Материалы" maxWidth="wide">
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
-        <Card className="overflow-hidden rounded-[32px] border-[#2f3136] bg-[radial-gradient(circle_at_top_left,#1f3b2e,transparent_48%),linear-gradient(135deg,#0f172a,#111827_55%,#161b22)] text-white shadow-[0_24px_80px_rgba(15,23,42,0.28)]">
+        <Card
+          className="overflow-hidden rounded-[32px] border-border/70 text-card-foreground shadow-surface"
+          style={{
+            background:
+              "radial-gradient(circle at top left, var(--status-success-soft), transparent 48%), linear-gradient(135deg, oklch(var(--card)), color-mix(in srgb, oklch(var(--card)) 84%, oklch(var(--muted)) 16%) 55%, oklch(var(--muted)))",
+          }}
+        >
           <CardHeader className="space-y-4 p-8">
-            <Badge className="w-fit border-white/15 bg-white/10 text-white hover:bg-white/10">
+            <Badge className="w-fit border-border/80 bg-background/70 text-foreground hover:bg-background/70">
               Материалы CURSA
             </Badge>
             <div className="space-y-3">
               <CardTitle className="max-w-3xl text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
                 Библиотека шаблонов, чек-листов и методических материалов
               </CardTitle>
-              <CardDescription className="max-w-2xl text-base leading-7 text-white/72 md:text-lg">
+              <CardDescription className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
                 Собрал единый набор для быстрого старта, самостоятельной проверки и финального
                 контроля курсовой работы без ручного поиска по кафедральным документам.
               </CardDescription>
@@ -115,7 +121,7 @@ const MaterialsPage: FC<MaterialsPageProps> = ({ className = "" }) => {
           <CardContent className="flex flex-wrap gap-3 px-8 pb-8 pt-0">
             <Button
               size="lg"
-              className="rounded-2xl bg-white text-slate-950 hover:bg-white/90"
+              className="rounded-2xl"
               onClick={() => navigate("/")}
             >
               <Download className="size-4" />
@@ -124,7 +130,7 @@ const MaterialsPage: FC<MaterialsPageProps> = ({ className = "" }) => {
             <Button
               size="lg"
               variant="outline"
-              className="rounded-2xl border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              className="rounded-2xl border-border/80 bg-background/40 text-foreground hover:bg-background/70 hover:text-foreground"
               onClick={() => navigate("/guidelines")}
             >
               <BookOpen className="size-4" />
@@ -215,7 +221,13 @@ const MaterialsPage: FC<MaterialsPageProps> = ({ className = "" }) => {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[32px] border-border/70 bg-[linear-gradient(180deg,rgba(245,158,11,0.12),rgba(15,23,42,0.02))]">
+        <Card
+          className="rounded-[32px] border-border/70"
+          style={{
+            background:
+              "linear-gradient(180deg, var(--status-warning-soft), color-mix(in srgb, oklch(var(--background)) 96%, transparent))",
+          }}
+        >
           <CardHeader className="space-y-3 p-8 pb-4">
             <div className="flex items-center gap-3 text-amber-600 dark:text-amber-300">
               <Sparkles className="size-5" />

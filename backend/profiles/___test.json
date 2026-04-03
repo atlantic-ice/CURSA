@@ -1,0 +1,11 @@
+{
+    "id": "../test",
+    "name": "Test path traversal",
+    "category": "custom",
+    "description": "test",
+    "rules": {},
+    "is_system": false,
+    "created_at": "2026-04-02T21:10:24.896665",
+    "version": "1.0",
+    "extends": "default_gost"
+}

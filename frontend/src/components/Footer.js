@@ -2,14 +2,14 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import TelegramIcon from "@mui/icons-material/Telegram";
 import {
-  Box,
-  Container,
-  Divider,
-  Grid,
-  IconButton,
-  Link,
-  Typography,
-  useTheme,
+    Box,
+    Container,
+    Divider,
+    Grid,
+    IconButton,
+    Link,
+    Typography,
+    useTheme,
 } from "@mui/material";
 import { memo } from "react";
 import { Link as RouterLink } from "react-router-dom";
@@ -64,14 +64,14 @@ const Footer = memo(() => {
           {/* Логотип и описание */}
           <Grid item xs={12} md={4}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-              <StarLogo size={24} color={theme.palette.mode === "dark" ? "#60a5fa" : "#2563eb"} />
+              <StarLogo size={24} color={theme.palette.primary.main} />
               <Typography
                 variant="h5"
                 sx={{
                   fontWeight: 800,
                   letterSpacing: "0.05em",
                   fontFamily: '"Montserrat", "Roboto", "Arial", sans-serif',
-                  color: theme.palette.mode === "dark" ? "#60a5fa" : "#2563eb",
+                  color: "primary.main",
                 }}
               >
                 CURSA
@@ -89,10 +89,7 @@ const Footer = memo(() => {
                   color: "text.secondary",
                   "&:hover": {
                     color: "primary.main",
-                    bgcolor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "rgba(37, 99, 235, 0.1)"
-                        : "rgba(37, 99, 235, 0.05)",
+                    bgcolor: "action.hover",
                   },
                 }}
               >
@@ -105,10 +102,7 @@ const Footer = memo(() => {
                   color: "text.secondary",
                   "&:hover": {
                     color: "primary.main",
-                    bgcolor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "rgba(37, 99, 235, 0.1)"
-                        : "rgba(37, 99, 235, 0.05)",
+                    bgcolor: "action.hover",
                   },
                 }}
               >
@@ -121,10 +115,7 @@ const Footer = memo(() => {
                   color: "text.secondary",
                   "&:hover": {
                     color: "primary.main",
-                    bgcolor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "rgba(37, 99, 235, 0.1)"
-                        : "rgba(37, 99, 235, 0.05)",
+                    bgcolor: "action.hover",
                   },
                 }}
               >
@@ -194,10 +185,7 @@ const Footer = memo(() => {
                   transition: "all 0.2s",
                   "&:focus": {
                     borderColor: "primary.main",
-                    boxShadow: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "0 0 0 2px rgba(37, 99, 235, 0.2)"
-                        : "0 0 0 2px rgba(37, 99, 235, 0.1)",
+                    boxShadow: (theme) => `0 0 0 2px ${theme.palette.action.focus}`,
                   },
                 }}
               />

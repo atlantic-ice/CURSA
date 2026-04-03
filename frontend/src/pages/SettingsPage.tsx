@@ -116,13 +116,13 @@ const SettingsPage: FC<SettingsPageProps> = ({ className = "" }) => {
 
   const toastStyle = useMemo(
     () => ({
-      background: isDark ? "#121214" : "#ffffff",
-      color: isDark ? "#ffffff" : "#111111",
-      border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(17,17,17,0.08)",
+      background: "oklch(var(--card))",
+      color: "oklch(var(--card-foreground))",
+      border: "1px solid oklch(var(--border))",
       borderRadius: "16px",
-      boxShadow: isDark ? "0 20px 60px rgba(0,0,0,0.35)" : "0 18px 40px rgba(17,17,17,0.08)",
+      boxShadow: "0 20px 60px color-mix(in srgb, black 22%, transparent)",
     }),
-    [isDark],
+    [],
   );
 
   const exportHistory = (): void => {

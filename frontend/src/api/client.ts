@@ -217,6 +217,30 @@ const parseJsonResponse = async <T>(response: Response): Promise<T> => {
   return parsed as T;
 };
 
+const shouldRetryOnRateLimit = (path: string, init?: RequestInit): boolean => {
+  const method = (init?.method || "GET").toUpperCase();
+
+  // Retry only idempotent GET requests and never retry auth endpoints automatically.
+  if (method !== "GET") {
+    return false;
+  }
+
+  return !path.startsWith("/api/auth/");
+};
+
+const getRetryDelayMs = (response: Response, attempt: number): number => {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number.parseInt(retryAfter, 10);
+    if (!Number.isNaN(seconds) && seconds >= 0) {
+      return seconds * 1000;
+    }
+  }
+
+  // Exponential backoff: 500ms, 1s, 2s, 4s, ...
+  return 500 * Math.pow(2, attempt - 1);
+};
+
 /**
  * Выполняет запрос с автоматическим повтором при rate limiting (429).
  * Использует exponential backoff: 500ms, 1s, 2s, 4s, 8s.
@@ -228,34 +252,30 @@ const apiFetchWithRetry = async <T>(
   maxRetries: number = 5,
 ): Promise<T> => {
   let attempt = 0;
+  const shouldRetry = shouldRetryOnRateLimit(path, init);
 
   while (attempt < maxRetries) {
-    try {
-      const response = await fetch(`${baseUrl}${path}`, init);
+    const response = await fetch(`${baseUrl}${path}`, init);
+
+    if (response.status !== 429 || !shouldRetry) {
       return await parseJsonResponse<T>(response);
-    } catch (error) {
-      // Если это не ApiError или не 429, бросаем сразу
-      if (!(error instanceof ApiError) || error.status !== 429) {
-        throw error;
-      }
-
-      attempt++;
-
-      // Если достигли максимума попыток, бросаем ошибку
-      if (attempt >= maxRetries) {
-        throw error;
-      }
-
-      // Exponential backoff: 500ms * 2^attempt
-      const delay = 500 * Math.pow(2, attempt - 1);
-
-      console.warn(
-        `[API] Rate limit exceeded (429). Retry ${attempt}/${maxRetries - 1} after ${delay}ms...`,
-      );
-
-      // Ждем перед следующей попыткой
-      await new Promise((resolve) => setTimeout(resolve, delay));
     }
+
+    attempt++;
+
+    // Если достигли максимума попыток, возвращаем исходную 429 ошибку
+    if (attempt >= maxRetries) {
+      return await parseJsonResponse<T>(response);
+    }
+
+    const delay = getRetryDelayMs(response, attempt);
+
+    console.warn(
+      `[API] Rate limit exceeded (429). Retry ${attempt}/${maxRetries - 1} after ${delay}ms...`,
+    );
+
+    // Ждем перед следующей попыткой
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
   // На всякий случай, хотя сюда не должны попасть
@@ -538,6 +558,29 @@ export interface ValidationIssueDetail {
   suggestion?: string;
 }
 
+export interface QualityMetrics {
+  before_total_issues?: number | null;
+  after_total_issues?: number | null;
+  resolved_total_issues?: number | null;
+  completion_percentage?: number | null;
+  passes_completed?: number;
+  remaining_issues_reported?: number;
+  fallback_applied?: boolean;
+  attempts?: Array<{
+    attempt?: number;
+    passes?: number;
+    after_total_issues?: number;
+    completion_percentage?: number | null;
+  }>;
+}
+
+export interface GraduationReadiness {
+  status?: "ready" | "almost_ready" | "needs_revision" | "unknown";
+  target_completion?: number;
+  target_issues_max?: number;
+  message?: string;
+}
+
 export interface ValidationResponse {
   status?: "success" | "error";
   success?: boolean;
@@ -554,6 +597,7 @@ export interface ValidationResponse {
   check_results?: {
     score?: number;
     total_issues_count?: number;
+    completion_percentage?: number;
     issues?: Array<{
       severity?: string;
       description?: string;
@@ -566,7 +610,15 @@ export interface ValidationResponse {
       id?: string;
       name?: string;
     };
+    summary?: {
+      total_issues?: number;
+      completion_percentage?: number;
+    };
   };
+  quality_gate_passed?: boolean;
+  quality_metrics?: QualityMetrics;
+  graduation_ready?: boolean;
+  graduation_readiness?: GraduationReadiness;
   message?: string;
 }
 
@@ -599,6 +651,10 @@ export interface AutocorrectResponse {
     verification_results?: Record<string, { passed?: boolean; message?: string }>;
   };
   check_results?: ValidationResponse["check_results"];
+  quality_gate_passed?: boolean;
+  quality_metrics?: QualityMetrics;
+  graduation_ready?: boolean;
+  graduation_readiness?: GraduationReadiness;
 }
 
 export const documentsApi = {
@@ -936,6 +992,56 @@ export interface SubscribeResponse {
   duration_days: number;
 }
 
+// API Keys
+export interface ApiKeyData {
+  id: number;
+  name: string;
+  key_prefix: string;
+  scopes: string[];
+  is_active: boolean;
+  is_valid: boolean;
+  usage_count: number;
+  last_used_at: string | null;
+  created_at: string;
+  expires_at: string | null;
+  key?: string; // Only in creation response
+  message?: string;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
+  scopes: string[];
+  expires_in_days?: number | null;
+}
+
+export interface UpdateApiKeyRequest {
+  name?: string;
+  scopes?: string[];
+  is_active?: boolean;
+}
+
+export interface ApiKeyAuditEvent {
+  id: number;
+  user_id: number;
+  api_key_id: number | null;
+  event: string;
+  metadata: Record<string, unknown>;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export interface ApiKeyUsageMetrics {
+  key_id: number;
+  usage_count: number;
+  usage_count_last_hour: number;
+  hourly_remaining: number | null;
+  last_used_at: string | null;
+  rate_limit: number;
+  rate_limit_reset_at: string;
+  is_active: boolean;
+}
+
 export const paymentsApi = {
   getPlans: (accessToken?: string): Promise<{ success: boolean; data: Plan[] }> =>
     apiFetch<{ success: boolean; data: Plan[] }>("/api/payments/plans", {
@@ -978,4 +1084,98 @@ export const paymentsApi = {
       `/api/payments/history?limit=${encodeURIComponent(String(limit))}`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
     ),
+};
+
+export const apiKeysApi = {
+  list: (accessToken: string): Promise<{ api_keys: ApiKeyData[]; total: number }> =>
+    apiFetch<{ api_keys: ApiKeyData[]; total: number }>("/api/api-keys", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }),
+
+  create: (
+    payload: CreateApiKeyRequest,
+    accessToken: string,
+  ): Promise<ApiKeyData> =>
+    apiFetch<ApiKeyData>("/api/api-keys", {
+      method: "POST",
+      headers: buildJsonHeaders(accessToken),
+      body: JSON.stringify(payload),
+    }),
+
+  update: (
+    keyId: number,
+    payload: UpdateApiKeyRequest,
+    accessToken: string,
+  ): Promise<ApiKeyData> =>
+    apiFetch<ApiKeyData>(`/api/api-keys/${keyId}`, {
+      method: "PATCH",
+      headers: buildJsonHeaders(accessToken),
+      body: JSON.stringify(payload),
+    }),
+
+  revoke: (
+    keyId: number,
+    accessToken: string,
+  ): Promise<{ message: string }> =>
+    apiFetch<{ message: string }>(`/api/api-keys/${keyId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }),
+
+  regenerate: (
+    keyId: number,
+    accessToken: string,
+  ): Promise<ApiKeyData> =>
+    apiFetch<ApiKeyData>(`/api/api-keys/${keyId}/regenerate`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }),
+
+  getUsage: (
+    keyId: number,
+    accessToken: string,
+  ): Promise<ApiKeyUsageMetrics> =>
+    apiFetch<ApiKeyUsageMetrics>
+    (`/api/api-keys/${keyId}/usage`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }),
+
+  getUsageBulk: (
+    accessToken: string,
+    keyIds?: number[],
+  ): Promise<{ items: ApiKeyUsageMetrics[]; usage_by_key_id: Record<string, ApiKeyUsageMetrics>; total: number }> => {
+    const params = new URLSearchParams();
+    if (keyIds && keyIds.length > 0) {
+      params.set("key_ids", keyIds.join(","));
+    }
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+
+    return apiFetch<{ items: ApiKeyUsageMetrics[]; usage_by_key_id: Record<string, ApiKeyUsageMetrics>; total: number }>(
+      `/api/api-keys/usage${suffix}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
+  },
+
+  history: (
+    accessToken: string,
+    options?: { keyId?: number; limit?: number },
+  ): Promise<{ items: ApiKeyAuditEvent[]; total: number; limit: number }> => {
+    const params = new URLSearchParams();
+    if (options?.keyId !== undefined) {
+      params.set("key_id", String(options.keyId));
+    }
+    if (options?.limit !== undefined) {
+      params.set("limit", String(options.limit));
+    }
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+
+    return apiFetch<{ items: ApiKeyAuditEvent[]; total: number; limit: number }>(
+      `/api/api-keys/history${suffix}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
+  },
 };

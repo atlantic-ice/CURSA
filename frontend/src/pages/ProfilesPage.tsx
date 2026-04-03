@@ -1,25 +1,25 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertCircle,
-  ArrowRightLeft,
-  BarChart3,
-  BookMarked,
-  Copy,
-  FileDown,
-  FileText,
-  FolderKanban,
-  GraduationCap,
-  LayoutList,
-  ListTree,
-  Loader2,
-  Pencil,
-  Plus,
-  Ruler,
-  School,
-  ShieldCheck,
-  Table2,
-  Trash2,
-  Type,
+    AlertCircle,
+    ArrowRightLeft,
+    BarChart3,
+    BookMarked,
+    Copy,
+    FileDown,
+    FileText,
+    FolderKanban,
+    GraduationCap,
+    LayoutList,
+    ListTree,
+    Loader2,
+    Pencil,
+    Plus,
+    Ruler,
+    School,
+    ShieldCheck,
+    Table2,
+    Trash2,
+    Type,
 } from "lucide-react";
 import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -37,12 +37,12 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "../components/ui/dialog";
 import { SearchField } from "../components/ui/search-field";
 import { Separator } from "../components/ui/separator";
@@ -170,7 +170,7 @@ interface RuleItemProps {
 
 interface ProfilesPageProps {}
 
-const pagePanelClass = "border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm backdrop-blur-sm";
+const pagePanelClass = "border-border bg-card text-card-foreground shadow-sm backdrop-blur-sm";
 
 const getCategoryLabel = (category: Profile["category"]): string => {
   switch (category) {
@@ -211,18 +211,18 @@ const getCategoryIcon = (category: Profile["category"], className?: string) => {
 
 const RuleCard: FC<RuleCardProps> = ({ title, icon, children, delay }) => (
   <motion.div
-    initial={{ opacity: 0, y: 18 }}
+    initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.28, delay }}
+    transition={{ duration: 0.2, delay }}
     className="h-full"
   >
-    <Card className={cn(pagePanelClass, "h-full rounded-3xl")}>
-      <CardHeader className="space-y-0 pb-4">
+    <Card className={cn(pagePanelClass, "h-full rounded-2xl")}>
+      <CardHeader className="space-y-0 pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-muted-foreground">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/70 text-muted-foreground">
             {icon}
           </div>
-          <CardTitle className="text-base font-semibold tracking-[-0.02em]">{title}</CardTitle>
+          <CardTitle className="text-sm font-semibold tracking-[-0.01em] md:text-base">{title}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="flex h-full flex-col gap-3">{children}</CardContent>
@@ -242,13 +242,13 @@ const SummaryCard: FC<{ label: string; value: number; hint: string }> = ({
   value,
   hint,
 }) => (
-  <Card className={cn(pagePanelClass, "rounded-3xl")}>
-    <CardContent className="p-6">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+  <Card className={cn(pagePanelClass, "rounded-2xl")}>
+    <CardContent className="p-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-2 text-4xl font-black tracking-[-0.04em] text-foreground">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{hint}</p>
+      <p className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-foreground">{value}</p>
+      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{hint}</p>
     </CardContent>
   </Card>
 );
@@ -621,39 +621,39 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
         <Card
           className={cn(
             pagePanelClass,
-            "overflow-hidden rounded-[2rem] border-border/70 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),transparent)]",
+            "overflow-hidden rounded-[1.75rem] border-border/70 bg-card",
           )}
         >
-          <CardContent className="flex flex-col gap-5 p-6 md:p-8 xl:flex-row xl:items-center xl:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Общее количество профилей
+          <CardContent className="flex flex-col gap-6 p-6 md:p-7 xl:flex-row xl:items-center xl:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                Библиотека профилей
               </p>
-              <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-[-0.04em] text-foreground md:text-4xl">
-                Подберите шаблон, сравните правила и соберите собственный профиль оформления.
+              <h1 className="max-w-3xl text-2xl font-bold tracking-[-0.03em] text-foreground md:text-3xl">
+                Профили оформления в спокойном и рабочем формате.
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
-                Экран переведен на общий shadcn/Tailwind-язык CURSA: чистые surface-карточки, единая
-                иерархия действий и без MUI-обвязки на уровне страницы.
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
+                Выберите готовый ГОСТ или профиль вуза, сравните настройки и при необходимости
+                создайте аккуратную пользовательскую версию.
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="rounded-full border-[#2e2f2f] bg-[#171717] px-3 py-1 text-xs font-semibold text-[#b6b6b6]"
+                  className="rounded-full border-border bg-muted/20 px-3 py-1 text-xs font-semibold text-muted-foreground"
                 >
                   <ShieldCheck className="mr-1 h-3.5 w-3.5" />
                   {categoryCounts.gost} ГОСТ
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="rounded-full border-[#2e2f2f] bg-[#171717] px-3 py-1 text-xs font-semibold text-[#b6b6b6]"
+                  className="rounded-full border-border bg-muted/20 px-3 py-1 text-xs font-semibold text-muted-foreground"
                 >
                   <School className="mr-1 h-3.5 w-3.5" />
                   {categoryCounts.university} Университет
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="rounded-full border-[#2e2f2f] bg-[#171717] px-3 py-1 text-xs font-semibold text-[#b6b6b6]"
+                  className="rounded-full border-border bg-muted/20 px-3 py-1 text-xs font-semibold text-muted-foreground"
                 >
                   <FolderKanban className="mr-1 h-3.5 w-3.5" />
                   {categoryCounts.custom} Пользовательские
@@ -668,6 +668,8 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                     variant={showComparison ? "secondary" : "outline"}
                     size="icon"
                     onClick={handleShowComparison}
+                    aria-label="Сравнить профили"
+                    data-testid="profiles-compare-button"
                   >
                     <ArrowRightLeft className="h-4 w-4" />
                   </Button>
@@ -680,6 +682,8 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                     variant={showImportExport ? "secondary" : "outline"}
                     size="icon"
                     onClick={handleShowImportExport}
+                    aria-label="Импорт и экспорт профилей"
+                    data-testid="profiles-import-export-button"
                   >
                     <FileDown className="h-4 w-4" />
                   </Button>
@@ -692,6 +696,8 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                     variant={showStatistics ? "secondary" : "outline"}
                     size="icon"
                     onClick={handleShowStatistics}
+                    aria-label="Статистика профилей"
+                    data-testid="profiles-statistics-button"
                   >
                     <BarChart3 className="h-4 w-4" />
                   </Button>
@@ -704,6 +710,8 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                     variant={showBulkOperations ? "secondary" : "outline"}
                     size="icon"
                     onClick={handleShowBulkOperations}
+                    aria-label="Массовые операции профилей"
+                    data-testid="profiles-bulk-button"
                   >
                     <LayoutList className="h-4 w-4" />
                   </Button>
@@ -724,7 +732,7 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {summaryCards.map((item) => (
             <SummaryCard key={item.label} label={item.label} value={item.value} hint={item.hint} />
           ))}
@@ -742,7 +750,7 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                 </div>
                 <Badge
                   variant="secondary"
-                  className="rounded-full border border-[#2e2f2f] bg-[#222222] px-2.5 py-1 text-xs text-[#b6b6b6]"
+                  className="rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground"
                 >
                   {filteredProfiles.length}
                 </Badge>
@@ -753,7 +761,7 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                 value={categoryTab}
                 onValueChange={(value) => setCategoryTab(value as typeof categoryTab)}
               >
-                <TabsList className="grid w-full grid-cols-3 rounded-2xl border border-[#2e2f2f] bg-[#222222] p-1">
+                <TabsList className="grid w-full grid-cols-3 rounded-2xl border border-border bg-muted/30 p-1">
                   <TabsTrigger value="all" className="rounded-xl">
                     Все {categoryCounts.all}
                   </TabsTrigger>
@@ -772,7 +780,7 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                 onSearch={() => undefined}
                 placeholder="Поиск профилей..."
                 buttonLabel="Поиск"
-                inputClassName="h-11 rounded-2xl border-[#2e2f2f] bg-[#171717] text-[#fafafa] placeholder:text-[#7b7b7b]"
+                inputClassName="h-11 rounded-2xl border-border bg-card text-foreground placeholder:text-muted-foreground"
                 buttonClassName="h-11 rounded-2xl px-4"
               />
 
@@ -784,9 +792,9 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                     <motion.button
                       key={profile.id}
                       type="button"
-                      initial={{ opacity: 0, x: -8 }}
+                      initial={{ opacity: 0, x: -4 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.025 }}
+                      transition={{ delay: index * 0.015, duration: 0.16 }}
                       onClick={() => {
                         setSelectedId(profile.id);
                         setIsCreating(false);
@@ -794,11 +802,11 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                       className={cn(
                         "flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition-colors",
                         isActive
-                          ? "border-[#2e2f2f] bg-[#222222] text-[#fafafa]"
-                          : "border-transparent bg-[#171717] hover:border-[#2e2f2f] hover:bg-[#222222]",
+                          ? "border-border bg-muted/25 text-foreground"
+                          : "border-transparent bg-card hover:border-border/70 hover:bg-muted/15",
                       )}
                     >
-                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#2e2f2f] bg-[#171717] text-[#b6b6b6]">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground">
                         {getCategoryIcon(profile.category, "h-4 w-4")}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -824,7 +832,7 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                 })}
 
                 {!filteredProfiles.length ? (
-                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-[#2e2f2f] bg-[#171717] p-6 text-center text-sm text-[#b6b6b6]">
+                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
                     По этому фильтру профили не найдены.
                   </div>
                 ) : null}
@@ -946,23 +954,23 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
               ) : (
                 <motion.div
                   key={selectedId}
-                  initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -16, filter: "blur(8px)" }}
-                  transition={{ duration: 0.28, ease: "easeOut" }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="space-y-4"
                 >
-                  <Card className={cn(pagePanelClass, "rounded-[2rem]")}>
+                  <Card className={cn(pagePanelClass, "rounded-[1.75rem]")}>
                     <CardContent className="flex flex-col gap-5 p-6 md:flex-row md:items-start md:justify-between">
                       <div className="max-w-3xl">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                           Активный профиль
                         </p>
-                        <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-foreground">
+                        <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-foreground md:text-[2rem]">
                           {profileData.name}
                         </h2>
                         {profileData.description ? (
-                          <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base">
+                          <p className="mt-3 text-sm leading-6 text-muted-foreground md:text-base">
                             {profileData.description}
                           </p>
                         ) : null}
@@ -1032,7 +1040,7 @@ const ProfilesPage: FC<ProfilesPageProps> = () => {
                     />
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <RuleCard
                       title="Шрифт и текст"
                       icon={<Type className="h-4 w-4" />}

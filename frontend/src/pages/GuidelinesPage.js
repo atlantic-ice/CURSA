@@ -10,26 +10,27 @@ import TableChartIcon from "@mui/icons-material/TableChart";
 import TextFormatIcon from "@mui/icons-material/TextFormat";
 import TitleIcon from "@mui/icons-material/Title";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  Container,
-  Divider,
-  Grid,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Paper,
-  Tab,
-  Tabs,
-  Typography,
-  useTheme,
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
+    Box,
+    Card,
+    CardContent,
+    CardHeader,
+    Container,
+    Divider,
+    Grid,
+    List,
+    ListItem,
+    ListItemIcon,
+    ListItemText,
+    Paper,
+    Tab,
+    Tabs,
+    Typography,
+    useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import GuidelineExample from "../components/GuidelineExample";
@@ -111,7 +112,7 @@ const GuidelinesPage = () => {
                 gap: 1.5,
                 letterSpacing: 0,
                 fontSize: { xs: 28, md: 38 },
-                color: "#ededed",
+                color: "text.primary",
               }}
             >
               <MenuBookOutlinedIcon sx={{ fontSize: { xs: 28, md: 38 } }} />
@@ -148,7 +149,7 @@ const GuidelinesPage = () => {
             position: "sticky",
             top: { xs: 0, md: 16 },
             zIndex: 10,
-            bgcolor: "rgba(10, 10, 10, 0.8)",
+            bgcolor: alpha(theme.palette.background.paper, 0.9),
             boxShadow: "none",
           }}
         >
@@ -174,19 +175,19 @@ const GuidelinesPage = () => {
                 px: 2.5,
                 color: theme.palette.text.secondary,
                 "&.Mui-selected": {
-                  color: "#ededed",
-                  background: "rgba(255,255,255,0.05)",
+                  color: theme.palette.text.primary,
+                  background: alpha(theme.palette.action.selected, 0.6),
                   boxShadow: "none",
                 },
                 "&:hover": {
-                  background: "rgba(255,255,255,0.03)",
-                  color: "#ededed",
+                  background: theme.palette.action.hover,
+                  color: theme.palette.text.primary,
                 },
               },
               "& .MuiTabs-indicator": {
                 height: 4,
                 borderRadius: 2,
-                background: "#ededed",
+                background: theme.palette.primary.main,
               },
             }}
           >

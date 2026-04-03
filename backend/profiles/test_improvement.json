@@ -1,0 +1,12 @@
+{
+    "id": "test_improvement",
+    "name": "Test Updated",
+    "category": "custom",
+    "description": "Updated test profile",
+    "rules": {},
+    "is_system": false,
+    "created_at": "2026-04-02T21:00:03.760094",
+    "version": "1.1",
+    "extends": "default_gost",
+    "updated_at": "2026-04-02T21:10:36.108901"
+}

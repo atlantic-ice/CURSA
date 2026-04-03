@@ -1,11 +1,11 @@
 import {
-  ArrowRight,
-  BookMarked,
-  ExternalLink,
-  FolderSearch,
-  GraduationCap,
-  Scale,
-  Search,
+    ArrowRight,
+    BookMarked,
+    ExternalLink,
+    FolderSearch,
+    GraduationCap,
+    Scale,
+    Search,
 } from "lucide-react";
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -91,38 +91,44 @@ const ResourcesPage: FC<ResourcesPageProps> = ({ className = "" }) => {
   return (
     <AppPageLayout className={className} title="Ресурсы" maxWidth="wide">
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
-        <Card className="rounded-[32px] border-[#2d3345] bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.22),transparent_32%),linear-gradient(135deg,#0b1220,#131c2f_48%,#19253a)] text-white shadow-[0_24px_80px_rgba(8,15,30,0.28)]">
+        <Card
+          className="rounded-[32px] border-border/70 text-card-foreground shadow-surface"
+          style={{
+            background:
+              "radial-gradient(circle at top right, var(--status-info-soft), transparent 32%), linear-gradient(135deg, oklch(var(--card)), color-mix(in srgb, oklch(var(--card)) 84%, oklch(var(--muted)) 16%) 48%, oklch(var(--muted)))",
+          }}
+        >
           <CardHeader className="space-y-4 p-8">
-            <Badge className="w-fit border-white/15 bg-white/10 text-white hover:bg-white/10">
+            <Badge className="w-fit border-border/80 bg-background/70 text-foreground hover:bg-background/70">
               Навигация по знаниям
             </Badge>
             <CardTitle className="max-w-3xl text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
               Полезные ресурсы для подготовки и проверки документов
             </CardTitle>
-            <CardDescription className="max-w-2xl text-base leading-7 text-white/72 md:text-lg">
+            <CardDescription className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
               Здесь собраны нормативные документы, разборы и внутренние инструменты CURSA, которые
               помогают быстро сверить оформление и не потерять важные требования.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 px-8 pb-8 pt-0 md:grid-cols-3">
-            <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+            <div className="rounded-[24px] border border-border/70 bg-background/40 p-4">
               <Scale className="mb-3 size-5 text-sky-300" />
-              <p className="text-sm font-medium text-white">Нормативная база</p>
-              <p className="mt-2 text-sm leading-6 text-white/68">
+              <p className="text-sm font-medium text-foreground">Нормативная база</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Стандарты и требования без долгого ручного поиска.
               </p>
             </div>
-            <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+            <div className="rounded-[24px] border border-border/70 bg-background/40 p-4">
               <BookMarked className="mb-3 size-5 text-emerald-300" />
-              <p className="text-sm font-medium text-white">Готовые разборы</p>
-              <p className="mt-2 text-sm leading-6 text-white/68">
+              <p className="text-sm font-medium text-foreground">Готовые разборы</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Примеры удачного и проблемного оформления под рукой.
               </p>
             </div>
-            <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+            <div className="rounded-[24px] border border-border/70 bg-background/40 p-4">
               <GraduationCap className="mb-3 size-5 text-amber-300" />
-              <p className="text-sm font-medium text-white">Рабочие профили</p>
-              <p className="mt-2 text-sm leading-6 text-white/68">
+              <p className="text-sm font-medium text-foreground">Рабочие профили</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Переход от стандарта к конкретным требованиям кафедры.
               </p>
             </div>

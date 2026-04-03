@@ -1,15 +1,12 @@
 import { motion } from "framer-motion";
 import {
-  ArrowLeft,
-  CheckCircle2,
-  ChevronDown,
-  Download,
-  PauseCircle,
-  PlayCircle,
-  Printer,
-  RotateCcw,
-  Sparkles,
-  Wand2,
+    ArrowLeft,
+    CheckCircle2,
+    ChevronDown,
+    Download,
+    Printer,
+    Sparkles,
+    Wand2,
 } from "lucide-react";
 import { FC, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -22,12 +19,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Separator } from "../components/ui/separator";
 import { cn } from "../lib/utils";
 import type {
-  BackendCheckIssue,
-  IssueCategory,
-  IssueSeverity,
-  ValidationIssue,
-  ValidationReport,
-  ValidationResult,
+    BackendCheckIssue,
+    IssueCategory,
+    IssueSeverity,
+    ValidationIssue,
+    ValidationReport,
+    ValidationResult,
 } from "../types";
 import "./ReportPage.css";
 
@@ -68,6 +65,27 @@ interface ImprovementSummary {
   resolved_font_issues?: number;
 }
 
+interface QualityMetrics {
+  before_total_issues?: number | null;
+  after_total_issues?: number | null;
+  resolved_total_issues?: number | null;
+  completion_percentage?: number | null;
+  fallback_applied?: boolean;
+  attempts?: Array<{
+    attempt?: number;
+    passes?: number;
+    after_total_issues?: number;
+    completion_percentage?: number | null;
+  }>;
+}
+
+interface GraduationReadiness {
+  status?: "ready" | "almost_ready" | "needs_revision" | "unknown";
+  target_completion?: number;
+  target_issues_max?: number;
+  message?: string;
+}
+
 type BackendIssueLike = BackendCheckIssue & { message?: string };
 
 type ReportPayload = Partial<ValidationReport> & {
@@ -90,6 +108,10 @@ type ReportPayload = Partial<ValidationReport> & {
   correction_success?: boolean;
   improvement?: ImprovementSummary;
   report?: CorrectionSummary;
+  quality_gate_passed?: boolean;
+  quality_metrics?: QualityMetrics;
+  graduation_ready?: boolean;
+  graduation_readiness?: GraduationReadiness;
   errors?: Array<Partial<ValidationIssue> & { message?: string }>;
 };
 
@@ -98,14 +120,6 @@ interface LocationState {
   fileName: string;
   profileId: string;
   profileName: string;
-}
-
-interface CorrectionPlaybackStep {
-  key: string;
-  title: string;
-  description: string;
-  accent: string;
-  count: number;
 }
 
 interface ViewerHighlight {
@@ -158,59 +172,18 @@ const gradeToneClasses: Record<DocumentGrade["tone"], string> = {
   danger: "border-red-500/20 bg-red-500/5",
 };
 
-const playbackPhaseCategories: Record<string, ValidationIssue["category"][]> = {
-  structure: ["structure", "headings", "bibliography", "tables", "images", "formulas"],
-  styles: ["font", "typography", "headings"],
-  formatting: ["spacing", "margins", "pagination", "formatting"],
-  xml_deep: ["formatting", "typography", "tables", "images"],
-  verification: [],
+const readinessBadgeClassByStatus: Record<string, string> = {
+  ready: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  almost_ready: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  needs_revision: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  unknown: "bg-muted text-muted-foreground",
 };
 
-const correctionPhaseMeta: Record<string, Omit<CorrectionPlaybackStep, "count">> = {
-  structure: {
-    key: "structure",
-    title: "Структура",
-    description: "Выравниваем порядок разделов, заголовков и важных блоков.",
-    accent: "#38bdf8",
-  },
-  styles: {
-    key: "styles",
-    title: "Стили",
-    description: "Приводим шрифты, начертания и текстовую систему к профилю.",
-    accent: "#8b5cf6",
-  },
-  formatting: {
-    key: "formatting",
-    title: "Форматирование",
-    description: "Исправляем интервалы, поля, выравнивание и абзацную сетку.",
-    accent: "#f59e0b",
-  },
-  xml_deep: {
-    key: "xml_deep",
-    title: "Глубокая правка",
-    description: "Дорабатываем низкоуровневые DOCX-настройки, недоступные в редакторе.",
-    accent: "#14b8a6",
-  },
-  verification: {
-    key: "verification",
-    title: "Верификация",
-    description: "Повторно проверяем документ и фиксируем результат.",
-    accent: "#22c55e",
-  },
-};
-
-const verificationLabels: Record<string, string> = {
-  fonts: "Шрифты",
-  spacing: "Интервалы",
-  margins: "Поля",
-};
-
-const playbackAccentClasses: Record<string, string> = {
-  structure: "report-playback-chip--structure",
-  styles: "report-playback-chip--styles",
-  formatting: "report-playback-chip--formatting",
-  xml_deep: "report-playback-chip--xml-deep",
-  verification: "report-playback-chip--verification",
+const readinessLabelByStatus: Record<string, string> = {
+  ready: "Готово к сдаче",
+  almost_ready: "Почти готово",
+  needs_revision: "Нужна доработка",
+  unknown: "Оценка недоступна",
 };
 
 const AnimatedNumber: FC<{ value: number }> = ({ value }) => {
@@ -474,38 +447,12 @@ const getPostCorrectionGrade = (remainingIssues: number): DocumentGrade => {
   };
 };
 
-const buildCorrectionPlaybackSteps = (summary?: CorrectionSummary): CorrectionPlaybackStep[] => {
-  const phaseCounts = summary?.actions_by_phase ?? {};
-  const steps = Object.values(correctionPhaseMeta)
-    .map((meta) => ({
-      ...meta,
-      count: phaseCounts[meta.key] ?? (meta.key === "verification" && summary ? 1 : 0),
-    }))
-    .filter((step) => {
-      if (!summary) {
-        return true;
-      }
-
-      return step.count > 0 || step.key === "verification";
-    });
-
-  return steps.length > 0
-    ? steps
-    : Object.values(correctionPhaseMeta).map((meta) => ({ ...meta, count: 0 }));
-};
-
 const buildViewerHighlights = (
   issues: ValidationIssue[],
-  activePhaseKey?: string,
   isProcessing = false,
   correctionApplied = false,
 ): ViewerHighlight[] => {
-  const phaseCategories = activePhaseKey ? (playbackPhaseCategories[activePhaseKey] ?? []) : [];
-  const phaseIssues =
-    phaseCategories.length > 0
-      ? issues.filter((issue) => phaseCategories.includes(issue.category))
-      : issues;
-  const source = (phaseIssues.length > 0 ? phaseIssues : issues).slice(0, 4);
+  const source = issues.slice(0, 4);
 
   return source.map((issue, index) => ({
     id: `${issue.id}-${index}`,
@@ -639,17 +586,10 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [correctionError, setCorrectionError] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  const [activePlaybackStep, setActivePlaybackStep] = useState(0);
-  const [isPlaybackRunning, setIsPlaybackRunning] = useState(false);
 
   useEffect(() => {
     setCurrentReport(reportData ?? null);
   }, [reportData]);
-
-  useEffect(() => {
-    setActivePlaybackStep(0);
-    setIsPlaybackRunning(isCorrecting);
-  }, [currentReport?.report, isCorrecting]);
 
   const handleGoBack = useCallback(() => {
     navigate("/");
@@ -720,12 +660,15 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
           check_results: correctionResult.check_results ?? previousReport.check_results,
           improvement: correctionResult.improvement,
           report: correctionResult.report,
+          quality_gate_passed: correctionResult.quality_gate_passed,
+          quality_metrics: correctionResult.quality_metrics,
+          graduation_ready: correctionResult.graduation_ready,
+          graduation_readiness: correctionResult.graduation_readiness,
         };
       });
     } catch (error) {
       setCorrectionError(getApiErrorMessage(error, "Не удалось автоматически исправить документ"));
     } finally {
-      setIsPlaybackRunning(false);
       setIsCorrecting(false);
     }
   }, [currentReport, fileName]);
@@ -740,78 +683,27 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
   const autocorrectableIssuesCount = issues.filter((issue) => issue.can_autocorrect).length;
   const correctionSummary = currentReport?.report;
   const improvementSummary = currentReport?.improvement;
+  const qualityMetrics = currentReport?.quality_metrics;
+  const graduationReadiness = currentReport?.graduation_readiness;
+  const qualityGatePassed = currentReport?.quality_gate_passed;
+  const readinessStatus = graduationReadiness?.status || "unknown";
+  const readinessLabel = readinessLabelByStatus[readinessStatus] || readinessLabelByStatus.unknown;
+  const readinessBadgeClass =
+    readinessBadgeClassByStatus[readinessStatus] || readinessBadgeClassByStatus.unknown;
+  const completionPercentage = qualityMetrics?.completion_percentage;
+  const fallbackApplied = Boolean(qualityMetrics?.fallback_applied);
+  const attemptsCount = qualityMetrics?.attempts?.length ?? 0;
   const correctedRemainingIssues = improvementSummary?.after_total_issues;
-  const correctionPlaybackSteps = useMemo(
-    () => buildCorrectionPlaybackSteps(correctionSummary),
-    [correctionSummary],
-  );
-  const showCorrectionPlayback = isCorrecting || Boolean(correctionSummary);
-  const playbackSteps = useMemo(
-    () => (showCorrectionPlayback ? correctionPlaybackSteps : []),
-    [showCorrectionPlayback, correctionPlaybackSteps],
-  );
-  const hasPlaybackSteps = playbackSteps.length > 0;
-  const currentStepIndex = hasPlaybackSteps ? activePlaybackStep % playbackSteps.length : 0;
-  const activePlayback = hasPlaybackSteps ? playbackSteps[currentStepIndex] : null;
   const viewerHighlights = useMemo(
-    () =>
-      buildViewerHighlights(
-        issues,
-        activePlayback?.key,
-        isCorrecting,
-        Boolean(currentReport?.correction_success),
-      ),
-    [issues, activePlayback?.key, isCorrecting, currentReport?.correction_success],
+    () => buildViewerHighlights(issues, isCorrecting, Boolean(currentReport?.correction_success)),
+    [issues, isCorrecting, currentReport?.correction_success],
   );
-  const verificationEntries = Object.entries(correctionSummary?.verification_results ?? {});
   const showDocumentViewer = Boolean(correctedFilePath || originalPreviewPath);
   const viewerModeNote = correctedFilePath
     ? originalPreviewPath
-      ? "Сравниваем оригинал и исправленный документ в live-режиме."
+      ? "Сравниваем оригинал и исправленный документ."
       : "Исходный снимок недоступен, поэтому показываем исправленный документ без полного compare-view."
     : "";
-  const playbackProgressPercent = hasPlaybackSteps
-    ? Math.round(((currentStepIndex + 1) / playbackSteps.length) * 100)
-    : 0;
-  const canControlPlayback = hasPlaybackSteps && !isCorrecting;
-
-  const handleTogglePlayback = useCallback(() => {
-    if (!canControlPlayback) {
-      return;
-    }
-
-    setIsPlaybackRunning((previous) => !previous);
-  }, [canControlPlayback]);
-
-  const handleRestartPlayback = useCallback(() => {
-    if (!hasPlaybackSteps) {
-      return;
-    }
-
-    setActivePlaybackStep(0);
-    if (!isCorrecting) {
-      setIsPlaybackRunning(true);
-    }
-  }, [hasPlaybackSteps, isCorrecting]);
-
-  useEffect(() => {
-    if (!showCorrectionPlayback || playbackSteps.length === 0) {
-      return undefined;
-    }
-
-    if (!isCorrecting && !isPlaybackRunning) {
-      return undefined;
-    }
-
-    const interval = window.setInterval(
-      () => {
-        setActivePlaybackStep((previousStep) => (previousStep + 1) % playbackSteps.length);
-      },
-      isCorrecting ? 900 : 1800,
-    );
-
-    return () => window.clearInterval(interval);
-  }, [showCorrectionPlayback, playbackSteps, isCorrecting, isPlaybackRunning]);
 
   const initialHighSeverityCount = initialIssues.filter(
     (issue) => issue.severity === "critical" || issue.severity === "error",
@@ -936,6 +828,28 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
                       Осталось: {improvementSummary.after_total_issues ?? 0}
                     </Badge>
                   ) : null}
+                  {(qualityGatePassed === true || qualityGatePassed === false) ? (
+                    <Badge
+                      className={cn(
+                        "rounded-full px-3 py-1",
+                        qualityGatePassed
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                          : "bg-red-500/15 text-red-700 dark:text-red-300",
+                      )}
+                    >
+                      Quality gate: {qualityGatePassed ? "пройден" : "не пройден"}
+                    </Badge>
+                  ) : null}
+                  {graduationReadiness ? (
+                    <Badge className={cn("rounded-full px-3 py-1", readinessBadgeClass)}>
+                      {readinessLabel}
+                    </Badge>
+                  ) : null}
+                  {fallbackApplied ? (
+                    <Badge className="rounded-full bg-amber-500/15 px-3 py-1 text-amber-700 dark:text-amber-300">
+                      Применен fallback
+                    </Badge>
+                  ) : null}
                 </div>
               </div>
 
@@ -964,36 +878,6 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
                         ? "Исправляем документ..."
                         : "Исправить автоматически"}
                   </Button>
-
-                  {hasPlaybackSteps ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="rounded-2xl"
-                        onClick={handleTogglePlayback}
-                        disabled={!canControlPlayback}
-                        aria-label={
-                          isPlaybackRunning ? "Пауза walkthrough" : "Запустить walkthrough"
-                        }
-                      >
-                        {isPlaybackRunning ? (
-                          <PauseCircle className="size-4" />
-                        ) : (
-                          <PlayCircle className="size-4" />
-                        )}
-                        {isPlaybackRunning ? "Пауза walkthrough" : "Запустить walkthrough"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="rounded-2xl"
-                        onClick={handleRestartPlayback}
-                        disabled={!hasPlaybackSteps}
-                      >
-                        <RotateCcw className="size-4" />
-                        Сначала
-                      </Button>
-                    </>
-                  ) : null}
                 </div>
 
                 {improvementSummary ? (
@@ -1028,6 +912,45 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
 
               {correctionError ? <p className="text-sm text-red-500">{correctionError}</p> : null}
               {downloadError ? <p className="text-sm text-red-500">{downloadError}</p> : null}
+
+              {qualityMetrics || graduationReadiness ? (
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-[20px] border border-border/70 bg-background/60 px-4 py-3 text-sm text-muted-foreground">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.24em]">
+                      Готовность
+                    </span>
+                    <span className="mt-1 block text-base font-semibold text-foreground">
+                      {readinessLabel}
+                    </span>
+                  </div>
+                  <div className="rounded-[20px] border border-border/70 bg-background/60 px-4 py-3 text-sm text-muted-foreground">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.24em]">
+                      Процент соответствия
+                    </span>
+                    <span className="mt-1 block text-base font-semibold text-foreground">
+                      {typeof completionPercentage === "number"
+                        ? `${Math.round(completionPercentage)}%`
+                        : "Нет данных"}
+                    </span>
+                  </div>
+                  <div className="rounded-[20px] border border-border/70 bg-background/60 px-4 py-3 text-sm text-muted-foreground">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.24em]">
+                      Попыток коррекции
+                    </span>
+                    <span className="mt-1 block text-base font-semibold text-foreground">
+                      {attemptsCount > 0 ? attemptsCount : "1"}
+                    </span>
+                  </div>
+                  <div className="rounded-[20px] border border-border/70 bg-background/60 px-4 py-3 text-sm text-muted-foreground">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.24em]">
+                      Режим результата
+                    </span>
+                    <span className="mt-1 block text-base font-semibold text-foreground">
+                      {fallbackApplied ? "Безопасный fallback" : "Автокоррекция"}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </motion.div>
@@ -1055,94 +978,23 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
           />
         </div>
 
-        {showCorrectionPlayback || showDocumentViewer ? (
+        {showDocumentViewer ? (
           <motion.div initial="hidden" animate="show" variants={fadeUp}>
             <Card className="rounded-[32px] border-border/70 bg-card/92 shadow-surface">
               <CardHeader className="space-y-3 p-6 pb-4 md:p-8 md:pb-5">
                 <div className="space-y-2">
                   <h2 className="text-2xl font-semibold tracking-[-0.04em] text-foreground">
-                    {showCorrectionPlayback ? "Живой режим исправлений" : "Предпросмотр документа"}
+                    Предпросмотр документа
                   </h2>
                   <CardDescription className="max-w-3xl text-sm leading-relaxed md:text-base">
-                    {showCorrectionPlayback
-                      ? isCorrecting
-                        ? "Автокоррекция идёт по фазам. Ниже показывается текущий прогресс и документ."
-                        : "Здесь видно, какие фазы прошла автокоррекция и что осталось после неё."
-                      : "Показываем доступный снимок документа и готовый corrected-файл."}
+                    Показываем доступный снимок документа и готовый corrected-файл.
                   </CardDescription>
                 </div>
-                {showCorrectionPlayback && activePlayback ? (
-                  <div className="rounded-[22px] border border-border/70 bg-background/55 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-muted-foreground">
-                      Фокус playback: {activePlayback.title}
-                    </p>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      {activePlayback.description}
-                    </p>
-                  </div>
-                ) : null}
               </CardHeader>
 
               <CardContent className="space-y-5 p-6 pt-0 md:p-8 md:pt-0">
-                {showCorrectionPlayback && hasPlaybackSteps ? (
-                  <div className="flex flex-wrap gap-2">
-                    {playbackSteps.map((step, index) => {
-                      const isActive = index === currentStepIndex;
-
-                      return (
-                        <button
-                          key={step.key}
-                          type="button"
-                          onClick={() => {
-                            setActivePlaybackStep(index);
-                            if (!isCorrecting) {
-                              setIsPlaybackRunning(false);
-                            }
-                          }}
-                          className={cn(
-                            "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                            isActive
-                              ? playbackAccentClasses[step.key] || "text-foreground"
-                              : "border-border/70 bg-background/55 text-muted-foreground hover:bg-accent",
-                          )}
-                        >
-                          {step.title}
-                          {step.count > 0 ? ` · ${step.count}` : ""}
-                        </button>
-                      );
-                    })}
-
-                    <Badge variant="outline" className="rounded-full px-3 py-1.5 text-foreground">
-                      {isCorrecting
-                        ? `Автопроход ${playbackProgressPercent}%`
-                        : isPlaybackRunning
-                          ? `Walkthrough ${playbackProgressPercent}%`
-                          : `Шаг ${currentStepIndex + 1} из ${playbackSteps.length}`}
-                    </Badge>
-                  </div>
-                ) : null}
-
-                {showCorrectionPlayback && verificationEntries.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {verificationEntries.map(([key, result]) => (
-                      <Badge
-                        key={key}
-                        className={cn(
-                          "rounded-full px-3 py-1.5",
-                          result.passed
-                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
-                            : "bg-amber-500/15 text-amber-600 dark:text-amber-300",
-                        )}
-                      >
-                        {verificationLabels[key] ?? key}:{" "}
-                        {result.message ?? (result.passed ? "OK" : "Проверить")}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : null}
-
                 {showDocumentViewer ? (
-                  <div data-testid="live-document-compare" className="space-y-3">
+                  <div className="space-y-3">
                     {viewerModeNote ? (
                       <p className="text-sm text-muted-foreground">{viewerModeNote}</p>
                     ) : null}
@@ -1150,8 +1002,6 @@ const ReportPage: FC<ReportPageProps> = ({ className = "" }) => {
                       originalPath={originalPreviewPath}
                       correctedPath={correctedFilePath}
                       highlightedIssues={viewerHighlights}
-                      activePhaseTitle={activePlayback?.title ?? null}
-                      activePhaseAccent={activePlayback?.accent}
                       isProcessing={isCorrecting}
                     />
                   </div>

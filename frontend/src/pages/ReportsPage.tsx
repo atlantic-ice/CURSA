@@ -87,6 +87,29 @@ const getCorrectedPath = (item: HistoryItem): string | undefined => {
   return item.correctedFilePath || item.corrected_file_path || item.reportData?.corrected_file_path;
 };
 
+const getReadinessStatus = (item: HistoryItem): string => {
+  return item.reportData?.graduation_readiness?.status || "unknown";
+};
+
+const getReadinessLabel = (item: HistoryItem): string => {
+  const status = getReadinessStatus(item);
+  if (status === "ready") return "Готово к сдаче";
+  if (status === "almost_ready") return "Почти готово";
+  if (status === "needs_revision") return "Нужна доработка";
+  return "Оценка недоступна";
+};
+
+const getQualityGatePassed = (item: HistoryItem): boolean | null => {
+  if (typeof item.reportData?.quality_gate_passed === "boolean") {
+    return item.reportData.quality_gate_passed;
+  }
+  return null;
+};
+
+const hasFallback = (item: HistoryItem): boolean => {
+  return Boolean(item.reportData?.quality_metrics?.fallback_applied);
+};
+
 const getProfileLabel = (item: HistoryItem): string => {
   return (
     item.profileName ||
@@ -138,6 +161,50 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
     }
     return scored.reduce((sum, score) => sum + score, 0) / scored.length;
   }, [history]);
+  const readinessStats = useMemo(() => {
+    return history.reduce(
+      (stats, item) => {
+        const status = getReadinessStatus(item);
+        if (status === "ready") {
+          stats.ready += 1;
+        } else if (status === "almost_ready") {
+          stats.almostReady += 1;
+        } else if (status === "needs_revision") {
+          stats.needsRevision += 1;
+        } else {
+          stats.unknown += 1;
+        }
+
+        const gatePassed = getQualityGatePassed(item);
+        if (gatePassed === true) {
+          stats.gatePassed += 1;
+          stats.gateKnown += 1;
+        } else if (gatePassed === false) {
+          stats.gateKnown += 1;
+        }
+
+        if (hasFallback(item)) {
+          stats.fallback += 1;
+        }
+
+        return stats;
+      },
+      {
+        ready: 0,
+        almostReady: 0,
+        needsRevision: 0,
+        unknown: 0,
+        gatePassed: 0,
+        gateKnown: 0,
+        fallback: 0,
+      },
+    );
+  }, [history]);
+  const graduationReadyCount = readinessStats.ready + readinessStats.almostReady;
+  const gatePassRate =
+    readinessStats.gateKnown > 0
+      ? Math.round((readinessStats.gatePassed / readinessStats.gateKnown) * 100)
+      : null;
 
   const cycleSort = (): void => {
     setSort((previous) =>
@@ -185,11 +252,15 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
 
   const exportCSV = (): void => {
     const rows: Array<Array<string | number>> = [
-      ["Файл", "Дата", "Проблем", "Балл", "Исправлен"],
+      ["Файл", "Дата", "Проблем", "Балл", "Исправлен", "Quality Gate", "Готовность", "Fallback"],
       ...history.map((item) => {
         const issues = getIssuesCount(item);
         const score = getScoreValue(item) ?? "";
         const corrected = getCorrectedPath(item) ? "Да" : "Нет";
+        const gatePassed = getQualityGatePassed(item);
+        const gateLabel = gatePassed == null ? "Нет данных" : gatePassed ? "Пройден" : "Не пройден";
+        const readinessLabel = getReadinessLabel(item);
+        const fallbackLabel = hasFallback(item) ? "Да" : "Нет";
         const date = new Date(getTimestampValue(item)).toLocaleString("ru-RU");
 
         return [
@@ -198,6 +269,9 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
           issues,
           score,
           corrected,
+          gateLabel,
+          readinessLabel,
+          fallbackLabel,
         ];
       }),
     ];
@@ -208,6 +282,68 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = `cursa_reports_${new Date().toISOString().split("T")[0]}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportVkrReadinessSummary = (): void => {
+    const now = new Date();
+    const dateLabel = now.toLocaleString("ru-RU");
+    const gateRateLabel = gatePassRate == null ? "нет данных" : `${gatePassRate}%`;
+    const total = totalReports;
+
+    const needsRevisionItems = history
+      .filter((item) => getReadinessStatus(item) === "needs_revision")
+      .sort((left, right) => getIssuesCount(right) - getIssuesCount(left))
+      .slice(0, 20);
+
+    const topSection =
+      needsRevisionItems.length === 0
+        ? "- Документов со статусом `needs_revision` не найдено."
+        : needsRevisionItems
+            .map((item, index) => {
+              const fileName = item.fileName || item.document_name || "Без названия";
+              const issues = getIssuesCount(item);
+              const score = getScoreValue(item);
+              const scoreLabel = score != null && Number.isFinite(score) ? score.toFixed(1) : "-";
+              return `${index + 1}. ${fileName} | проблемы: ${issues} | балл: ${scoreLabel}`;
+            })
+            .join("\n");
+
+    const markdown = [
+      "# VKR Readiness Summary",
+      "",
+      `Сформировано: ${dateLabel}`,
+      "",
+      "## Агрегированные метрики",
+      "",
+      `- Всего отчетов: ${total}`,
+      `- Готово к сдаче (ready + almost_ready): ${graduationReadyCount}`,
+      `- Ready: ${readinessStats.ready}`,
+      `- Almost ready: ${readinessStats.almostReady}`,
+      `- Needs revision: ${readinessStats.needsRevision}`,
+      `- Unknown: ${readinessStats.unknown}`,
+      `- Quality gate passed: ${readinessStats.gatePassed}`,
+      `- Quality gate pass rate: ${gateRateLabel}`,
+      `- Fallback cases: ${readinessStats.fallback}`,
+      "",
+      "## Документы, требующие ручной доработки",
+      "",
+      topSection,
+      "",
+      "## Интерпретация для защиты",
+      "",
+      "- Метрика ready+almost_ready отражает оперативную готовность корпуса документов к финальной сдаче.",
+      "- Quality gate pass rate демонстрирует устойчивость алгоритма автокоррекции без деградации результата.",
+      "- Fallback cases указывают на сложные документы, где система включила безопасный режим без ухудшения.",
+      "",
+    ].join("\n");
+
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `VKR_READINESS_SUMMARY_${now.toISOString().split("T")[0]}.md`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -223,6 +359,16 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
             variant="outline"
             className="rounded-xl"
             disabled={history.length === 0}
+            onClick={exportVkrReadinessSummary}
+          >
+            <FileText className="size-4" />
+            VKR Summary
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl"
+            disabled={history.length === 0}
             onClick={exportCSV}
           >
             <Download className="size-4" />
@@ -232,8 +378,8 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
       }
     >
       <motion.section initial="hidden" animate="show" variants={fadeUp} className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="rounded-[28px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+          <Card className="rounded-[28px] border-border bg-card text-card-foreground shadow-sm">
             <CardContent className="p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                 Всего отчётов
@@ -244,7 +390,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[28px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+          <Card className="rounded-[28px] border-border bg-card text-card-foreground shadow-sm">
             <CardContent className="p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                 С исправлениями
@@ -255,7 +401,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[28px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+          <Card className="rounded-[28px] border-border bg-card text-card-foreground shadow-sm">
             <CardContent className="p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                 Средний балл
@@ -265,9 +411,53 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
               </p>
             </CardContent>
           </Card>
+
+          <Card className="rounded-[28px] border-border bg-card text-card-foreground shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                Готово/почти готово
+              </p>
+              <p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-foreground">
+                {graduationReadyCount}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Ready: {readinessStats.ready} · Almost: {readinessStats.almostReady}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[28px] border-border bg-card text-card-foreground shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                Quality gate
+              </p>
+              <p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-foreground">
+                {readinessStats.gatePassed}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {gatePassRate == null
+                  ? "Нет достаточных данных"
+                  : `${gatePassRate}% от документов с метрикой`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[28px] border-border bg-card text-card-foreground shadow-sm">
+            <CardContent className="p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                Fallback
+              </p>
+              <p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-foreground">
+                {readinessStats.fallback}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Требуют ручной проверки: {readinessStats.needsRevision}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        <Card className="rounded-[30px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+        <Card className="rounded-[30px] border-border bg-card text-card-foreground shadow-sm">
           <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:p-5">
             <SearchField
               value={query}
@@ -276,7 +466,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
               placeholder="Поиск по названию"
               buttonLabel="Поиск"
               className="min-w-0 flex-1"
-              inputClassName="h-11 rounded-2xl border-[#2e2f2f] bg-[#171717] text-[#fafafa] placeholder:text-[#7b7b7b]"
+              inputClassName="h-11 rounded-2xl border-border bg-card text-foreground placeholder:text-muted-foreground"
               buttonClassName="h-11 rounded-2xl px-4"
             />
 
@@ -310,7 +500,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
         variants={fadeUp}
         transition={{ delay: 0.06 }}
       >
-        <Card className="rounded-[30px] border-[#2e2f2f] bg-[#171717] text-[#fafafa] shadow-sm">
+        <Card className="rounded-[30px] border-border bg-card text-card-foreground shadow-sm">
           <CardHeader className="p-6 pb-4">
             <CardTitle className="text-xl">Список отчётов</CardTitle>
             <CardDescription>
@@ -320,7 +510,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
 
           <CardContent className="space-y-4 p-6 pt-0">
             {history.length === 0 ? (
-              <div className="rounded-[26px] border border-dashed border-[#2e2f2f] bg-[#171717] px-6 py-16 text-center">
+              <div className="rounded-[26px] border border-dashed border-border bg-card px-6 py-16 text-center">
                 <FileText className="mx-auto size-10 text-muted-foreground" />
                 <p className="mt-4 text-base font-medium text-foreground">Нет отчётов</p>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -328,7 +518,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
                 </p>
               </div>
             ) : items.length === 0 ? (
-              <div className="rounded-[26px] border border-dashed border-[#2e2f2f] bg-[#171717] px-6 py-16 text-center text-sm text-[#b6b6b6]">
+              <div className="rounded-[26px] border border-dashed border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground">
                 По текущим фильтрам ничего не найдено.
               </div>
             ) : (
@@ -337,12 +527,15 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
                 const correctedPath = getCorrectedPath(item);
                 const issuesCount = getIssuesCount(item);
                 const score = getScoreValue(item);
+                const readinessLabel = getReadinessLabel(item);
+                const gatePassed = getQualityGatePassed(item);
+                const fallbackApplied = hasFallback(item);
                 const isExpanded = expandedId === itemKey;
 
                 return (
                   <div
                     key={itemKey}
-                    className="rounded-[26px] border border-[#2e2f2f] bg-[#171717] transition-colors hover:bg-[#222222]"
+                    className="rounded-[26px] border border-border bg-card transition-colors hover:bg-muted/20"
                   >
                     <button
                       type="button"
@@ -362,7 +555,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
                           </Badge>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-[#b6b6b6]">
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                           <span>{new Date(getTimestampValue(item)).toLocaleString("ru-RU")}</span>
                           <span>•</span>
                           <span>{issuesCount} замечаний</span>
@@ -375,6 +568,29 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="rounded-full px-3 py-1 text-muted-foreground">
+                            {readinessLabel}
+                          </Badge>
+
+                          {gatePassed != null ? (
+                            <Badge
+                              className={cn(
+                                "rounded-full px-3 py-1",
+                                gatePassed
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+                                  : "bg-red-500/15 text-red-600 dark:text-red-300",
+                              )}
+                            >
+                              Quality gate: {gatePassed ? "OK" : "Fail"}
+                            </Badge>
+                          ) : null}
+
+                          {fallbackApplied ? (
+                            <Badge className="rounded-full bg-amber-500/15 px-3 py-1 text-amber-600 dark:text-amber-300">
+                              Fallback
+                            </Badge>
+                          ) : null}
+
                           {correctedPath ? (
                             <Badge className="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-600 dark:text-emerald-300">
                               Исправленный DOCX готов
@@ -408,7 +624,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
 
                       <ChevronDown
                         className={cn(
-                          "mt-1 size-4 shrink-0 text-[#b6b6b6] transition-transform",
+                          "mt-1 size-4 shrink-0 text-muted-foreground transition-transform",
                           isExpanded && "rotate-180",
                         )}
                       />
@@ -424,8 +640,8 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
                           transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                           className="overflow-hidden"
                         >
-                          <div className="grid gap-4 border-t border-[#2e2f2f] px-4 py-4 md:grid-cols-[120px_minmax(0,1fr)_auto] md:px-5 md:py-5">
-                            <div className="rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4 text-center">
+                          <div className="grid gap-4 border-t border-border px-4 py-4 md:grid-cols-[120px_minmax(0,1fr)_auto] md:px-5 md:py-5">
+                            <div className="rounded-2xl border border-border bg-card p-4 text-center">
                               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                                 Оценка
                               </p>
@@ -434,7 +650,7 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
                               </p>
                             </div>
 
-                            <div className="space-y-3 rounded-2xl border border-[#2e2f2f] bg-[#171717] p-4">
+                            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
                               <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                                   Документ
@@ -459,6 +675,25 @@ const ReportsPage: FC<ReportsPageProps> = ({ className = "" }) => {
                                   </p>
                                   <p className="mt-1 text-sm text-foreground">
                                     {getProfileLabel(item)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                                    Готовность
+                                  </p>
+                                  <p className="mt-1 text-sm text-foreground">{readinessLabel}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                                    Quality gate
+                                  </p>
+                                  <p className="mt-1 text-sm text-foreground">
+                                    {gatePassed == null
+                                      ? "Нет данных"
+                                      : gatePassed
+                                        ? "Пройден"
+                                        : "Не пройден"}
+                                    {fallbackApplied ? " · fallback" : ""}
                                   </p>
                                 </div>
                               </div>

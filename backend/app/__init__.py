@@ -217,7 +217,7 @@ def create_app():
     get_oauth_service(app)
 
     # Импорт моделей для миграций (важно после инициализации db)
-    from app.models import User, Subscription, Document, APIKey
+    from app.models import User, Subscription, Document, APIKey, APIKeyAudit
 
     if not is_testing:
         app.logger.info("База данных инициализирована")
@@ -307,6 +307,7 @@ def create_app():
     from app.api import preview_routes
     from app.api import auth_routes
     from app.api import validation_routes
+    from app.api import api_key_routes
 
     app.register_blueprint(document_routes.bp)
     app.register_blueprint(profile_routes.bp)
@@ -314,6 +315,40 @@ def create_app():
     app.register_blueprint(preview_routes.bp)
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(validation_routes.validation_bp)
+    app.register_blueprint(api_key_routes.api_key_routes)
+
+    # Совместимость с новым frontend API: /api/documents/*
+    # Используем существующие view-функции, чтобы не дублировать бизнес-логику.
+    app.add_url_rule(
+        "/api/documents/validate",
+        endpoint="documents_validate_alias",
+        view_func=app.view_functions["document.analyze_document"],
+        methods=["POST", "OPTIONS"],
+    )
+    app.add_url_rule(
+        "/api/documents/profiles",
+        endpoint="documents_profiles_alias",
+        view_func=app.view_functions["profiles.list_profiles"],
+        methods=["GET", "OPTIONS"],
+    )
+    app.add_url_rule(
+        "/api/documents/profiles/",
+        endpoint="documents_profiles_alias_slash",
+        view_func=app.view_functions["profiles.list_profiles"],
+        methods=["GET", "OPTIONS"],
+    )
+    app.add_url_rule(
+        "/api/documents/profiles/<profile_id>",
+        endpoint="documents_profile_by_id_alias",
+        view_func=app.view_functions["profiles.get_profile"],
+        methods=["GET", "OPTIONS"],
+    )
+    app.add_url_rule(
+        "/api/documents/<document_id>/corrected",
+        endpoint="documents_corrected_alias",
+        view_func=app.view_functions["document.download_corrected_file"],
+        methods=["GET", "OPTIONS"],
+    )
 
     # Маршрут для API документации (JSON)
     @app.route("/api/openapi.json")

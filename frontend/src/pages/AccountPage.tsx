@@ -1,17 +1,17 @@
 import { motion } from "framer-motion";
 import {
-  BadgeCheck,
-  Building2,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Link2,
-  Loader2,
-  MailWarning,
-  Save,
-  Shield,
-  UserRound,
+    BadgeCheck,
+    Building2,
+    CheckCircle2,
+    Eye,
+    EyeOff,
+    KeyRound,
+    Link2,
+    Loader2,
+    MailWarning,
+    Save,
+    Shield,
+    UserRound,
 } from "lucide-react";
 import { FC, useContext, useMemo, useState } from "react";
 
@@ -22,20 +22,20 @@ import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
 } from "../components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Separator } from "../components/ui/separator";
@@ -468,7 +468,7 @@ const AccountPage: FC<AccountPageProps> = () => {
           animate="show"
           transition={{ duration: 0.35, delay: 0.1 }}
         >
-          <Card className="border-white/10 bg-background/75 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+          <Card className="border-border/70 bg-card/92 shadow-surface">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>
                 <CardTitle>Профиль</CardTitle>
@@ -527,7 +527,7 @@ const AccountPage: FC<AccountPageProps> = () => {
                         onChange={(event) => setter(event.target.value)}
                         placeholder={field.placeholder}
                         aria-label={field.label}
-                        className="border-white/10 bg-background/70"
+                        className="border-border bg-background/70"
                       />
                     ) : (
                       <div className="text-sm text-foreground">{value || "—"}</div>
@@ -562,7 +562,7 @@ const AccountPage: FC<AccountPageProps> = () => {
           transition={{ duration: 0.35, delay: 0.12 }}
           className="space-y-6"
         >
-          <Card className="border-white/10 bg-background/75 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+          <Card className="border-border/70 bg-card/92 shadow-surface">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <KeyRound className="size-4 text-muted-foreground" />
@@ -588,7 +588,7 @@ const AccountPage: FC<AccountPageProps> = () => {
                         value={oldPassword}
                         onChange={(event) => setOldPassword(event.target.value)}
                         placeholder="Введите текущий пароль"
-                        className="border-white/10 bg-background/70"
+                        className="border-border bg-background/70"
                       />
                     </div>
                   ) : null}
@@ -602,7 +602,7 @@ const AccountPage: FC<AccountPageProps> = () => {
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
                       placeholder="Минимум 8 символов"
-                      className="border-white/10 bg-background/70"
+                      className="border-border bg-background/70"
                     />
                   </div>
                   <div className="space-y-2">
@@ -618,7 +618,7 @@ const AccountPage: FC<AccountPageProps> = () => {
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       placeholder="Повторите пароль"
-                      className="border-white/10 bg-background/70"
+                      className="border-border bg-background/70"
                     />
                   </div>
                   <div className="flex items-center justify-between gap-3">
@@ -659,7 +659,7 @@ const AccountPage: FC<AccountPageProps> = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-white/10 bg-background/75 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+          <Card className="border-border/70 bg-card/92 shadow-surface">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Shield className="size-4 text-muted-foreground" />
@@ -711,7 +711,7 @@ const AccountPage: FC<AccountPageProps> = () => {
         transition={{ duration: 0.35, delay: 0.14 }}
         className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
       >
-        <Card className="border-white/10 bg-background/75 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+        <Card className="border-border/70 bg-card/92 shadow-surface">
           <CardHeader>
             <CardTitle>Связанные сервисы</CardTitle>
             <CardDescription>
@@ -762,7 +762,7 @@ const AccountPage: FC<AccountPageProps> = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-background/75 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+        <Card className="border-border/70 bg-card/92 shadow-surface">
           <CardHeader>
             <CardTitle>Сводка аккаунта</CardTitle>
             <CardDescription>
@@ -812,10 +812,10 @@ const AccountPage: FC<AccountPageProps> = () => {
       </motion.section>
 
       <Dialog open={twoFaOpen} onOpenChange={(open) => !open && !twoFaLoading && resetTwoFaSetup()}>
-        <DialogContent className="max-w-2xl border-white/10 bg-[#090b10] text-white">
+        <DialogContent className="max-w-2xl border-border bg-card text-card-foreground">
           <DialogHeader>
             <DialogTitle>Настройка двухфакторной аутентификации</DialogTitle>
-            <DialogDescription className="text-white/60">
+            <DialogDescription className="text-muted-foreground">
               Подключите приложение-аутентификатор, подтвердите код и сохраните резервные коды.
             </DialogDescription>
           </DialogHeader>
@@ -823,7 +823,7 @@ const AccountPage: FC<AccountPageProps> = () => {
           {twoFaBackupCodes.length === 0 ? (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-[148px_minmax(0,1fr)]">
-                <div className="flex h-[148px] items-center justify-center rounded-3xl border border-white/10 bg-white/[0.04] p-3">
+                <div className="flex h-[148px] items-center justify-center rounded-3xl border border-border bg-muted/20 p-3">
                   {twoFaQrCode ? (
                     <img
                       src={twoFaQrCode}
@@ -831,29 +831,29 @@ const AccountPage: FC<AccountPageProps> = () => {
                       className="h-full w-full rounded-2xl object-contain"
                     />
                   ) : (
-                    <div className="text-sm text-white/40">Загрузка QR...</div>
+                    <div className="text-sm text-muted-foreground">Загрузка QR...</div>
                   )}
                 </div>
-                <div className="space-y-3 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="space-y-3 rounded-3xl border border-border bg-muted/15 p-4">
                   <div>
-                    <div className="text-sm font-medium text-white">Как подключить</div>
-                    <div className="mt-1 text-sm leading-6 text-white/60">
+                    <div className="text-sm font-medium text-foreground">Как подключить</div>
+                    <div className="mt-1 text-sm leading-6 text-muted-foreground">
                       Отсканируйте QR-код в Google Authenticator, Microsoft Authenticator или
                       аналогичном приложении.
                     </div>
                   </div>
                   <div>
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/38">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                       Код для ручного ввода
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3 font-mono text-sm tracking-[0.22em] text-white/88">
+                    <div className="rounded-2xl border border-border bg-card px-4 py-3 font-mono text-sm tracking-[0.22em] text-foreground">
                       {twoFaSecret || "—"}
                     </div>
                   </div>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white" htmlFor="two-fa-token">
+                <label className="text-sm font-medium text-foreground" htmlFor="two-fa-token">
                   Код из приложения
                 </label>
                 <Input
@@ -864,7 +864,7 @@ const AccountPage: FC<AccountPageProps> = () => {
                   }
                   placeholder="000000"
                   inputMode="numeric"
-                  className="border-white/10 bg-white/[0.04] text-lg tracking-[0.35em] text-white placeholder:text-white/25"
+                  className="border-border bg-card text-lg tracking-[0.35em] text-foreground placeholder:text-muted-foreground"
                 />
               </div>
               <DialogFooter className="gap-2 sm:gap-2">
@@ -893,7 +893,7 @@ const AccountPage: FC<AccountPageProps> = () => {
                 {twoFaBackupCodes.map((code) => (
                   <div
                     key={code}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-sm tracking-[0.18em] text-white/90"
+                    className="rounded-2xl border border-border bg-card px-4 py-3 font-mono text-sm tracking-[0.18em] text-foreground"
                   >
                     {code}
                   </div>
@@ -911,10 +911,10 @@ const AccountPage: FC<AccountPageProps> = () => {
         <div className="fixed bottom-6 right-6 z-50 max-w-sm">
           <div
             className={cn(
-              "rounded-2xl border px-4 py-3 text-sm shadow-[0_18px_40px_rgba(0,0,0,0.18)] backdrop-blur",
+              "rounded-2xl border px-4 py-3 text-sm shadow-surface backdrop-blur",
               snack.error
-                ? "border-rose-500/25 bg-rose-500/12 text-rose-200"
-                : "border-emerald-500/25 bg-emerald-500/12 text-emerald-100",
+                ? "border-rose-500/25 bg-rose-500/12 text-rose-700 dark:text-rose-200"
+                : "border-emerald-500/25 bg-emerald-500/12 text-emerald-700 dark:text-emerald-100",
             )}
             role="status"
           >

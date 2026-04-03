@@ -1,6 +1,7 @@
 import DifferenceIcon from "@mui/icons-material/Difference";
 import ViewQuiltIcon from "@mui/icons-material/ViewQuilt";
 import { Alert, Box, CircularProgress, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 import * as Diff from "diff";
 import DOMPurify from "dompurify";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -8,17 +9,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getApiErrorMessage, previewsApi } from "../api/client";
 import "./DocumentViewer.css";
 
-const getSeverityTone = (severity) => {
+const getSeverityTone = (severity, theme) => {
   switch (severity) {
     case "critical":
     case "error":
-      return "#f87171";
+      return theme.palette.error.main;
     case "warning":
-      return "#fbbf24";
+      return theme.palette.warning.main;
     case "info":
-      return "#38bdf8";
+      return theme.palette.info.main;
     default:
-      return "#94a3b8";
+      return theme.palette.text.secondary;
+  }
+};
+
+const safeAlpha = (color, opacity) => {
+  try {
+    return alpha(color, opacity);
+  } catch (err) {
+    const percent = Math.max(0, Math.min(100, Math.round(opacity * 100)));
+    return `color-mix(in srgb, ${color} ${percent}%, transparent)`;
   }
 };
 
@@ -30,6 +40,7 @@ const DocumentViewer = ({
   activePhaseAccent = "#38bdf8",
   isProcessing = false,
 }) => {
+  const theme = useTheme();
   const [mode, setMode] = useState("split"); // 'split', 'diff'
   const [originalHtml, setOriginalHtml] = useState("");
   const [correctedHtml, setCorrectedHtml] = useState("");
@@ -41,6 +52,7 @@ const DocumentViewer = ({
   const rightPaneRef = useRef(null);
   const isScrolling = useRef(false);
   const visibleHighlights = useMemo(() => highlightedIssues.slice(0, 4), [highlightedIssues]);
+  const phaseAccent = activePhaseAccent || theme.palette.info.main;
 
   useEffect(() => {
     const fetchPreviews = async () => {
@@ -148,9 +160,9 @@ const DocumentViewer = ({
             <div
               className="viewer-phase-pill"
               style={{
-                borderColor: `${activePhaseAccent}66`,
-                background: `${activePhaseAccent}1a`,
-                color: activePhaseAccent,
+                borderColor: safeAlpha(phaseAccent, 0.45),
+                background: safeAlpha(phaseAccent, 0.12),
+                color: phaseAccent,
               }}
             >
               {isProcessing ? "Сейчас сканируем" : "Фокус проверки"}: {activePhaseTitle}
@@ -185,12 +197,12 @@ const DocumentViewer = ({
             <div
               key={issue.id}
               className="viewer-highlight-card"
-              style={{ borderColor: `${getSeverityTone(issue.severity)}55` }}
+              style={{ borderColor: safeAlpha(getSeverityTone(issue.severity, theme), 0.35) }}
             >
               <div className="viewer-highlight-card-top">
                 <span
                   className="viewer-highlight-dot"
-                  style={{ backgroundColor: getSeverityTone(issue.severity) }}
+                  style={{ backgroundColor: getSeverityTone(issue.severity, theme) }}
                 />
                 <span className="viewer-highlight-title">{issue.title}</span>
               </div>
@@ -204,7 +216,7 @@ const DocumentViewer = ({
       <div className="viewer-content">
         {mode === "split" ? (
           <>
-            <div className="doc-pane" style={{ "--viewer-accent": activePhaseAccent }}>
+            <div className="doc-pane" style={{ "--viewer-accent": phaseAccent }}>
               <div className="doc-pane-header">
                 <span>Оригинал</span>
                 {activePhaseTitle && (
@@ -230,7 +242,7 @@ const DocumentViewer = ({
                 )}
               </div>
             </div>
-            <div className="doc-pane" style={{ "--viewer-accent": activePhaseAccent }}>
+            <div className="doc-pane" style={{ "--viewer-accent": phaseAccent }}>
               <div className="doc-pane-header">
                 <span>Исправленный</span>
                 {activePhaseTitle && (

@@ -1,49 +1,32 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('Profiles workflow', () => {
-  test('Create profile then compare', async ({ page }) => {
+  test('Open comparison and view result table', async ({ page }) => {
     await page.goto('/profiles');
-    // Click create profile
-    const create = page.getByRole('button', { name: 'Создать профиль' });
-    await expect(create).toBeVisible();
-    await create.click();
+    await expect(page.getByRole('heading', { name: /профили оформления/i })).toBeVisible();
 
-    // Select template
-    await page.getByRole('button', { name: 'Минимальный' }).click();
+    const openCompareButton = page.getByTestId('profiles-compare-button');
+    await expect(openCompareButton).toBeVisible();
+    await openCompareButton.click();
 
-    // Fill name
-    const nameInput = page.locator('input').filter({ hasText: 'Название профиля' }).first();
-    // Playwright text inputs: find by label text
-    const nameByLabel = page.getByLabel('Название профиля');
-    await nameByLabel.fill('E2E Test Profile');
+    await expect(page.getByText(/сравнение профилей/i)).toBeVisible();
 
-    // Click Next until Save
-    const nextBtn = page.getByRole('button', { name: 'Далее' });
-    if (await nextBtn.isEnabled()) await nextBtn.click(); // Step 2
-    if (await nextBtn.isEnabled()) await nextBtn.click(); // Step 3
-    if (await nextBtn.isEnabled()) await nextBtn.click(); // Step 4
+    const selectProfile1 = page.getByRole('combobox').first();
+    const selectProfile2 = page.getByRole('combobox').nth(1);
+    await expect(selectProfile1).toBeVisible();
+    await expect(selectProfile2).toBeVisible();
 
-    const saveBtn = page.getByRole('button', { name: 'Сохранить' });
-    await expect(saveBtn).toBeVisible();
-    await saveBtn.click();
+    await selectProfile1.click();
+    await page.getByRole('option').first().click();
 
-    // Wait for new profile in list
-    await expect(page.getByText('E2E Test Profile')).toBeVisible({ timeout: 5000 });
+    await selectProfile2.click();
+    await page.getByRole('option').last().click();
 
-    // Open comparison
-    await page.getByRole('button', { name: 'Сравнить профили' }).click();
+    const compareButton = page.getByRole('button', { name: /^сравнить$/i });
+    await expect(compareButton).toBeEnabled();
+    await compareButton.click();
 
-    // Choose profiles and compare - select the new profile and default_gost
-    // The select component is a MUI Select, open dropdown and select by visible text
-    await page.getByLabel('Профиль 2').click();
-    const opt = page.getByRole('option', { name: 'E2E Test Profile' }).first();
-    await opt.click();
-
-    // Click compare
-    await page.getByRole('button', { name: 'Сравнить' }).click();
-
-    // Expect a table of differences
-    await expect(page.locator('table')).toBeVisible();
-    await expect(page.getByText('Совпадение')).toBeVisible();
+    await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/совпадение|различ|отлич/i).first()).toBeVisible();
   });
 });

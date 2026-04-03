@@ -335,10 +335,15 @@ export interface ValidationReport {
   check_results?: {
     score?: number;
     total_issues_count?: number;
+    completion_percentage?: number;
     issues?: BackendCheckIssue[];
     profile?: {
       id?: string;
       name?: string;
+    };
+    summary?: {
+      total_issues?: number;
+      completion_percentage?: number;
     };
   };
   report?: {
@@ -359,6 +364,29 @@ export interface ValidationReport {
     before_font_issues?: number;
     after_font_issues?: number;
     resolved_font_issues?: number;
+  };
+  quality_gate_passed?: boolean;
+  quality_metrics?: {
+    before_total_issues?: number | null;
+    after_total_issues?: number | null;
+    resolved_total_issues?: number | null;
+    completion_percentage?: number | null;
+    passes_completed?: number;
+    remaining_issues_reported?: number;
+    fallback_applied?: boolean;
+    attempts?: Array<{
+      attempt?: number;
+      passes?: number;
+      after_total_issues?: number;
+      completion_percentage?: number | null;
+    }>;
+  };
+  graduation_ready?: boolean;
+  graduation_readiness?: {
+    status?: "ready" | "almost_ready" | "needs_revision" | "unknown";
+    target_completion?: number;
+    target_issues_max?: number;
+    message?: string;
   };
   correction_success?: boolean;
   score?: number;
@@ -398,6 +426,10 @@ export interface CheckHistoryEntry {
   profileName?: string;
   totalIssues?: number;
   correctedFilePath?: string;
+  quality_gate_passed?: boolean;
+  quality_metrics?: ValidationReport["quality_metrics"];
+  graduation_ready?: boolean;
+  graduation_readiness?: ValidationReport["graduation_readiness"];
 }
 
 // Type aliases for backward compatibility

@@ -186,7 +186,7 @@ def register():
 
 
 @bp.route("/login", methods=["POST"])
-@rate_limit("10 per hour")
+@rate_limit("30 per minute")
 def login():
     """Login user with email and password"""
     try:
@@ -364,7 +364,7 @@ def change_password():
 
 @bp.route("/me", methods=["GET"])
 @jwt_required()
-@rate_limit("100 per hour")
+@rate_limit("60 per minute")
 def get_current_user():
     """Get current authenticated user"""
     try:

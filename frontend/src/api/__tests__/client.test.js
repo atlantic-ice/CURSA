@@ -1,25 +1,29 @@
 import {
-  ApiError,
-  accountApi,
-  adminApi,
-  aiApi,
-  apiFetch,
-  authApi,
-  documentsApi,
-  healthApi,
-  notificationsApi,
-  previewsApi,
-  profilesApi,
+    ApiError,
+    accountApi,
+    adminApi,
+    aiApi,
+    apiFetch,
+    authApi,
+    documentsApi,
+    healthApi,
+    notificationsApi,
+    previewsApi,
+    profilesApi,
 } from "../client";
 
-const createMockResponse = ({ ok, status, body, contentType = "application/json" }) => ({
+const createMockResponse = ({ ok, status, body, contentType = "application/json", headers = {} }) => ({
   ok,
   status,
   text: jest.fn().mockResolvedValue(body),
   headers: {
-    get: jest
-      .fn()
-      .mockImplementation((name) => (name.toLowerCase() === "content-type" ? contentType : null)),
+    get: jest.fn().mockImplementation((name) => {
+      const normalizedName = name.toLowerCase();
+      if (normalizedName === "content-type") {
+        return contentType;
+      }
+      return headers[normalizedName] ?? null;
+    }),
   },
 });
 
@@ -89,6 +93,52 @@ describe("api client", () => {
       status: 200,
       message: expect.stringContaining("JSON"),
     });
+  });
+
+  test("apiFetch does not retry 429 for auth endpoints", async () => {
+    global.fetch.mockResolvedValue(
+      createMockResponse({
+        ok: false,
+        status: 429,
+        body: JSON.stringify({ error: "Слишком много запросов" }),
+      }),
+    );
+
+    await expect(apiFetch("/api/auth/me", undefined, "http://localhost:5000")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 429,
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("apiFetch retries 429 for non-auth GET endpoints", async () => {
+    const timeoutSpy = jest.spyOn(global, "setTimeout").mockImplementation((handler) => {
+      handler();
+      return 0;
+    });
+
+    global.fetch
+      .mockResolvedValueOnce(
+        createMockResponse({
+          ok: false,
+          status: 429,
+          body: JSON.stringify({ error: "rate limited" }),
+        }),
+      )
+      .mockResolvedValueOnce(
+        createMockResponse({
+          ok: true,
+          status: 200,
+          body: JSON.stringify([{ id: "default_gost" }]),
+        }),
+      );
+
+    const result = await profilesApi.list();
+
+    expect(result).toEqual([{ id: "default_gost" }]);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(timeoutSpy).toHaveBeenCalled();
   });
 
   test("authApi.login sends credentials with POST", async () => {

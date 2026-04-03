@@ -14,12 +14,10 @@ jest.mock("../../components/DocumentViewer.js", () => ({
     originalPath,
     correctedPath,
     highlightedIssues = [],
-    activePhaseTitle,
     isProcessing,
   }) => (
     <div data-testid="document-viewer-mock">
-      {originalPath}::{correctedPath}::{activePhaseTitle}::{String(isProcessing)}::
-      {highlightedIssues.length}
+      {originalPath}::{correctedPath}::{String(isProcessing)}::{highlightedIssues.length}
     </div>
   ),
 }));
@@ -181,18 +179,11 @@ describe("ReportPage", () => {
     expect(screen.getByRole("heading", { name: /^хорошо$/i })).toBeVisible();
     expect(screen.getByText(/проблем после коррекции/i)).toBeVisible();
     expect(screen.getByText(/интервал абзаца требует ручной проверки/i)).toBeVisible();
-    expect(screen.getByRole("heading", { name: /живой режим исправлений/i })).toBeVisible();
-    expect(screen.getByText(/фокус playback:\s*структура/i)).toBeVisible();
-    expect(screen.getByRole("button", { name: /запустить walkthrough/i })).toBeVisible();
-    expect(screen.getByRole("button", { name: /сначала/i })).toBeVisible();
-    expect(screen.getByText(/шаг 1 из 4/i)).toBeVisible();
+    expect(screen.getByRole("heading", { name: /предпросмотр документа/i })).toBeVisible();
     expect(screen.getByTestId("document-viewer-mock")).toHaveTextContent(
-      /report_original\.docx::report_multipass\.docx::структура::false::1/i,
+      /report_original\.docx::report_multipass\.docx::false::1/i,
     );
     expect(screen.queryByText(/шрифт не соответствует гост/i)).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /запустить walkthrough/i }));
-    expect(screen.getByRole("button", { name: /пауза walkthrough/i })).toBeVisible();
   });
 
   test("downloads corrected file when correction already exists", async () => {

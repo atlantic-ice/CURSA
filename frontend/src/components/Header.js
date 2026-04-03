@@ -4,18 +4,19 @@ import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import MenuIcon from "@mui/icons-material/Menu";
 import {
-  Box,
-  Button,
-  Drawer,
-  IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Typography,
-  useMediaQuery,
-  useTheme,
+    Box,
+    Button,
+    Drawer,
+    IconButton,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    Typography,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useContext, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { ColorModeContext } from "../App";
@@ -46,9 +47,9 @@ const Header = () => {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "#000",
+        bgcolor: "background.paper",
         p: "32px 28px",
-        borderLeft: "1px solid rgba(255,255,255,0.08)",
+        borderLeft: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 6 }}>
@@ -57,7 +58,7 @@ const Header = () => {
             fontSize: "0.95rem",
             fontWeight: 900,
             letterSpacing: "0.2em",
-            color: "#fff",
+            color: "text.primary",
             fontFamily: "'Wix Madefor Display', sans-serif",
           }}
         >
@@ -67,9 +68,9 @@ const Header = () => {
           onClick={() => setMobileOpen(false)}
           aria-label="Закрыть меню"
           sx={{
-            color: "rgba(255,255,255,0.4)",
+            color: "text.secondary",
             p: 0.5,
-            "&:hover": { color: "#fff", bgcolor: "transparent" },
+            "&:hover": { color: "text.primary", bgcolor: "transparent" },
           }}
         >
           <CloseIcon fontSize="small" />
@@ -87,7 +88,7 @@ const Header = () => {
               sx={{
                 px: 0,
                 py: 1.5,
-                borderBottom: "1px solid rgba(255,255,255,0.05)",
+                borderBottom: `1px solid ${alpha(theme.palette.divider, 0.75)}`,
                 borderRadius: 0,
                 "&:hover": { bgcolor: "transparent" },
               }}
@@ -98,12 +99,12 @@ const Header = () => {
                   fontWeight: isActive(item.path) ? 600 : 400,
                   fontSize: "1.1rem",
                   letterSpacing: "0.01em",
-                  color: isActive(item.path) ? "#fff" : "rgba(255,255,255,0.45)",
+                  color: isActive(item.path) ? "text.primary" : "text.secondary",
                 }}
               />
               {isActive(item.path) && (
                 <Box
-                  sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#fff", flexShrink: 0 }}
+                  sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main", flexShrink: 0 }}
                 />
               )}
             </ListItemButton>
@@ -120,15 +121,15 @@ const Header = () => {
         sx={{
           mt: 4,
           borderRadius: 1,
-          bgcolor: "#fff",
-          color: "#000",
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
           fontWeight: 600,
           fontSize: "0.85rem",
           textTransform: "none",
           letterSpacing: "0.04em",
           boxShadow: "none",
           py: 1.5,
-          "&:hover": { bgcolor: "rgba(255,255,255,0.88)", boxShadow: "none" },
+          "&:hover": { bgcolor: "primary.main", opacity: 0.92, boxShadow: "none" },
         }}
       >
         Проверить работу
@@ -149,10 +150,10 @@ const Header = () => {
           display: "flex",
           alignItems: "center",
           px: { xs: 3, md: 5 },
-          bgcolor: "rgba(0,0,0,0.75)",
+          bgcolor: alpha(theme.palette.background.default, 0.85),
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.75)}`,
           zIndex: 1200,
         }}
       >
@@ -167,7 +168,7 @@ const Header = () => {
               fontSize: "0.95rem",
               fontWeight: 900,
               letterSpacing: "0.2em",
-              color: "#fff",
+              color: "text.primary",
               fontFamily: "'Wix Madefor Display', sans-serif",
             }}
           >
@@ -185,7 +186,7 @@ const Header = () => {
                 to={link.path}
                 disableRipple
                 sx={{
-                  color: isActive(link.path) ? "#fff" : "rgba(255,255,255,0.4)",
+                  color: isActive(link.path) ? "text.primary" : "text.secondary",
                   fontSize: "0.82rem",
                   fontWeight: isActive(link.path) ? 600 : 400,
                   textTransform: "none",
@@ -193,7 +194,7 @@ const Header = () => {
                   px: 1.5,
                   borderRadius: 0.5,
                   position: "relative",
-                  "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.05)" },
+                  "&:hover": { color: "text.primary", bgcolor: "action.hover" },
                   ...(isActive(link.path) && {
                     "&:after": {
                       content: '""',
@@ -203,7 +204,7 @@ const Header = () => {
                       transform: "translateX(-50%)",
                       width: 16,
                       height: 2,
-                      bgcolor: "#fff",
+                      bgcolor: "primary.main",
                       borderRadius: 999,
                     },
                   }),
@@ -223,9 +224,9 @@ const Header = () => {
               width: 32,
               height: 32,
               borderRadius: "50%",
-              bgcolor: "rgba(255,255,255,0.1)",
-              color: "rgba(255,255,255,0.7)",
-              "&:hover": { bgcolor: "rgba(255,255,255,0.16)", color: "#fff" },
+              bgcolor: "action.hover",
+              color: "text.secondary",
+              "&:hover": { bgcolor: "action.selected", color: "text.primary" },
             }}
           >
             {isDark ? (
@@ -241,8 +242,8 @@ const Header = () => {
               to="/login"
               sx={{
                 borderRadius: 1,
-                borderColor: "rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.7)",
+                borderColor: "divider",
+                color: "text.secondary",
                 textTransform: "none",
                 fontSize: "0.8rem",
                 fontWeight: 500,
@@ -250,9 +251,9 @@ const Header = () => {
                 py: 0.5,
                 minHeight: 32,
                 "&:hover": {
-                  borderColor: "rgba(255,255,255,0.4)",
-                  color: "#fff",
-                  bgcolor: "rgba(255,255,255,0.04)",
+                  borderColor: "primary.main",
+                  color: "text.primary",
+                  bgcolor: "action.hover",
                 },
               }}
             >
@@ -267,8 +268,8 @@ const Header = () => {
               endIcon={<ArrowOutwardIcon sx={{ fontSize: "12px !important" }} />}
               sx={{
                 borderRadius: 1,
-                bgcolor: "#fff",
-                color: "#000",
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
                 textTransform: "none",
                 fontSize: "0.8rem",
                 fontWeight: 600,
@@ -277,7 +278,7 @@ const Header = () => {
                 minHeight: 32,
                 letterSpacing: "0.02em",
                 boxShadow: "none",
-                "&:hover": { bgcolor: "rgba(255,255,255,0.88)", boxShadow: "none" },
+                "&:hover": { bgcolor: "primary.main", opacity: 0.92, boxShadow: "none" },
               }}
             >
               Проверить
@@ -288,9 +289,9 @@ const Header = () => {
               onClick={() => setMobileOpen(true)}
               aria-label="Открыть меню"
               sx={{
-                color: "rgba(255,255,255,0.6)",
+                color: "text.secondary",
                 p: 0.75,
-                "&:hover": { color: "#fff", bgcolor: "transparent" },
+                "&:hover": { color: "text.primary", bgcolor: "transparent" },
               }}
             >
               <MenuIcon fontSize="small" />

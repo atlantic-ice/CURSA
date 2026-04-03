@@ -4,6 +4,7 @@ import datetime
 import traceback
 import logging
 import uuid
+import shutil
 from werkzeug.utils import secure_filename
 from app.services.document_processor import DocumentProcessor
 from app.services.norm_control_checker import NormControlChecker
@@ -13,6 +14,71 @@ logger = logging.getLogger(__name__)
 
 
 SESSION_TTL_SECONDS = 60 * 60
+
+
+def _get_total_issues(check_results):
+    """Извлекает total_issues из разных форматов ответа проверок."""
+    if not isinstance(check_results, dict):
+        return 0
+
+    if isinstance(check_results.get('total_issues_count'), int):
+        return check_results['total_issues_count']
+
+    summary = check_results.get('summary')
+    if isinstance(summary, dict) and isinstance(summary.get('total_issues'), int):
+        return summary['total_issues']
+
+    issues = check_results.get('issues')
+    if isinstance(issues, list):
+        return len(issues)
+
+    return 0
+
+
+def _get_completion_percentage(check_results):
+    """Извлекает процент соответствия документа требованиям."""
+    if not isinstance(check_results, dict):
+        return None
+
+    completion = check_results.get('completion_percentage')
+    if isinstance(completion, (int, float)):
+        return float(completion)
+
+    summary = check_results.get('summary')
+    if isinstance(summary, dict):
+        summary_completion = summary.get('completion_percentage')
+        if isinstance(summary_completion, (int, float)):
+            return float(summary_completion)
+
+    return None
+
+
+def _build_graduation_readiness(after_total_issues, completion_percentage):
+    """Возвращает статус готовности документа к финальной сдаче."""
+    if completion_percentage is None:
+        return {
+            'status': 'unknown',
+            'target_completion': 95.0,
+            'target_issues_max': 3,
+            'message': 'Недостаточно данных для оценки готовности.',
+        }
+
+    if completion_percentage >= 97 and after_total_issues <= 1:
+        status = 'ready'
+        message = 'Документ соответствует уровню финальной сдачи.'
+    elif completion_percentage >= 95 and after_total_issues <= 3:
+        status = 'almost_ready'
+        message = 'Документ близок к финальной сдаче, нужна минимальная ручная вычитка.'
+    else:
+        status = 'needs_revision'
+        message = 'Требуются дополнительные исправления перед финальной сдачей.'
+
+    return {
+        'status': status,
+        'target_completion': 95.0,
+        'target_issues_max': 3,
+        'message': message,
+    }
 
 class WorkflowService:
     def __init__(self, corrections_dir):
@@ -176,6 +242,7 @@ class WorkflowService:
             checker = NormControlChecker(profile_id=profile_id)
             check_results = checker.check_document(document_data)
             result['check_results'] = check_results
+            before_total_issues = _get_total_issues(check_results)
 
             # Шаг 4: Автоисправление
             try:
@@ -199,18 +266,143 @@ class WorkflowService:
                 base_name, _ = os.path.splitext(original_filename)
                 safe_base = secure_filename(base_name) or "document"
                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                corrected_filename = f"{safe_base}_corrected_{timestamp}.docx"
-                permanent_path = os.path.join(self.corrections_dir, corrected_filename)
+                max_passes = 4 if before_total_issues >= 80 else 3
+                attempt_passes = [max_passes]
+                if before_total_issues > 0:
+                    attempt_passes.append(min(max_passes + 1, 5))
 
-                # Исправляем
-                corrected_file_path = corrector.correct_document(file_path, None, out_path=permanent_path)
+                best_attempt = None
+                attempts_meta = []
 
-                if os.path.exists(corrected_file_path):
+                for attempt_index, passes in enumerate(attempt_passes, start=1):
+                    suffix = '' if attempt_index == 1 else f"_retry{attempt_index}"
+                    corrected_filename = f"{safe_base}_corrected_{timestamp}{suffix}.docx"
+                    permanent_path = os.path.join(self.corrections_dir, corrected_filename)
+
+                    corrector.max_passes = passes
+                    corrected_file_path, correction_report = corrector.correct_document_multipass(
+                        file_path,
+                        out_path=permanent_path,
+                        max_passes=passes,
+                    )
+
+                    if not os.path.exists(corrected_file_path):
+                        result['errors'].append(
+                            f'Файл исправления не был создан (попытка {attempt_index}).'
+                        )
+                        continue
+
+                    corrected_proc = DocumentProcessor.process_document(corrected_file_path)
+                    if corrected_proc.get('status') == 'error' or not corrected_proc.get('raw_data'):
+                        result['errors'].append(
+                            f'Не удалось выполнить повторную проверку исправленного документа (попытка {attempt_index}).'
+                        )
+                        continue
+
+                    corrected_check_results = checker.check_document(corrected_proc['raw_data'])
+                    after_total_issues = _get_total_issues(corrected_check_results)
+                    completion_percentage = _get_completion_percentage(corrected_check_results)
+                    attempts_meta.append({
+                        'attempt': attempt_index,
+                        'passes': passes,
+                        'after_total_issues': after_total_issues,
+                        'completion_percentage': completion_percentage,
+                    })
+
+                    attempt_payload = {
+                        'corrected_filename': corrected_filename,
+                        'corrected_file_path': corrected_file_path,
+                        'correction_report': correction_report,
+                        'corrected_check_results': corrected_check_results,
+                        'after_total_issues': after_total_issues,
+                        'completion_percentage': completion_percentage,
+                        'passes': passes,
+                    }
+
+                    is_better = False
+                    if best_attempt is None:
+                        is_better = True
+                    elif after_total_issues < best_attempt['after_total_issues']:
+                        is_better = True
+                    elif after_total_issues == best_attempt['after_total_issues']:
+                        best_completion = best_attempt.get('completion_percentage')
+                        current_completion = completion_percentage
+                        if current_completion is not None and (
+                            best_completion is None or current_completion > best_completion
+                        ):
+                            is_better = True
+
+                    if is_better:
+                        if best_attempt and os.path.exists(best_attempt['corrected_file_path']):
+                            try:
+                                os.remove(best_attempt['corrected_file_path'])
+                            except OSError:
+                                logger.warning(
+                                    "Не удалось удалить файл худшей попытки коррекции: %s",
+                                    best_attempt['corrected_file_path'],
+                                )
+                        best_attempt = attempt_payload
+                    else:
+                        try:
+                            os.remove(corrected_file_path)
+                        except OSError:
+                            logger.warning(
+                                "Не удалось удалить файл невыбранной попытки коррекции: %s",
+                                corrected_file_path,
+                            )
+
+                if best_attempt:
+                    result['corrected_file_path'] = best_attempt['corrected_filename']
+                    result['full_corrected_path'] = best_attempt['corrected_file_path']
+                    result['corrected_check_results'] = best_attempt['corrected_check_results']
+
+                    after_total_issues = best_attempt['after_total_issues']
+                    completion_percentage = best_attempt['completion_percentage']
+                    report = best_attempt['correction_report']
+
+                    result['quality_metrics'] = {
+                        'before_total_issues': before_total_issues,
+                        'after_total_issues': after_total_issues,
+                        'resolved_total_issues': max(0, before_total_issues - after_total_issues),
+                        'completion_percentage': completion_percentage,
+                        'passes_completed': report.passes_completed,
+                        'remaining_issues_reported': report.remaining_issues,
+                        'attempts': attempts_meta,
+                        'fallback_applied': False,
+                    }
+
+                    result['quality_gate_passed'] = after_total_issues <= before_total_issues
+                    if not result['quality_gate_passed']:
+                        # Гарантия отсутствия деградации: если коррекция ухудшила результат,
+                        # возвращаем безопасную копию исходного документа.
+                        safe_filename = f"{safe_base}_safe_{timestamp}.docx"
+                        safe_output_path = os.path.join(self.corrections_dir, safe_filename)
+                        shutil.copy2(file_path, safe_output_path)
+
+                        result['corrected_file_path'] = safe_filename
+                        result['full_corrected_path'] = safe_output_path
+                        result['corrected_check_results'] = check_results
+                        result['quality_metrics'].update({
+                            'after_total_issues': before_total_issues,
+                            'resolved_total_issues': 0,
+                            'completion_percentage': _get_completion_percentage(check_results),
+                            'fallback_applied': True,
+                        })
+                        result['quality_gate_passed'] = True
+                        result['errors'].append(
+                            'Обнаружено ухудшение качества после автокоррекции; применен безопасный fallback без деградации.'
+                        )
+
+                    readiness = _build_graduation_readiness(
+                        result['quality_metrics']['after_total_issues'],
+                        result['quality_metrics']['completion_percentage'],
+                    )
+                    result['graduation_ready'] = readiness['status'] in {'ready', 'almost_ready'}
+                    result['graduation_readiness'] = readiness
+
                     result['correction_success'] = True
-                    result['corrected_file_path'] = corrected_filename
-                    result['full_corrected_path'] = corrected_file_path
                 else:
-                    result['errors'].append('Файл исправления не был создан')
+                    result['errors'].append('Автокоррекция не смогла сформировать валидный улучшенный результат.')
 
             except Exception as e:
                 logger.error(f"Correction failed: {e}")

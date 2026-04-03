@@ -1,58 +1,58 @@
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { ThemeProvider, alpha, createTheme } from "@mui/material/styles";
 import { motion } from "framer-motion";
 import {
-  ArrowUpRight,
-  BookOpen,
-  FilePlus2,
-  FolderOpen,
-  LayoutDashboard,
-  LucideIcon,
-  Search,
-  Settings,
-  User,
+    ArrowUpRight,
+    BookOpen,
+    FilePlus2,
+    FolderOpen,
+    LayoutDashboard,
+    LucideIcon,
+    Search,
+    Settings,
+    User,
 } from "lucide-react";
 import {
-  FC,
-  ReactNode,
-  Suspense,
-  createContext,
-  lazy,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    FC,
+    ReactNode,
+    Suspense,
+    createContext,
+    lazy,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  Navigate,
-  Outlet,
-  Route,
-  BrowserRouter as Router,
-  Routes,
-  useNavigate,
+    Navigate,
+    Outlet,
+    Route,
+    BrowserRouter as Router,
+    Routes,
+    useNavigate,
 } from "react-router-dom";
 import { authApi, type AuthUser } from "./api/client";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AppSidebar } from "./components/app-sidebar";
 import { SiteHeader } from "./components/site-header";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from "./components/ui/dialog";
 import { Input } from "./components/ui/input";
 import { Separator } from "./components/ui/separator";
 import { SidebarInset, SidebarProvider } from "./components/ui/sidebar";
 import { cn } from "./lib/utils";
 import type {
-  AuthContextType,
-  CheckHistoryContextType,
-  CheckHistoryEntry,
-  ColorModeContextType,
-  User as UserType,
+    AuthContextType,
+    CheckHistoryContextType,
+    CheckHistoryEntry,
+    ColorModeContextType,
+    User as UserType,
 } from "./types";
 
 // ============================================================================
@@ -176,6 +176,7 @@ const ResourcesPage = lazy(() => import("./pages/ResourcesPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const APIKeysPage = lazy(() => import("./pages/APIKeysPage"));
 
 // ============================================================================
 // Constants
@@ -188,6 +189,7 @@ const SHORTCUT_DEFS: ShortcutDef[] = [
   { keys: ["G", "R"], description: "Отчёты" },
   { keys: ["G", "A"], description: "Аккаунт" },
   { keys: ["G", "S"], description: "Настройки" },
+  { keys: ["G", "K"], description: "API Ключи" },
   { keys: ["Ctrl", "K"], description: "Командная палитра" },
   { keys: ["?"], description: "Справка по хоткеям" },
 ];
@@ -200,6 +202,7 @@ const PALETTE_NAV_ITEMS: PaletteNavItem[] = [
   { label: "Ресурсы", to: "/resources", shortcut: "", icon: FolderOpen },
   { label: "Аккаунт", to: "/account", shortcut: "G A", icon: User },
   { label: "Настройки", to: "/settings", shortcut: "G S", icon: Settings },
+  { label: "API Ключи", to: "/api-keys", shortcut: "G K", icon: Settings },
 ];
 
 // ============================================================================
@@ -666,6 +669,14 @@ const AnimatedRoutes: FC = () => {
               </PageWrapper>
             }
           />
+          <Route
+            path="/api-keys"
+            element={
+              <PageWrapper>
+                <APIKeysPage />
+              </PageWrapper>
+            }
+          />
         </Route>
         <Route element={<AdminRoute />}>
           <Route
@@ -896,7 +907,74 @@ const App: FC = () => {
   );
 
   // MUI theme
-  const muiTheme = useMemo(() => createTheme({ palette: { mode } }), [mode]);
+  const muiTheme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode,
+          primary: {
+            main: mode === "dark" ? "#e5e7eb" : "#111827",
+            contrastText: mode === "dark" ? "#111827" : "#f9fafb",
+          },
+          secondary: {
+            main: mode === "dark" ? "#9ca3af" : "#4b5563",
+          },
+          success: {
+            main: mode === "dark" ? "#34d399" : "#059669",
+          },
+          warning: {
+            main: mode === "dark" ? "#fbbf24" : "#d97706",
+          },
+          error: {
+            main: mode === "dark" ? "#f87171" : "#dc2626",
+          },
+          info: {
+            main: mode === "dark" ? "#38bdf8" : "#0284c7",
+          },
+          background: {
+            default: mode === "dark" ? "#0a0a0a" : "#fafafa",
+            paper: mode === "dark" ? "#171717" : "#ffffff",
+          },
+        },
+        shape: {
+          borderRadius: 12,
+        },
+        components: {
+          MuiPaper: {
+            styleOverrides: {
+              root: ({ theme }) => ({
+                backgroundImage: "none",
+                border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
+              }),
+            },
+          },
+          MuiButton: {
+            styleOverrides: {
+              root: {
+                textTransform: "none",
+              },
+            },
+          },
+          MuiToggleButton: {
+            styleOverrides: {
+              root: ({ theme }) => ({
+                borderColor: alpha(theme.palette.divider, 0.7),
+                color: theme.palette.text.secondary,
+                "&.Mui-selected": {
+                  color: theme.palette.background.default,
+                  backgroundColor: theme.palette.text.primary,
+                  borderColor: theme.palette.text.primary,
+                  "&:hover": {
+                    backgroundColor: theme.palette.text.primary,
+                  },
+                },
+              }),
+            },
+          },
+        },
+      }),
+    [mode],
+  );
 
   return (
     <ColorModeContext.Provider value={colorMode}>

@@ -12,12 +12,15 @@ import hashlib
 import re
 import random
 import urllib.request
+import zipfile
 from lxml import etree
+from docx import Document as DocxDocument
 
 from app.services.document_processor import DocumentProcessor
 from app.services.norm_control_checker import NormControlChecker
 from app.services.document_corrector import DocumentCorrector, CorrectionReport
 from app.services.workflow_service import WorkflowService
+from app.services.api_key_auth import authorize_api_key_request
 from app.config.security import (
     RATE_LIMITS,
     is_allowed_file,
@@ -40,14 +43,17 @@ os.makedirs(CORRECTIONS_DIR, exist_ok=True)
 workflow_service = WorkflowService(CORRECTIONS_DIR)
 
 
-def _load_default_profile_data():
+def _load_default_profile_data(profile_id=None):
     profile_data = None
 
     try:
         base_dir = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
-        profile_path = os.path.join(base_dir, 'profiles', 'default_gost.json')
+        profile_filename = f"{profile_id}.json" if profile_id else 'default_gost.json'
+        profile_path = os.path.join(base_dir, 'profiles', profile_filename)
+        if not os.path.exists(profile_path):
+            profile_path = os.path.join(base_dir, 'profiles', 'default_gost.json')
         if os.path.exists(profile_path):
             with open(profile_path, 'r', encoding='utf-8') as file_obj:
                 profile_data = json.load(file_obj)
@@ -57,10 +63,16 @@ def _load_default_profile_data():
     return profile_data
 
 
-def _run_multipass_correction(file_path, original_filename, max_passes=3, verbose=False):
+def _run_multipass_correction(
+    file_path,
+    original_filename,
+    max_passes=3,
+    verbose=False,
+    profile_id=None,
+):
     correction_id = str(uuid.uuid4())
     correction_date = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    profile_data = _load_default_profile_data()
+    profile_data = _load_default_profile_data(profile_id=profile_id)
 
     corrector = DocumentCorrector(profile_data=profile_data)
     corrector.verbose_logging = verbose
@@ -148,6 +160,33 @@ def _build_improvement_summary(before_check_results, after_check_results):
     }
 
 
+def _build_graduation_readiness(after_total_issues, completion_percentage):
+    if completion_percentage is None:
+        return {
+            'status': 'unknown',
+            'target_completion': 95.0,
+            'target_issues_max': 3,
+            'message': 'Недостаточно данных для оценки готовности.',
+        }
+
+    if completion_percentage >= 97 and after_total_issues <= 1:
+        status = 'ready'
+        message = 'Документ соответствует уровню финальной сдачи.'
+    elif completion_percentage >= 95 and after_total_issues <= 3:
+        status = 'almost_ready'
+        message = 'Документ близок к финальной сдаче, нужна минимальная ручная вычитка.'
+    else:
+        status = 'needs_revision'
+        message = 'Требуются дополнительные исправления перед финальной сдачей.'
+
+    return {
+        'status': status,
+        'target_completion': 95.0,
+        'target_issues_max': 3,
+        'message': message,
+    }
+
+
 def _build_improvement_from_report(before_check_results, correction_report):
     before_total = before_check_results.get('total_issues_count', 0)
     before_font = _count_font_issues(before_check_results)
@@ -206,6 +245,7 @@ def _autocorrect_from_session(document_token, data):
             original_filename,
             max_passes=max_passes,
             verbose=verbose,
+            profile_id=profile_id,
         )
         result['original_preview_path'] = original_preview_path
 
@@ -227,6 +267,58 @@ def _autocorrect_from_session(document_token, data):
                 before_check_results,
                 corrected_check_results,
             )
+
+            before_total_issues = result['improvement'].get('before_total_issues', 0)
+            after_total_issues = result['improvement'].get('after_total_issues', before_total_issues)
+            completion_percentage = corrected_check_results.get('completion_percentage')
+
+            if completion_percentage is None:
+                summary = corrected_check_results.get('summary') or {}
+                completion_percentage = summary.get('completion_percentage')
+
+            result['quality_metrics'] = {
+                'before_total_issues': before_total_issues,
+                'after_total_issues': after_total_issues,
+                'resolved_total_issues': max(0, before_total_issues - after_total_issues),
+                'completion_percentage': completion_percentage,
+                'fallback_applied': False,
+            }
+            result['quality_gate_passed'] = after_total_issues <= before_total_issues
+
+            if not result['quality_gate_passed']:
+                if original_preview_path:
+                    result['corrected_file_path'] = original_preview_path
+                    result['corrected_path'] = original_preview_path
+                    result['filename'] = original_preview_path
+                    result['check_results'] = before_check_results
+                    result['improvement'] = _build_improvement_summary(
+                        before_check_results,
+                        before_check_results,
+                    )
+                    result['quality_metrics'].update({
+                        'after_total_issues': before_total_issues,
+                        'resolved_total_issues': 0,
+                        'completion_percentage': (
+                            before_check_results.get('completion_percentage')
+                            or (before_check_results.get('summary') or {}).get('completion_percentage')
+                        ),
+                        'fallback_applied': True,
+                    })
+                    result['quality_gate_passed'] = True
+                    result.setdefault('errors', []).append(
+                        'Обнаружено ухудшение после автокоррекции; применен fallback к исходной версии без деградации.'
+                    )
+                else:
+                    result.setdefault('errors', []).append(
+                        'Обнаружено ухудшение качества после автокоррекции, fallback недоступен.'
+                    )
+
+            readiness = _build_graduation_readiness(
+                result['quality_metrics']['after_total_issues'],
+                result['quality_metrics']['completion_percentage'],
+            )
+            result['graduation_ready'] = readiness['status'] in {'ready', 'almost_ready'}
+            result['graduation_readiness'] = readiness
         else:
             result['improvement'] = _build_improvement_from_report(
                 before_check_results,
@@ -271,6 +363,65 @@ def apply_rate_limit(limit_key: str):
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _validate_docx_payload(file_path):
+    """Быстрая проверка, что загруженный файл является валидным DOCX."""
+    try:
+        if not os.path.exists(file_path) or os.path.getsize(file_path) <= 0:
+            return False, 'Файл пустой или не был сохранен корректно'
+
+        if os.path.getsize(file_path) < MIN_FILE_SIZE:
+            return False, 'Файл слишком маленький для корректного DOCX документа'
+
+        if not zipfile.is_zipfile(file_path):
+            return False, 'Файл не является корректным DOCX архивом'
+
+        with zipfile.ZipFile(file_path, 'r') as archive:
+            if 'word/document.xml' not in archive.namelist():
+                return False, 'В DOCX отсутствует обязательная часть word/document.xml'
+
+        # Проверка, что документ действительно открывается python-docx.
+        DocxDocument(file_path)
+        return True, None
+    except Exception as exc:
+        return False, f'Некорректный DOCX файл: {str(exc)}'
+
+
+def _unknown_graduation_readiness():
+    return {
+        'status': 'unknown',
+        'target_completion': 95.0,
+        'target_issues_max': 3,
+        'message': 'Недостаточно данных для оценки готовности.',
+    }
+
+
+def _normalize_batch_result(result, filename_hint=''):
+    """Приводит ответ по каждому файлу batch upload к единому quality-контракту."""
+    normalized = dict(result or {})
+    if filename_hint and not normalized.get('filename'):
+        normalized['filename'] = filename_hint
+
+    normalized.setdefault('success', False)
+    normalized.setdefault('correction_success', False)
+    normalized.setdefault('quality_gate_passed', False)
+    normalized.setdefault('graduation_ready', False)
+    normalized.setdefault('graduation_readiness', _unknown_graduation_readiness())
+
+    quality_metrics = normalized.get('quality_metrics')
+    if not isinstance(quality_metrics, dict):
+        quality_metrics = {}
+
+    quality_metrics.setdefault('before_total_issues', None)
+    quality_metrics.setdefault('after_total_issues', None)
+    quality_metrics.setdefault('resolved_total_issues', None)
+    quality_metrics.setdefault('completion_percentage', None)
+    quality_metrics.setdefault('fallback_applied', False)
+    quality_metrics.setdefault('attempts', [])
+    normalized['quality_metrics'] = quality_metrics
+
+    return normalized
 
 
 def _extract_items_from_rss(xml_bytes: bytes):
@@ -355,6 +506,10 @@ def upload_document():
     """
     Загрузка документа и его проверка
     """
+    _, auth_error = authorize_api_key_request(required_scope='document:check')
+    if auth_error:
+        return auth_error
+
     # Проверяем, есть ли файл в запросе
     if 'file' not in request.files:
         return jsonify({'error': 'Файл не найден в запросе'}), 400
@@ -384,9 +539,10 @@ def upload_document():
         with open(file_path, 'wb') as f:
             shutil.copyfileobj(file.stream, f)
 
-        # Проверяем, что файл успешно сохранен
-        if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
-            return jsonify({'error': 'Ошибка при сохранении файла'}), 500
+        # Проверяем, что файл успешно сохранен и является валидным DOCX.
+        is_valid_docx, docx_error = _validate_docx_payload(file_path)
+        if not is_valid_docx:
+            return jsonify({'error': docx_error}), 400
 
         current_app.logger.info(f"Файл сохранен по пути {file_path}, размер: {os.path.getsize(file_path)} байт")
 
@@ -419,6 +575,10 @@ def upload_batch():
     """
     Пакетная загрузка и обработка документов
     """
+    _, auth_error = authorize_api_key_request(required_scope='document:check')
+    if auth_error:
+        return auth_error
+
     if 'files' not in request.files:
         return jsonify({'error': 'Файлы не найдены в запросе (ожидается поле "files")'}), 400
 
@@ -433,11 +593,11 @@ def upload_batch():
 
     for file in files:
         if not allowed_file(file.filename):
-            results.append({
+            results.append(_normalize_batch_result({
                 'filename': file.filename,
                 'success': False,
                 'error': 'Недопустимый формат файла'
-            })
+            }, file.filename))
             continue
 
         try:
@@ -448,16 +608,25 @@ def upload_batch():
             file_path = os.path.join(temp_dir, filename)
             file.save(file_path)
 
+            is_valid_docx, docx_error = _validate_docx_payload(file_path)
+            if not is_valid_docx:
+                results.append(_normalize_batch_result({
+                    'filename': filename,
+                    'success': False,
+                    'error': docx_error,
+                }, filename))
+                continue
+
             # Обработка
             res = workflow_service.process_document(file_path, filename, profile_id)
-            results.append(res)
+            results.append(_normalize_batch_result(res, filename))
 
         except Exception as e:
-            results.append({
+            results.append(_normalize_batch_result({
                 'filename': file.filename,
                 'success': False,
                 'error': str(e)
-            })
+            }, file.filename))
 
     return jsonify({
         'success': True,
@@ -472,6 +641,10 @@ def analyze_document():
     """
     Анализ документа без сохранения отчета и исправлений
     """
+    _, auth_error = authorize_api_key_request(required_scope='document:check')
+    if auth_error:
+        return auth_error
+
     # Проверяем, есть ли файл в запросе
     if 'file' not in request.files:
         return jsonify({'error': 'Файл не найден в запросе'}), 400
@@ -498,6 +671,15 @@ def analyze_document():
 
         # Сохраняем файл
         file.save(file_path)
+
+        is_valid_docx, docx_error = _validate_docx_payload(file_path)
+        if not is_valid_docx:
+            try:
+                os.remove(file_path)
+                os.rmdir(temp_dir)
+            except Exception:
+                pass
+            return jsonify({'error': docx_error}), 400
 
         # Получаем ID профиля
         profile_id = request.form.get('profile_id')
@@ -540,6 +722,10 @@ def analyze_document():
 @bp.route('/autocorrect', methods=['POST'])
 def autocorrect_document():
     """Исправление документа по краткоживущему токену сессии анализа."""
+    _, auth_error = authorize_api_key_request(required_scope='document:correct')
+    if auth_error:
+        return auth_error
+
     data = request.json or {}
     document_token = data.get('document_token')
 
@@ -552,6 +738,10 @@ def autocorrect_document():
 @bp.route('/<document_id>/autocorrect', methods=['POST'])
 def autocorrect_document_legacy(document_id):
     """Совместимость с legacy API автокоррекции по идентификатору в URL."""
+    _, auth_error = authorize_api_key_request(required_scope='document:correct')
+    if auth_error:
+        return auth_error
+
     data = request.json or {}
     document_token = data.get('document_token') or document_id
 
@@ -563,6 +753,10 @@ def correct_document():
     """
     Исправление ошибок в документе
     """
+    _, auth_error = authorize_api_key_request(required_scope='document:correct')
+    if auth_error:
+        return auth_error
+
     data = request.json
     current_app.logger.info(f"Получен запрос на исправление документа: {data}")
 
@@ -678,6 +872,10 @@ def correct_document_multipass():
 
     Возвращает детальный отчёт о выполненных исправлениях.
     """
+    _, auth_error = authorize_api_key_request(required_scope='document:correct')
+    if auth_error:
+        return auth_error
+
     data = request.json
     current_app.logger.info(f"Получен запрос на многопроходное исправление документа: {data}")
 
@@ -726,6 +924,10 @@ def download_file():
     """
     Скачивание исправленного файла
     """
+    _, auth_error = authorize_api_key_request(required_scope='document:view')
+    if auth_error:
+        return auth_error
+
     path = request.args.get('path')
     custom_filename = request.args.get('filename')
 
@@ -786,6 +988,10 @@ def download_corrected_file():
     """
     Скачивание исправленного файла по относительному пути или ID
     """
+    _, auth_error = authorize_api_key_request(required_scope='document:view')
+    if auth_error:
+        return auth_error
+
     path = request.args.get('path')
     custom_filename = request.args.get('filename')
 
@@ -901,6 +1107,10 @@ def list_corrections():
     """
     Список исправленных файлов
     """
+    _, auth_error = authorize_api_key_request(required_scope='document:view')
+    if auth_error:
+        return auth_error
+
     try:
         files = []
         if os.path.exists(CORRECTIONS_DIR):

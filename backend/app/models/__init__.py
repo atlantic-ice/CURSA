@@ -14,6 +14,7 @@ from .subscription import Subscription, SubscriptionStatus
 from .document import Document, DocumentStatus
 from .payment import Payment, PaymentStatus
 from .api_key import APIKey
+from .api_key_audit import APIKeyAudit
 
 __all__ = [
     'User',
@@ -25,5 +26,6 @@ __all__ = [
     'Payment',
     'PaymentStatus',
     'APIKey',
+    'APIKeyAudit',
 ]
 

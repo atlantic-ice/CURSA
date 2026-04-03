@@ -1,0 +1,130 @@
+﻿{
+    "generated":  {
+                      "value":  "\/Date(1774017516432)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "20 марта 2026 г. 17:38:36"
+                  },
+    "overall":  "VKR_READY_100",
+    "validatorCount":  15,
+    "testFileCount":  30,
+    "pages":  [
+                  {
+                      "page":  "Upload",
+                      "present":  true,
+                      "files":  "UploadPage.css, UploadPage.tsx"
+                  },
+                  {
+                      "page":  "Report",
+                      "present":  true,
+                      "files":  "ReportPage.css, ReportPage.tsx, ReportsPage.tsx"
+                  },
+                  {
+                      "page":  "Profiles",
+                      "present":  true,
+                      "files":  "ProfilesPage.tsx"
+                  },
+                  {
+                      "page":  "Preview",
+                      "present":  true,
+                      "files":  "PreviewPage.tsx"
+                  },
+                  {
+                      "page":  "Pricing",
+                      "present":  true,
+                      "files":  "PricingPage.tsx"
+                  },
+                  {
+                      "page":  "Profile",
+                      "present":  true,
+                      "files":  "ProfilePage.tsx, ProfilesPage.tsx"
+                  },
+                  {
+                      "page":  "Settings",
+                      "present":  true,
+                      "files":  "SettingsPage.tsx"
+                  },
+                  {
+                      "page":  "Billing",
+                      "present":  true,
+                      "files":  "BillingPage.tsx"
+                  },
+                  {
+                      "page":  "APIKeys",
+                      "present":  true,
+                      "files":  "APIKeysPage.tsx"
+                  }
+              ],
+    "services":  [
+                     {
+                         "service":  "backend",
+                         "present":  true
+                     },
+                     {
+                         "service":  "frontend",
+                         "present":  true
+                     },
+                     {
+                         "service":  "postgres",
+                         "present":  true
+                     },
+                     {
+                         "service":  "redis",
+                         "present":  true
+                     },
+                     {
+                         "service":  "prometheus",
+                         "present":  true
+                     },
+                     {
+                         "service":  "grafana",
+                         "present":  true
+                     }
+                 ],
+    "steps":  [
+                  {
+                      "name":  "Python installed",
+                      "status":  "PASS",
+                      "details":  ""
+                  },
+                  {
+                      "name":  "Node installed",
+                      "status":  "PASS",
+                      "details":  ""
+                  },
+                  {
+                      "name":  "NPM installed",
+                      "status":  "PASS",
+                      "details":  ""
+                  },
+                  {
+                      "name":  "Validators \u003e= 15",
+                      "status":  "PASS",
+                      "details":  ""
+                  },
+                  {
+                      "name":  "Tests \u003e= 30 files",
+                      "status":  "PASS",
+                      "details":  ""
+                  },
+                  {
+                      "name":  "Critical services in docker-compose",
+                      "status":  "PASS",
+                      "details":  ""
+                  },
+                  {
+                      "name":  "Create backend venv if needed",
+                      "status":  "PASS",
+                      "details":  ""
+                  },
+                  {
+                      "name":  "Install backend requirements",
+                      "status":  "PASS",
+                      "details":  ""
+                  },
+                  {
+                      "name":  "Backend smoke test",
+                      "status":  "PASS",
+                      "details":  ""
+                  }
+              ]
+}
