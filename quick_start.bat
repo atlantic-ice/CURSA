@@ -47,6 +47,9 @@ REM --- 3. Intelligent Dependency Check ---
 set "MISSING_DEPS=0"
 if not exist "frontend\node_modules" set "MISSING_DEPS=1"
 
+REM --- Disable rate limiting for local development ---
+set "RATE_LIMIT_ENABLED=false"
+
 if "!MISSING_DEPS!"=="1" (
     echo [INFO] First run or missing dependencies detected.
     echo [INFO] Starting automatic installation...
